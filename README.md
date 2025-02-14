@@ -69,3 +69,24 @@ Whether you're a developer looking to contribute, a stakeholder interested in th
 Feel free to explore the repository and contribute to building a better music experience for everyone!  
 
 
+
+## 🔗 Links
+
+- [Figma] (https://www.figma.com/design/puqaUlMTznwdG5uTKPoPAP/IT342?node-id=0-1&t=ZkXVjLunc23z2BZm-1)
+- [ClickUp] (https://app.clickup.com/9016724751/v/s/90162662327)
+
+
+## 👨‍💻Developers Profile  
+
+
+#### John Gabriel Cañal  
+- **Course & Year:** BSIT-3  
+- **GitHub:** [john48k](https://github.com/john48k)  
+
+#### Allen Luis S. Mangoroban  
+- **Course & Year:** BSIT-3  
+- **GitHub:** [Imo-sama](https://github.com/Imo-sama)  
+
+#### Cg M. Fernandez  
+- **Course & Year:** BSIT-3  
+- **GitHub:** [cg-del](https://github.com/cg-del)  
