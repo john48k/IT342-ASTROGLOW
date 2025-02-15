@@ -1,4 +1,4 @@
-# AstroGlow
+# 🎵AstroGlow🎵
 
 ## Product Description  
 Welcome to AstroGlow! This initiative focuses on seamlessly integrating various components and services to create a unified and efficient ecosystem for managing and enhancing the user experience of a music application.  
@@ -9,7 +9,7 @@ Whether you're a developer looking to contribute, a stakeholder interested in th
 
 
 
-## List of features for Web Application Features  
+## 📝List of features for Web Application Features  
 - **Import Music**  
   - Users can upload new music files from their devices.  
   - The system automatically updates the music library when changes occur.  
@@ -34,7 +34,7 @@ Whether you're a developer looking to contribute, a stakeholder interested in th
 
 ---
 
-## List of features for Mobile Application Features  
+## 📝List of features for Mobile Application Features  
 - **Import Music**  
   - Users can upload new music files from their devices.  
   - The platform updates music files in the user's library automatically.  
@@ -60,7 +60,7 @@ Whether you're a developer looking to contribute, a stakeholder interested in th
 - **Play Button**  
   - A play button is accessible on any screen for instant playback while navigating the app.  
 
-## List of features - Objectives  
+## 📝List of features - Objectives  
 - Streamline data flow between different system components.  
 - Enhance system reliability and minimize latency.  
 - Implement scalable architecture to support growing user bases and content libraries.  
