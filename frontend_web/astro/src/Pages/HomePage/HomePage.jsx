@@ -13,10 +13,16 @@ export const HomePage = () => {
                     <button className="p-2 hover:bg-gray-100 rounded-md">
                         <LayoutGrid className="h-4 w-4" />
                     </button>
-                    <a href="#" className="flex items-center gap-1 text-[#2684ff] font-medium">
+                    {/* <a href="#" className="flex items-center gap-1 text-[#2684ff] font-medium">
+
                         <svg viewBox="0 0 32 32" className="h-6 w-6" fill="#2684ff">
                             <path d="M15.3 3.3c-.5-.5-1.1-.3-1.4.4-.2.4-.4 1.2-.4 1.8 0 .5-.1 1-.1 1 0 .1-.9-.2-2-.7-1.1-.4-2.1-.8-2.3-.8-.8 0-1 .4-.7 1.4.2.5.7 1.3 1.2 1.7.5.4.9.8.9.8-.1.1-.8 0-1.8-.2-1.5-.3-1.7-.3-2.2.2-.6.6-.6.7 0 1.8.4.6 1.1 1.3 1.6 1.6.5.3 1 .6 1 .6 0 .1-.4.3-1 .6-.5.3-1.2 1-1.6 1.6-.6 1.1-.6 1.2 0 1.8.5.5.7.5 2.2.2.9-.2 1.7-.3 1.8-.2 0 0-.4.4-.9.8-.5.4-1 1.2-1.2 1.7-.3 1-.1 1.4.7 1.4.2 0 1.2-.4 2.3-.8 1.1-.5 2-.8 2-.7 0 0 .1.5.1 1 0 .6.2 1.4.4 1.8.3.7.9.9 1.4.4.3-.3.6-1 .7-1.6.1-.6.2-1.1.3-1.1.1-.1.5.3.9.8.4.5 1.1.9 1.6 1 .7.1.9-.1.9-.8 0-.5-.3-1.3-.7-1.8-.4-.5-.7-1-.7-1 0-.1.5-.1 1.1-.1.6 0 1.4-.2 1.8-.5.6-.5.6-.8-.1-1.3-.4-.3-1.2-.6-1.8-.7-.6-.1-1.1-.2-1.1-.2 0-.1.3-.6.7-1 .4-.5.7-1.3.7-1.8 0-.7-.2-.9-.9-.8-.5.1-1.2.5-1.6 1-.4.5-.8.9-.9.8-.1 0-.2-.5-.3-1.1-.1-.6-.4-1.3-.7-1.6z"></path>
                         </svg>
+                        AstroGlow
+                    </a> */}
+
+                    <a href="#" className="flex items-center gap-1 text-[#2684ff] font-medium">
+                        <img src="./src/assets/images/AstroGlow-logo.png" alt="Profile" className="h-6 w-6 rounded-full" />
                         AstroGlow
                     </a>
                 </div>
@@ -51,7 +57,7 @@ export const HomePage = () => {
                     </span>
                 </div>
             </header>
-
+            {/* This is the side bar i repeat this is the side bar bruhhhhh  */}
             <div className="flex">
                 {/* Sidebar */}
                 <aside className="w-64 border-r min-h-[calc(100vh-3.5rem)] p-4">
@@ -146,7 +152,7 @@ export const HomePage = () => {
                             </div>
                             <div className="mt-8 text-center">
                                 <img
-                                    // src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/IT342-ZxdPcfQG7OTmAvnolyHzSarUx7Ejon.png"
+
                                     src="./src/assets/images/spotify-placeholder.png"
 
                                     alt="Spotify Place Holder"
