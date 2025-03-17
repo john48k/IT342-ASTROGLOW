@@ -72,10 +72,12 @@ Feel free to explore the repository and contribute to building a better music ex
 
 ## 🔗 Links
 
-- [Figma] (https://www.figma.com/design/puqaUlMTznwdG5uTKPoPAP/IT342?node-id=0-1&t=ZkXVjLunc23z2BZm-1)
+<!-- - [Figma] (https://www.figma.com/design/puqaUlMTznwdG5uTKPoPAP/IT342?node-id=0-1&t=ZkXVjLunc23z2BZm-1)
 - [ClickUp] (https://app.clickup.com/9016724751/v/s/90162662327)
 - [Diagrams] (https://drive.google.com/file/d/1zkfdnZg_mxy_cdmbxZGZMqQudcnYx7mH/view?usp=sharing)
-- [SRS] (https://cebuinstituteoftechnology-my.sharepoint.com/:w:/g/personal/allenluis_mangoroban_cit_edu/Ecw2LrpiV8ROieKj0R3iVnwBfk2hTVy2F8NpNkhAccZNNQ?e=x8hCb7)
+- [SRS] (https://cebuinstituteoftechnology-my.sharepoint.com/:w:/g/personal/allenluis_mangoroban_cit_edu/Ecw2LrpiV8ROieKj0R3iVnwBfk2hTVy2F8NpNkhAccZNNQ?e=x8hCb7) -->
+
+
 
 
 ## 👨‍💻Developers Profile  
