@@ -1,0 +1,85 @@
+/* Landing page styles */
+.landing-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.landing-content {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+/* Navbar styles */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    height: 70px;
+    background-color: #1a1a2e;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-logo h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #7f5af0;
+    text-shadow: 0 0 10px rgba(127, 90, 240, 0.5);
+    animation: flicker 1.5s infinite alternate;
+}
+
+@keyframes flicker {
+    0% {
+        opacity: 1;
+        text-shadow: 0 0 10px rgba(127, 90, 240, 0.5), 0 0 20px rgba(127, 90, 240, 0.3), 0 0 30px rgba(127, 90, 240, 0.2);
+    }
+    50% {
+        opacity: 0.5;
+        text-shadow: 0 0 5px rgba(127, 90, 240, 0.4), 0 0 10px rgba(127, 90, 240, 0.2), 0 0 15px rgba(127, 90, 240, 0.1);
+    }
+    100% {
+        opacity: 1;
+        text-shadow: 0 0 30px rgba(127, 90, 240, 0.5), 0 0 20px rgba(127, 90, 240, 0.3), 0 0 30px rgba(127, 90, 240, 0.2);
+    }
+}
+
+.navbar-links {
+    display: flex;
+    gap: 1rem;
+}
+
+.navbar-button {
+    padding: 0.5rem 1.2rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.login-button {
+    background-color: transparent;
+    border: 1px solid #7f5af0;
+    color: #7f5af0;
+}
+
+.login-button:hover {
+    background-color: rgba(127, 90, 240, 0.1);
+}
+
+.signup-button {
+    background-color: #7f5af0;
+    border: 1px solid #7f5af0;
+    color: white;
+}
+
+.signup-button:hover {
+    background-color: #6a4cc4;
+}
