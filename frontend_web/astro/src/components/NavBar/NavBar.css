@@ -92,6 +92,7 @@
 
 .navbar-links {
     display: flex;
+    align-items: center;
     gap: 1rem;
 }
 
@@ -128,13 +129,17 @@
     background-color: #4b2ea2;
 }
 
-/* .navbar-separate{
-    font-size: 66px;
-    font-family: sans-serif; 
-} */
+.navbar-separate{
+    font-size: 36px;
+    font-weight:100
+}
 
 .about-us{
     font-weight: 500;
     color: rgb(255, 255, 255);
-    
+    transition: 0.5s;
+}
+
+.about-us:hover{
+    color: #aa96e6;
 }
