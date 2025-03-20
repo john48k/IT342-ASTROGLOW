@@ -1,0 +1,140 @@
+
+/* this is where the fonts go mfs */
+@font-face {
+    font-family: landing-page-font;
+    src: url(../../assets/fonts/13_Misa.TTF);
+}
+
+/* animation shit mother fuckers dont touch  */
+
+@keyframes flicker1 {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes flicker-logo {
+    0% {
+        opacity: 1;
+        filter: brightness(1);
+    }
+    50% {
+        opacity: 1;
+        filter: brightness(0.9);
+    }
+    100% {
+        opacity: 1;
+        filter: brightness(1);
+    }
+}
+
+
+
+.landing-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.landing-content {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+/* Navbar styles */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    height: 70px;
+    background-color: #1a1a2e;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-title-text{
+    font: 100;
+}
+
+.navbar-logo {
+    display: flex;
+    align-items: center;
+}
+
+.navbar-logo img {
+    height: 40px;
+    margin-right: 10px;
+    animation: flicker-logo 1.5s infinite alternate;
+}
+
+.navbar-logo h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #7f5af0;
+    text-shadow: 0 0 10px rgba(127, 90, 240, 0.5);
+    animation: flicker1 0.79s infinite alternate; 
+    font-family: landing-page-font;
+}
+
+
+
+.navbar-links {
+    display: flex;
+    gap: 1rem;
+}
+
+.navbar-button {
+    padding: 0.5rem 1.2rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.navbar-login-button {
+    background-color: transparent;
+    border: 1px solid #7f5af0;
+    color: #7f5af0;
+    transition: 0.7s;
+}
+
+.navbar-login-button:hover {
+    background-color: rgba(127, 90, 240, 0.303);
+    color: #8a65f8;
+
+}
+
+.navbar-signup-button {
+    background-color: #7f5af0;
+    border: 1px solid #7f5af0;
+    color: white;
+    transition: 0.5s;
+}
+
+.navbar-signup-button:hover {
+    background-color: #4b2ea2;
+}
+
+/* .navbar-separate{
+    font-size: 66px;
+    font-family: sans-serif; 
+} */
+
+.about-us{
+    font-weight: 500;
+    color: rgb(255, 255, 255);
+    
+}
