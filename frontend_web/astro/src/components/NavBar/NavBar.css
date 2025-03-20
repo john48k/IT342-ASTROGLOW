@@ -127,3 +127,14 @@
 .navbar-signup-button:hover {
     background-color: #4b2ea2;
 }
+
+/* .navbar-separate{
+    font-size: 66px;
+    font-family: sans-serif; 
+} */
+
+.about-us{
+    font-weight: 500;
+    color: rgb(255, 255, 255);
+    
+}

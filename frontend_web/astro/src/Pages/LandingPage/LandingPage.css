@@ -33,5 +33,10 @@
 .astro-title-text{
     font-size: 50px;
     color: white;
-    
+    margin-top: -160px;
+  font-family: inherit;
+  font-weight: 500;
 }
+
+/* landing page title over here bruh */
+

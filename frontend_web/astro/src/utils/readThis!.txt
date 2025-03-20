@@ -1,0 +1,18 @@
+read this bruhhhhhh
+
+This is where api stuff goes and stuff 
+something like this as an example: 
+
+
+
+utils/
+├── formatDate.js      # Function to format dates
+├── api.js             # Functions for API calls (e.g., fetch data)
+├── validators.js      # Form validation functions (e.g., email validation)
+├── localStorage.js    # Functions for handling local storage
+├── auth.js            # Authentication helper functions
+├── constants.js       # Global constants (e.g., API URLs, error messages)
+
+
+hi cg 
+hi allen 

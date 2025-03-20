@@ -1,7 +1,8 @@
 import React from 'react';
 import './LandingPage.css';
-import '../../components/Navbar.css'
-import Navbar from '../../components/NavBar';
+// import '../../components/Navbar.css'
+import '../../components/NavBar/NavBar.css'
+import Navbar from '../../components/./NavBar/NavBar';
 
 const LandingPage = () => {
     return (
@@ -15,3 +16,6 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+
+//  font-family: inherit;
+// 
