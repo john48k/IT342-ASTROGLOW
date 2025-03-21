@@ -1,4 +1,5 @@
 import styles from "./LoginPage.module.css";
+import { Link } from "react-router-dom";
 
 const LoginPage = () => {
   return (
@@ -24,9 +25,12 @@ const LoginPage = () => {
               <button className={styles.opacity}>SUBMIT</button>
             </form>
             <div className={`${styles["register-forget"]} ${styles.opacity}`}>
-              <a className={styles["register-hover"]} href="/signup">
+              {/* <a className={styles["register-hover"]} href="/signup">
                 REGISTER
-              </a>
+              </a> */}
+              <Link className={styles["register-hover"]} to="/signup">
+                REGISTER
+              </Link>
             </div>
           </div>
           <div className={`${styles.circle} ${styles["circle-two"]}`}></div>
