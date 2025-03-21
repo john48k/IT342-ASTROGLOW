@@ -134,6 +134,10 @@
     text-decoration: underline;
 }
 
+.already{
+    color: black;
+}
+
 .astro-glow-font {
     font-family: AstroGlow;
     font-weight: 100; 

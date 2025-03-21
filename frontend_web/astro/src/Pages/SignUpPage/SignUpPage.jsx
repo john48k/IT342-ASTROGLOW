@@ -35,7 +35,7 @@ const SignUpPage = () => {
                             <a href="http://google.com/">Login with Google</a>
                         </div>
                         <div className="login-link">
-                            <span>Already have an account? </span>
+                            <span className='already'>Already have an account? </span>
                             <a href="/login">Login</a>
                         </div>
                     </form>
