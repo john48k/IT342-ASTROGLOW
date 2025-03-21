@@ -104,34 +104,38 @@
     background-color: #0056b3;
 }
 
-.google-login {
+.signup-google-login {
     margin-top: 20px;
     text-align: center;
 }
 
-.google-login a {
+.signup-google-login a {
     color: #4285f4;
     text-decoration: none;
     font-weight: bold;
 }
 
-.google-login a:hover {
+.signup-google-login a:hover {
     text-decoration: underline;
 }
 
-.login-link {
+.signup-login-link {
     margin-top: 20px;
     text-align: center;
 }
 
-.login-link a {
+.signup-login-link a {
     color: #007bff;
     text-decoration: none;
     font-weight: bold;
 }
 
-.login-link a:hover {
+.signup-login-link a:hover {
     text-decoration: underline;
+}
+
+.already{
+    color: black;
 }
 
 .astro-glow-font {
