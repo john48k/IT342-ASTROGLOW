@@ -4,7 +4,6 @@ import NavBar from "../../components/NavBar/NavBar";
 const SignUpPage = () => {
   return (
     <div className="SignUpPage">
-      <NavBar />
       <div className="split-screen">
         <div className="left-side">
           <div className="left-side-text">
