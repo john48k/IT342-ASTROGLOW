@@ -1,0 +1,94 @@
+
+.AboutPage {
+    text-align: center;
+    background: linear-gradient(150deg, #600f58, #16213e, #600f58);
+    min-height: 100vh;
+    padding: 0px 0;
+}
+
+.aboutPageHeroSection {
+    position: relative;
+    background-image: url('../../assets/images/AboutUs-Hero.jpg');
+    background-size: cover;
+    background-position: center;
+    padding: 100px 20px;
+    filter: hue-rotate(250deg) saturate(1.2) brightness(0.8);
+}
+
+.aboutPageHeroSection::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+}
+
+.aboutPageHeroSection > * {
+    position: relative;
+    z-index: 2;
+}
+
+.aboutPageHeroTitle {
+    font-size: 3em;
+    margin-bottom: 20px;
+    color: white;
+}
+
+.aboutPageHeroSubTitle {
+    font-size: 1.5em;
+    max-width: 600px;
+    margin: 0 auto;
+    color: white;
+}
+
+.aboutSection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    padding: 50px 20px;
+}
+
+.creatorContainer {
+    display: flex;
+    width: 80%;
+    max-width: 800px;
+    background: #ffffff1c;
+    padding: 20px;
+    border-radius: 50px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    align-items: center;
+    gap: 20px;
+}
+
+.creatorImage {
+    width: 50%;
+    height: 250px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.allencreatorImage {
+    width: 50%;
+    height: 250px;
+    object-fit:fill;
+    border-radius: 10px;
+}
+
+.creatorInfo {
+    flex: 1;
+    text-align: left;
+    color: rgba(0, 0, 0, 0.595);
+}
+
+.name{
+    font-size: 32px;
+    margin-top: -10%;
+}
+
+.course{
+    font-size: 22px;
+}
