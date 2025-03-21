@@ -6,13 +6,13 @@
 .SignUpPage {
     display: flex;
     flex-direction: column;
-    height: 100vh; /* Full viewport height */
-    overflow: hidden; /* Prevent scrolling */
+    height: 100vh; 
+    overflow: hidden; 
 }
 
 .split-screen {
     display: flex;
-    flex: 1; /* Take up remaining space */
+    flex: 1; 
 }
 
 .left-side, .right-side {
@@ -23,12 +23,12 @@
 }
 
 .left-side {
-    background: linear-gradient(to bottom, black 0%, black 50%, purple 100%); /* Gradient with more black in the middle */
+    background: linear-gradient(to bottom, black 0%, black 50%, rgb(50, 0, 159) 100%); /* Gradient with more black in the middle */
     display: flex;
     flex-direction: column;
-    justify-content: flex-start; /* Align items to the start of the container */
-    align-items: center; /* Center items horizontally */
-    padding-top:    55px; /* Optional: Add some padding at the top */
+    justify-content: flex-start; 
+    align-items: center; 
+    padding-top:    55px; 
 }
 
 .left-side-header {
@@ -52,8 +52,8 @@
 }
 
 .right-side {
-    background-color: #ffffff; /* Optional: background color for the right side */
-    padding: 20px; /* Optional: padding for the form */
+    background-color: #ffffff; 
+    padding: 20px; 
 }
 
 .signup-form {
@@ -141,18 +141,24 @@
     animation: flicker 2s infinite alternate;
 }
 
+.astro-pic {
+    margin-top: 20px;
+}
+
 @keyframes flicker {
     0% {
         opacity: 1;
-        color: #c55af0; /* Initial color */
+        color: #5a5af0; 
     }
     50% {
         opacity: 0.5;
-        color: #ff009d; /* Initial color */
+        color: #0000ff; 
+
 
     }
     100% {
         opacity: 1;
-        color: #c55af0; /* Final color */
+        color: #5a5af0; 
+
     }
 }

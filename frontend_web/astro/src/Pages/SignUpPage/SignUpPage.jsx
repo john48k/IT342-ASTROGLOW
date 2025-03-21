@@ -1,5 +1,4 @@
 import './SignUpPage.css';
-import '../../components/NavBar/NavBar.css'; // Import NavBar CSS
 import NavBar from '../../components/NavBar/NavBar';
 
 const SignUpPage = () => {
@@ -11,16 +10,18 @@ const SignUpPage = () => {
                     <div className='left-side-text'>
                         <h1 className='left-side-header'>Create your free account</h1>
                         <p className='left-side-sub-title'>All Your Sounds, All in One Place.</p>
+                        <div className='astro-pic'>
+                            <img src="astro-pic.png" alt="" />
+                        </div>
                     </div>
-                    {/* <img src="path/to/your/image.jpg" alt="Sign Up" className="full-size-image" /> */}
                 </div>
                 <div className="right-side">
                     <form className="signup-form">
                         <h2>Sign up to <span className="astro-glow-font">AstroGlow</span></h2>
-                        <div className="form-group">
+                        {/* <div className="form-group">
                             <label htmlFor="username">Username</label>
                             <input type="text" id="username" name="username" required />
-                        </div>
+                        </div> */}
                         <div className="form-group">
                             <label htmlFor="email">Email</label>
                             <input type="email" id="email" name="email" required />
