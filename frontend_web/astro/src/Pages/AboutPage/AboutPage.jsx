@@ -3,6 +3,7 @@ import React from 'react';
 import styles from './AboutPage.module.css';
 import NavBar from '../../components/NavBar/NavBar';
 
+
 const AboutPage = () => {
     return (
         <div className={styles.AboutPage}>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import './Navbar.css';
+// import './Navbar.css';
+import '../../components/NavBarStyle/NavBar.css';
 import logo from '../../assets/images/AstroGlow-logo.png';
 
 const Navbar = () => {
