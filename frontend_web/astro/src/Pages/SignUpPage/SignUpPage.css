@@ -1,3 +1,8 @@
+@font-face {
+    font-family: AstroGlow;
+    src: url(../../assets/fonts/13_Misa.TTF);
+}
+
 .SignUpPage {
     display: flex;
     flex-direction: column;
@@ -19,7 +24,26 @@
 
 .left-side {
     background: linear-gradient(to bottom, black 0%, black 50%, purple 100%); /* Gradient with more black in the middle */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* Align items to the start of the container */
+    align-items: center; /* Center items horizontally */
+    padding-top:    55px; /* Optional: Add some padding at the top */
 }
+
+.left-side-header {
+    color: white;
+    font-size: 32px;
+    font-weight: 500;
+}
+
+.left-side-sub-title {
+    color: white;
+    font-size: 17px;
+    margin-top: 1%;
+    font-weight: 400;
+}
+
 
 .full-size-image {
     width: 100%;
@@ -108,4 +132,27 @@
 
 .login-link a:hover {
     text-decoration: underline;
+}
+
+.astro-glow-font {
+    font-family: AstroGlow;
+    font-weight: 100; 
+    color: #c55af0;
+    animation: flicker 2s infinite alternate;
+}
+
+@keyframes flicker {
+    0% {
+        opacity: 1;
+        color: #c55af0; /* Initial color */
+    }
+    50% {
+        opacity: 0.5;
+        color: #ff009d; /* Initial color */
+
+    }
+    100% {
+        opacity: 1;
+        color: #c55af0; /* Final color */
+    }
 }

@@ -8,11 +8,15 @@ const SignUpPage = () => {
             <NavBar />
             <div className="split-screen">
                 <div className="left-side">
+                    <div className='left-side-text'>
+                        <h1 className='left-side-header'>Create your free account</h1>
+                        <p className='left-side-sub-title'>All Your Sounds, All in One Place.</p>
+                    </div>
                     {/* <img src="path/to/your/image.jpg" alt="Sign Up" className="full-size-image" /> */}
                 </div>
                 <div className="right-side">
                     <form className="signup-form">
-                        <h2>Sign up to AstroGlow</h2>
+                        <h2>Sign up to <span className="astro-glow-font">AstroGlow</span></h2>
                         <div className="form-group">
                             <label htmlFor="username">Username</label>
                             <input type="text" id="username" name="username" required />
