@@ -1,5 +1,6 @@
 import "./SignUpPage.css";
 import NavBar from "../../components/NavBar/NavBar";
+import { Link } from "react-router-dom"; // Added import
 
 const SignUpPage = () => {
   return (
@@ -12,7 +13,7 @@ const SignUpPage = () => {
               All Your Sounds, All in One Place.
             </p>
             <div className="astro-pic">
-              <img src="astro-pic.png" alt="" />
+              <img src="/astro-pic.png" alt="Astro character" />
             </div>
           </div>
         </div>
@@ -21,10 +22,6 @@ const SignUpPage = () => {
             <h2>
               Sign up to <span className="astro-glow-font">AstroGlow</span>
             </h2>
-            {/* <div className="form-group">
-                            <label htmlFor="username">Username</label>
-                            <input type="text" id="username" name="username" required />
-                        </div> */}
             <div className="form-group">
               <label htmlFor="email">Email</label>
               <input type="email" id="email" name="email" required />
@@ -41,7 +38,7 @@ const SignUpPage = () => {
             </div>
             <div className="signup-login-link">
               <span className="already">Already have an account? </span>
-              <a href="/login">Login</a>
+              <Link to="/login">Login</Link>
             </div>
           </form>
         </div>
