@@ -10,7 +10,7 @@ export const HomePage = () => {
             <div className={styles.container}>
                 <aside className={styles.sidebar}>
                     <ul>
-                        <div className={styles.libraryHead}>
+                        <div className={styles.libraryHeader}>
                             <img className={styles.libraryLogo} src="library-music.png" alt="" />
                             <p>Your Library</p>
                         </div>
@@ -22,7 +22,10 @@ export const HomePage = () => {
                 </aside>
                 <main className={styles.mainContent}>
                     <h1 className={styles.nameTitle}>Good Day "USER NAME"</h1>
-
+                    <button className={styles.uploadBtn}>
+                        <img src="upload-arrow.png" alt="Upload" className={styles.uploadIcon} />
+                        upload
+                    </button>
                 </main>
             </div>
         </div>

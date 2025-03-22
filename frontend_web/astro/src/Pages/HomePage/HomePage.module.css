@@ -1,3 +1,8 @@
+
+body{
+    background-color: black;
+}
+
 .homePage {
     display: flex;
     flex-direction: column;
@@ -73,11 +78,39 @@
 }
 
 
+.uploadBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px; 
+    padding: 5px 15px;
+    border: none;
+    background-color: transparent;
+    border: 1px solid #7f5af0;
+    font-weight: 500;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: 0.3s;
+    position: relative;
+    top: -54px; /* Adjust as needed */
+    left: 83%; /* Moves it to the right */
+  }
 
-
-body{
-    background-color: black;
+.uploadBtn:hover{
+    cursor: pointer;
+    background-color: #00558e71;
 }
+
+.uploadIcon {
+    width: 30px; 
+    height: 30px;
+  }
+
+  
+
+
+
 
 
 
