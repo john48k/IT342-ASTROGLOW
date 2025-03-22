@@ -1,0 +1,50 @@
+.homePage {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.container {
+    display: flex;
+    flex: 1;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #390056;
+    color: white;
+    padding: 1rem;
+    height: 100vh;
+    position: fixed;
+    top: 70px; 
+    left: 0;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar li {
+    margin-bottom: 1rem;
+}
+
+.sidebar a {
+    color: white;
+    text-decoration: none;
+    font-size: 1.2rem;
+    transition: color 0.2s;
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+.sidebar a:hover {
+    color: #7f5af0;
+}
+
+.mainContent {
+    margin-left: 260px; 
+    padding: 2rem;
+    flex: 1;
+}
