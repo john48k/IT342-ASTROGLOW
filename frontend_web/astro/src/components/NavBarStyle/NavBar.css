@@ -1,11 +1,11 @@
 
-/* this is where the fonts go mfs */
+/* this is where the fonts go make sure you download the font*/
 @font-face {
     font-family: landing-page-font;
     src: url(../../assets/fonts/13_Misa.TTF);
 }
 
-/* animation shit mother fuckers dont touch  */
+/* this animation keyframes stuff section*/
 
 @keyframes flicker1 {
     0% {
