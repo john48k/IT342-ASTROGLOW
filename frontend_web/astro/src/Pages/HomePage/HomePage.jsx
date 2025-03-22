@@ -6,22 +6,22 @@ export const HomePage = () => {
     // Sample featured collections data
     const featuredCollections = [
         {
-            title: "Cosmic Chill",
-            description: "Ambient sounds for your interstellar journey",
-            image: "placeholder.jpg",
-            tracks: 24,
+            title: "Sweater Weather",
+            description: "The Neighborhood",
+            image: "sweater-weather.png",
+            track: 1,
         },
         {
-            title: "Astral Beats",
-            description: "Rhythms from across the galaxy",
-            image: "placeholder.jpg",
-            tracks: 18,
+            title: "Kanye West",
+            description: "Kanye West",
+            image: "homecoming.png",
+            track: 1,
         },
         {
-            title: "Nebula Dreams",
-            description: "Dreamy melodies for cosmic meditation",
-            image: "placeholder.jpg",
-            tracks: 15,
+            title: "StarBoy",
+            description: "The Weeknd",
+            image: "starboy.png",
+            track1: 1,
         },
     ]
 
@@ -114,7 +114,7 @@ export const HomePage = () => {
 
                     {/* Featured Music Section */}
                     <section className={styles.featuredSection}>
-                        <h2 className={styles.sectionTitle}>Featured Collections</h2>
+                        <h2 className={styles.sectionTitle}>Featured Songs</h2>
 
                         {/* Featured playlists */}
                         <div className={styles.featuredGrid}>
@@ -132,7 +132,7 @@ export const HomePage = () => {
                                     <div className={styles.playlistInfo}>
                                         <h3 className={styles.playlistTitle}>{playlist.title}</h3>
                                         <p className={styles.playlistDescription}>{playlist.description}</p>
-                                        <p className={styles.playlistTracks}>{playlist.tracks} tracks</p>
+                                        <p className={styles.playlistTracks}>{playlist.tracks}</p>
                                     </div>
                                 </div>
                             ))}
