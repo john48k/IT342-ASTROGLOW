@@ -8,6 +8,6 @@ public class AstroGlowApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(AstroGlowApplication.class, args);
-
 	}
+
 }
