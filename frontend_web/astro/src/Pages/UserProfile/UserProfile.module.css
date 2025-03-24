@@ -1,0 +1,160 @@
+body {
+  background-color: black;
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  color: white;
+}
+
+/* Base layout styles */
+.userInfoPage {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.container {
+  display: flex;
+  flex: 1;
+  position: relative;
+}
+
+/* Sidebar styles */
+.sidebar {
+  width: 250px;
+  background-color: #390056;
+  color: white;
+  padding: 1rem;
+  position: sticky;
+  top: 70px; /* Matches the navbar height */
+  height: calc(100vh - 70px); /* Viewport height minus navbar height */
+  overflow-y: auto; /* Allow scrolling within sidebar if content is too tall */
+  z-index: 10;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin-bottom: 1rem;
+}
+
+.sidebar a {
+  color: white;
+  text-decoration: none;
+  font-size: 1.2rem;
+  transition: color 0.2s;
+  display: inline-block;
+  padding: 1px 19px;
+  border-radius: 4px;
+}
+
+.sidebar a:hover {
+  color: #7f5af0;
+}
+
+.libraryHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.libraryLogo {
+  height: 20px;
+  width: auto;
+}
+
+/* Main content styles */
+.mainContent {
+  flex: 1;
+  padding: 2rem;
+  border-radius: 10px;
+  background-image: linear-gradient(160deg, #000000 0%, #653895 100%);
+  min-height: calc(100vh - 70px - 4rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Profile card styles */
+.profileCard {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  padding: 3rem;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 30px rgba(123, 31, 162, 0.2);
+}
+
+.profileAvatar {
+  width: 100px;
+  height: 100px;
+  background-image: linear-gradient(to right, #8b5cf6, #ec4899);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: bold;
+  color: white;
+  margin: 0 auto 2rem;
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+}
+
+.welcomeTitle {
+  font-size: 2.5rem;
+  margin: 0 0 0.5rem;
+  background-image: linear-gradient(to right, #c084fc, #f0abfc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.emailText {
+  font-size: 1.1rem;
+  color: #d1d1d1;
+  margin: 0 0 2.5rem;
+}
+
+.logoutButton {
+  background-image: linear-gradient(to right, #8b5cf6, #ec4899);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.logoutButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+}
+
+/* Media queries */
+@media (max-width: 768px) {
+  .mainContent {
+    padding: 1rem;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .profileCard {
+    padding: 2rem;
+  }
+
+  .welcomeTitle {
+    font-size: 2rem;
+  }
+}
+
