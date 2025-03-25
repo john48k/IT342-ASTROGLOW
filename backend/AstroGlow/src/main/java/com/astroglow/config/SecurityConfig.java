@@ -18,9 +18,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").permitAll() // Allow all requests to /api/** endpoints
                         .anyRequest().authenticated()
                 )
-                .oauth2Login(oauth -> oauth.defaultSuccessUrl("/api/user/user-info", true))
+                // .oauth2Login(oauth -> oauth.defaultSuccessUrl("/api/user/user-info", true))
+                .oauth2Login(oauth -> oauth.defaultSuccessUrl("http://localhost:5173/Home", true))
                 .logout(logout -> logout.logoutSuccessUrl("/"))
-                .formLogin(formLogin -> formLogin.defaultSuccessUrl("/api/user/user-info", true))
+                // .formLogin(formLogin -> formLogin.defaultSuccessUrl("/api/user/user-info", true))
+                .formLogin(formLogin -> formLogin.defaultSuccessUrl("http://localhost:5173/Home", true))
                 .build();
     }
 }

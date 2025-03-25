@@ -56,6 +56,7 @@ public class UserController {
         }
         return ResponseEntity.status(401).body(null);
     }
+    
 
     // This is for the Google and Github JSON user-info
     @GetMapping("/user-info")
