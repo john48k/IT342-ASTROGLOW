@@ -1,18 +1,21 @@
-import styles from "./LoginPage.module.css";
 import { Link } from "react-router-dom";
+import styles from "./LoginPage.module.css";
 
 const LoginPage = () => {
+  const handleGoogleLogin = () => {
+    window.location.href = "http://localhost:8080/oauth2/authorization/google";
+  };
+
+  const handleGithubLogin = () => {
+    window.location.href = "http://localhost:8080/oauth2/authorization/github";
+  };
+
   return (
     <div className={styles.LoginPage}>
       <section className={styles.container}>
         <div className={styles["login-container"]}>
           <div className={`${styles.circle} ${styles["circle-one"]}`}></div>
           <div className={styles["form-container"]}>
-            {/* <img
-              src="https://raw.githubusercontent.com/hicodersofficial/glassmorphism-login-form/master/assets/illustration.png"
-              alt="illustration"
-              className={styles.illustration}
-            /> */}
             <img
               src="login-character.png"
               alt="login-character"
@@ -24,10 +27,36 @@ const LoginPage = () => {
               <input type="password" placeholder="PASSWORD" />
               <button className={styles.opacity}>SUBMIT</button>
             </form>
+
+            <div className={`${styles["social-login"]} ${styles.opacity}`}>
+              <p>Or login with</p>
+              <div className={styles["social-buttons"]}>
+                <button
+                  onClick={handleGoogleLogin}
+                  className={`${styles["social-button"]} ${styles["google-button"]}`}
+                >
+                  <img
+                    src="/google-icon.png"
+                    alt="Google"
+                    className={styles["social-icon"]}
+                  />
+                  Google
+                </button>
+                <button
+                  onClick={handleGithubLogin}
+                  className={`${styles["social-button"]} ${styles["github-button"]}`}
+                >
+                  <img
+                    src="/github-icon.png"
+                    alt="GitHub"
+                    className={styles["social-icon"]}
+                  />
+                  GitHub
+                </button>
+              </div>
+            </div>
+
             <div className={`${styles["register-forget"]} ${styles.opacity}`}>
-              {/* <a className={styles["register-hover"]} href="/signup">
-                REGISTER
-              </a> */}
               <Link className={styles["register-hover"]} to="/signup">
                 REGISTER
               </Link>
