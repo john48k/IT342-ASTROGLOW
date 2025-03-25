@@ -8,18 +8,19 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
-
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain defaultSecurityChain(HttpSecurity http) throws  Exception{
+    public SecurityFilterChain defaultSecurityChain(HttpSecurity http) throws Exception {
         return http
-                .authorizeHttpRequests(authurize -> authurize.anyRequest().authenticated())
-                .oauth2Login(oauth -> oauth.defaultSuccessUrl("/user-info", true))
+                .csrf(csrf -> csrf.disable()) // Disable CSRF protection for API endpoints
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/api/**").permitAll() // Allow all requests to /api/** endpoints
+                        .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth -> oauth.defaultSuccessUrl("/api/user/user-info", true))
                 .logout(logout -> logout.logoutSuccessUrl("/"))
-                .formLogin(formLogin -> formLogin.defaultSuccessUrl("/user-info", true))
+                .formLogin(formLogin -> formLogin.defaultSuccessUrl("/api/user/user-info", true))
                 .build();
-
     }
-
 }
