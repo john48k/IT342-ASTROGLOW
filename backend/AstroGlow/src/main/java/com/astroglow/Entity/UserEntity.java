@@ -2,40 +2,58 @@ package com.astroglow.Entity;
 
 import jakarta.persistence.*;
 
+import java.util.List;
+
 @Entity
 @Table(name = "users")
 public class UserEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id") // Maps to database column
-    private int userId;
+    @Column(name = "user_id")
+    private Long userId;
 
-    @Column(name = "user_name", nullable = false)
+    @Column(name = "user_name", length = 255, nullable = false)
     private String userName;
 
-    @Column(name = "user_password", nullable = false)
+    @Column(name = "user_password", length = 255, nullable = false)
     private String userPassword;
 
-    @Column(name = "user_email", unique = true, nullable = false)
+    @Column(name = "user_email", length = 255, nullable = false)
     private String userEmail;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private AuthenticationEntity authentication;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<PlaylistEntity> playlists;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<OfflineLibraryEntity> offlineLibraries;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<FavoritesEntity> favorites;
 
     // Default Constructor (Required by JPA)
     public UserEntity() {
     }
 
-    // Constructor (optional for manual object creation)
-    public UserEntity(String userName, String userPassword, String userEmail) {
+    public UserEntity(Long userId, String userName, String userPassword, String userEmail, AuthenticationEntity authentication, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
+        this.userId = userId;
         this.userName = userName;
         this.userPassword = userPassword;
         this.userEmail = userEmail;
+        this.authentication = authentication;
+        this.playlists = playlists;
+        this.offlineLibraries = offlineLibraries;
+        this.favorites = favorites;
     }
 
-    // Getters and Setters
-    public int getUserId() {
+    public Long getUserId() {
         return userId;
     }
 
-    public void setUserId(int userId) {
+    public void setUserId(Long userId) {
         this.userId = userId;
     }
 
@@ -62,6 +80,36 @@ public class UserEntity {
     public void setUserEmail(String userEmail) {
         this.userEmail = userEmail;
     }
+
+    public AuthenticationEntity getAuthentication() {
+        return authentication;
+    }
+
+    public void setAuthentication(AuthenticationEntity authentication) {
+        this.authentication = authentication;
+    }
+
+    public List<PlaylistEntity> getPlaylists() {
+        return playlists;
+    }
+
+    public void setPlaylists(List<PlaylistEntity> playlists) {
+        this.playlists = playlists;
+    }
+
+    public List<OfflineLibraryEntity> getOfflineLibraries() {
+        return offlineLibraries;
+    }
+
+    public void setOfflineLibraries(List<OfflineLibraryEntity> offlineLibraries) {
+        this.offlineLibraries = offlineLibraries;
+    }
+
+    public List<FavoritesEntity> getFavorites() {
+        return favorites;
+    }
+
+    public void setFavorites(List<FavoritesEntity> favorites) {
+        this.favorites = favorites;
+    }
 }
-
-
