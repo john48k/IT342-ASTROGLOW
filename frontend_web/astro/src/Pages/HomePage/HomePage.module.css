@@ -29,7 +29,7 @@ body {
     padding: 1rem;
     position: sticky;
     top: 70px; /* Matches the navbar height */
-    height: calc(100vh - 70px); /* Viewport height minus navbar height */
+    height: calc(378vh - 70px); /* Viewport height minus navbar height */
     overflow-y: auto; /* Allow scrolling within sidebar if content is too tall */
     z-index: 10;
   }
