@@ -21,4 +21,46 @@ public class OfflineLibraryEntity {
 
     @Column(name = "file_path", length = 255, nullable = false)
     private String filePath;
+
+    public OfflineLibraryEntity() {
+    }
+
+    public OfflineLibraryEntity(Long offlinelibId, UserEntity user, MusicEntity music, String filePath) {
+        this.offlinelibId = offlinelibId;
+        this.user = user;
+        this.music = music;
+        this.filePath = filePath;
+    }
+
+    public Long getOfflinelibId() {
+        return offlinelibId;
+    }
+
+    public void setOfflinelibId(Long offlinelibId) {
+        this.offlinelibId = offlinelibId;
+    }
+
+    public UserEntity getUser() {
+        return user;
+    }
+
+    public void setUser(UserEntity user) {
+        this.user = user;
+    }
+
+    public MusicEntity getMusic() {
+        return music;
+    }
+
+    public void setMusic(MusicEntity music) {
+        this.music = music;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
 }
