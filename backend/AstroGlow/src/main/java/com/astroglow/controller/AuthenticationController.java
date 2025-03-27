@@ -24,7 +24,7 @@ public class AuthenticationController {
     public AuthenticationEntity putAnalytics(@RequestParam int id,@RequestBody AuthenticationEntity newAuthentication) {
         return aserv.putAuthentication(id, newAuthentication);
     }
-    @DeleteMapping("/deleteAuthentication")
+    @DeleteMapping("/deleteAuthentication/{id}")
     public String deleteAuthentication(@PathVariable int id) {
         return aserv.deleteAuthentication(id);
     }

@@ -1,7 +1,7 @@
 package com.astroglow.Entity;
 
 import jakarta.persistence.*;
-
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.util.List;
 
 @Entity
@@ -10,8 +10,7 @@ public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
-    private Long userId;
+    private int userId;
 
     @Column(name = "user_name", length = 255, nullable = false)
     private String userName;
@@ -22,15 +21,19 @@ public class UserEntity {
     @Column(name = "user_email", length = 255, nullable = false)
     private String userEmail;
 
+    @JsonManagedReference(value = "user-authentication")
     @OneToOne(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private AuthenticationEntity authentication;
 
+    @JsonManagedReference(value = "user-playlist")
     @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<PlaylistEntity> playlists;
 
+    @JsonManagedReference(value = "user-offline")
     @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<OfflineLibraryEntity> offlineLibraries;
 
+    @JsonManagedReference(value = "user-favorites")
     @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<FavoritesEntity> favorites;
 
@@ -38,7 +41,7 @@ public class UserEntity {
     public UserEntity() {
     }
 
-    public UserEntity(Long userId, String userName, String userPassword, String userEmail, AuthenticationEntity authentication, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
+    public UserEntity(int userId, String userName, String userPassword, String userEmail, AuthenticationEntity authentication, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
         this.userId = userId;
         this.userName = userName;
         this.userPassword = userPassword;
@@ -49,11 +52,11 @@ public class UserEntity {
         this.favorites = favorites;
     }
 
-    public Long getUserId() {
+    public int getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(int userId) {
         this.userId = userId;
     }
 

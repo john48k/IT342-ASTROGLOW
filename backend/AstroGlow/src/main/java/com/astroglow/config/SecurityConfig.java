@@ -22,7 +22,7 @@ public class SecurityConfig {
                 .oauth2Login(oauth -> oauth.defaultSuccessUrl("http://localhost:5173/Home", true))
                 .logout(logout -> logout.logoutSuccessUrl("/"))
                 // .formLogin(formLogin -> formLogin.defaultSuccessUrl("/api/user/user-info", true))
-                .formLogin(formLogin -> formLogin.defaultSuccessUrl("http://localhost:5173/Home", true))
+                .formLogin(formLogin ->     formLogin.defaultSuccessUrl("http://localhost:5173/Home", true))
                 .build();
     }
 }

@@ -1,5 +1,6 @@
 package com.astroglow.Entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -7,33 +8,33 @@ import jakarta.persistence.*;
 public class FavoritesEntity {
 
     @Id
-
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "favorite_id")
-    private Long favoriteId;
+    private int favoriteId;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "userId", nullable = false)
+    @JsonBackReference(value = "user-favorites")
     private UserEntity user;
 
-    @ManyToOne
-    @JoinColumn(name = "music_id", nullable = false)
-    private MusicEntity music;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "music_id", referencedColumnName = "musicId",nullable = false)
+    @JsonBackReference(value = "music-favorites")    private MusicEntity music;
     public FavoritesEntity() {
     }
 
-    public FavoritesEntity(Long favoriteId, UserEntity user, MusicEntity music) {
+    public FavoritesEntity(int favoriteId, UserEntity user, MusicEntity music) {
         this.favoriteId = favoriteId;
         this.user = user;
         this.music = music;
     }
 
-    public Long getFavoriteId() {
+    public int getFavoriteId() {
         return favoriteId;
     }
 
-    public void setFavoriteId(Long favoriteId) {
+    public void setFavoriteId(int favoriteId) {
         this.favoriteId = favoriteId;
     }
 

@@ -1,5 +1,6 @@
 package com.astroglow.Entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -9,30 +10,32 @@ public class PlaylistEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "playlist_id")
-    private Long playlistId;
+    private int playlistId;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JsonBackReference(value = "user-playlist")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "userId", nullable = false)
     private UserEntity user;
 
-    @ManyToOne
-    @JoinColumn(name = "music_id", nullable = false)
+    @JsonBackReference(value = "music-playlist")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "music_id", referencedColumnName = "musicId", nullable = false)
     private MusicEntity music;
 
     public PlaylistEntity() {
     }
 
-    public PlaylistEntity(Long playlistId, UserEntity user, MusicEntity music) {
+    public PlaylistEntity(int playlistId, UserEntity user, MusicEntity music) {
         this.playlistId = playlistId;
         this.user = user;
         this.music = music;
     }
 
-    public Long getPlaylistId() {
+    public int getPlaylistId() {
         return playlistId;
     }
 
-    public void setPlaylistId(Long playlistId) {
+    public void setPlaylistId(int playlistId) {
         this.playlistId = playlistId;
     }
 

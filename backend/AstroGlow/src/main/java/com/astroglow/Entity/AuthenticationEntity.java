@@ -10,13 +10,16 @@ public class AuthenticationEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_biometric_id")
-    private Long userBiometricId;
+    private int userBiometricId;
 
-    @OneToOne
-    @JoinColumn(name="user_id",nullable=false)
+
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "userId", nullable = false)
+    @JsonBackReference(value = "user-authentication")
     private UserEntity user;
 
-    public AuthenticationEntity(Long userBiometricId, UserEntity user) {
+    public AuthenticationEntity(int userBiometricId, UserEntity user) {
         this.userBiometricId = userBiometricId;
         this.user = user;
     }
@@ -24,11 +27,11 @@ public class AuthenticationEntity {
     public AuthenticationEntity() {
     }
 
-    public Long getUserBiometricId() {
+    public int getUserBiometricId() {
         return userBiometricId;
     }
 
-    public void setUserBiometricId(Long userBiometricId) {
+    public void setUserBiometricId(int userBiometricId) {
         this.userBiometricId = userBiometricId;
     }
 

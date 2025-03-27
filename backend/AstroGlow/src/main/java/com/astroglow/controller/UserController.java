@@ -22,7 +22,7 @@ public class UserController {
     @Autowired
     UserService userService;
 
-    @PostMapping("/postUser")
+    @PostMapping(value ="/postUser", consumes = "application/json")
     public UserEntity postUser(@RequestBody UserEntity user) {
         return userService.postUser(user);
     }

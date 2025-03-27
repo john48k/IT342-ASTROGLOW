@@ -1,7 +1,7 @@
 package com.astroglow.Entity;
 
 import jakarta.persistence.*;
-
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.util.List;
 
 @Entity
@@ -10,8 +10,7 @@ public class MusicEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "music_id")
-    private Long musicId;
+    private int musicId;
 
     @Column(name = "title", length = 255, nullable = false)
     private String title;
@@ -25,19 +24,22 @@ public class MusicEntity {
     @Column(name = "time")
     private Integer time;
 
-    @OneToMany(mappedBy = "music", cascade = CascadeType.ALL)
+    @JsonManagedReference(value = "music-playlist")
+    @OneToMany(mappedBy = "music", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<PlaylistEntity> playlists;
 
-    @OneToMany(mappedBy = "music", cascade = CascadeType.ALL)
+    @JsonManagedReference(value = "music-offline")
+    @OneToMany(mappedBy = "music", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<OfflineLibraryEntity> offlineLibraries;
 
-    @OneToMany(mappedBy = "music", cascade = CascadeType.ALL)
+    @JsonManagedReference(value = "music-favorites")
+    @OneToMany(mappedBy = "music", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<FavoritesEntity> favorites;
 
     public MusicEntity() {
     }
 
-    public MusicEntity(Long musicId, String title, String artist, String genre, Integer time, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
+    public MusicEntity(int musicId, String title, String artist, String genre, Integer time, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
         this.musicId = musicId;
         this.title = title;
         this.artist = artist;
@@ -48,11 +50,11 @@ public class MusicEntity {
         this.favorites = favorites;
     }
 
-    public Long getMusicId() {
+    public int getMusicId() {
         return musicId;
     }
 
-    public void setMusicId(Long musicId) {
+    public void setMusicId(int musicId) {
         this.musicId = musicId;
     }
 

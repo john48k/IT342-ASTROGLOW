@@ -40,12 +40,13 @@ public class AuthenticationService {
     }
 
     public String deleteAuthentication(int id) {
-        String msg="";
-        if(authenticationRepository.findById(id)!=null) {
+        String msg = "";
+        if (authenticationRepository.existsById(id)) {
             authenticationRepository.deleteById(id);
-            msg="Successfully deleted.";
-        } else
-            msg=id+" not found.";
+            msg = "Biometrics Successfully deleted.";
+        } else {
+            msg = id + " not found.";
+        }
         return msg;
     }
 }
