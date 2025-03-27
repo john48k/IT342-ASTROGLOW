@@ -1,9 +1,7 @@
-package com.astroglow.Controller;
+package com.astroglow.controller;
 
 import java.util.List;
 
-import com.astroglow.Entity.MusicEntity;
-import com.astroglow.Entity.UserEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -91,36 +89,6 @@ public class OfflineLibraryController {
     @PostMapping
     public ResponseEntity<?> addOfflineLibraryEntry(@RequestBody OfflineLibraryEntity offlineLibrary) {
         try {
-            OfflineLibraryEntity savedOfflineLibrary = offlineLibraryService.addOfflineLibraryEntry(offlineLibrary);
-            return new ResponseEntity<>(savedOfflineLibrary, HttpStatus.CREATED);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-        }
-    }
-
-    // Add an offline library entry using DTO
-    @PostMapping("/dto")
-    public ResponseEntity<?> addOfflineLibraryEntryDTO(@RequestBody OfflineLibraryEntity dto) {
-        try {
-            OfflineLibraryEntity offlineLibrary = new OfflineLibraryEntity();
-
-            // Create user reference
-            UserEntity user = new UserEntity();
-            user.setUserId(dto.getUserId());
-            offlineLibrary.setUser(user);
-
-            // Create music reference
-            MusicEntity music = new MusicEntity();
-            music.setMusicId(dto.getMusicId());
-            offlineLibrary.setMusic(music);
-
-            // Set file path
-            offlineLibrary.setFilePath(dto.getFilePath());
-
             OfflineLibraryEntity savedOfflineLibrary = offlineLibraryService.addOfflineLibraryEntry(offlineLibrary);
             return new ResponseEntity<>(savedOfflineLibrary, HttpStatus.CREATED);
         } catch (EntityNotFoundException e) {
