@@ -1,4 +1,4 @@
-package com.astroglow.Controller;
+package com.astroglow.controller;
 
 import java.util.List;
 

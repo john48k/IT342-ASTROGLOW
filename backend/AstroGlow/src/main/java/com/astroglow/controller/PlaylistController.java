@@ -1,4 +1,4 @@
-package com.astroglow.Controller;
+package com.astroglow.controller;
 
 import java.util.List;
 
@@ -27,14 +27,14 @@ public class PlaylistController {
     private PlaylistService playlistService;
 
     // Get all playlists
-    @GetMapping
+    @GetMapping("/getAllPlaylist")
     public ResponseEntity<List<PlaylistEntity>> getAllPlaylists() {
         List<PlaylistEntity> playlists = playlistService.getAllPlaylists();
         return new ResponseEntity<>(playlists, HttpStatus.OK);
     }
 
     // Get playlist by ID
-    @GetMapping("/{id}")
+    @GetMapping("getPlaylist/{id}")
     public ResponseEntity<PlaylistEntity> getPlaylistById(@PathVariable("id") int id) {
         try {
             PlaylistEntity playlist = playlistService.getPlaylistById(id);
@@ -45,7 +45,7 @@ public class PlaylistController {
     }
 
     // Get playlists by user ID
-    @GetMapping("/user/{userId}")
+    @GetMapping("getPlaylist/user/{userId}")
     public ResponseEntity<List<PlaylistEntity>> getPlaylistsByUserId(@PathVariable("userId") int userId) {
         try {
             List<PlaylistEntity> playlists = playlistService.getPlaylistsByUserId(userId);
@@ -67,7 +67,7 @@ public class PlaylistController {
     }
 
     // Add a music to a user's playlist
-    @PostMapping("/user/{userId}/music/{musicId}")
+    @PostMapping("/postPlaylist/user/{userId}/music/{musicId}")
     public ResponseEntity<?> addToPlaylist(@PathVariable("userId") int userId, @PathVariable("musicId") int musicId) {
         try {
             PlaylistEntity playlist = playlistService.addToPlaylist(userId, musicId);
@@ -80,7 +80,7 @@ public class PlaylistController {
     }
 
     // Add a playlist entry (using request body)
-    @PostMapping
+    @PostMapping("postPlaylist")
     public ResponseEntity<?> addPlaylistEntry(@RequestBody PlaylistEntity playlist) {
         try {
             PlaylistEntity savedPlaylist = playlistService.addPlaylistEntry(playlist);
@@ -93,7 +93,7 @@ public class PlaylistController {
     }
 
     // Update a playlist entry
-    @PutMapping("/{id}")
+    @PutMapping("putPlaylist/{id}")
     public ResponseEntity<?> updatePlaylistEntry(@PathVariable("id") int id, @RequestBody PlaylistEntity playlist) {
         try {
             PlaylistEntity updatedPlaylist = playlistService.updatePlaylistEntry(id, playlist);
@@ -104,7 +104,7 @@ public class PlaylistController {
     }
 
     // Delete a playlist entry
-    @DeleteMapping("/{id}")
+    @DeleteMapping("deletePlaylist/{id}")
     public ResponseEntity<String> deletePlaylistEntry(@PathVariable("id") int id) {
         String message = playlistService.deletePlaylistEntry(id);
         if (message.contains("not found")) {
@@ -114,7 +114,7 @@ public class PlaylistController {
     }
 
     // Remove a music from a user's playlist
-    @DeleteMapping("/user/{userId}/music/{musicId}")
+    @DeleteMapping("deletePlaylist/user/{userId}/music/{musicId}")
     public ResponseEntity<?> removeFromPlaylist(@PathVariable("userId") int userId, @PathVariable("musicId") int musicId) {
         try {
             String message = playlistService.removeFromPlaylist(userId, musicId);
