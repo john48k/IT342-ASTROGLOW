@@ -49,7 +49,7 @@ const LoginPage = () => {
                   <img
                     src="/github-icon.png"
                     alt="GitHub"
-                    className={styles["social-icon"]}
+                    className={`${styles["social-icon"]} ${styles["github-icon"]}`}
                   />
                   GitHub
                 </button>
