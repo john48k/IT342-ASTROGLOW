@@ -27,7 +27,7 @@ public class FavoritesController {
     private FavoritesService favoritesService;
 
     // Get all favorites
-    @GetMapping
+    @GetMapping("/getAllFavorites")
     public ResponseEntity<List<FavoritesEntity>> getAllFavorites() {
         List<FavoritesEntity> favorites = favoritesService.getAllFavorites();
         return new ResponseEntity<>(favorites, HttpStatus.OK);
@@ -80,7 +80,7 @@ public class FavoritesController {
     }
 
     // Add a favorite (using request body)
-    @PostMapping
+    @PostMapping("/postFavorites")
     public ResponseEntity<?> addFavoriteEntity(@RequestBody FavoritesEntity favorite) {
         try {
             FavoritesEntity savedFavorite = favoritesService.addFavorite(favorite);
@@ -93,7 +93,7 @@ public class FavoritesController {
     }
 
     // Update a favorite
-    @PutMapping("/{id}")
+    @PutMapping("/putFavorites/{id}")
     public ResponseEntity<?> updateFavorite(@PathVariable("id") int id, @RequestBody FavoritesEntity favorite) {
         try {
             FavoritesEntity updatedFavorite = favoritesService.updateFavorite(id, favorite);
@@ -104,7 +104,7 @@ public class FavoritesController {
     }
 
     // Delete a favorite
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/deleteFavorites/{id}")
     public ResponseEntity<String> deleteFavorite(@PathVariable("id") int id) {
         String message = favoritesService.deleteFavorite(id);
         if (message.contains("not found")) {

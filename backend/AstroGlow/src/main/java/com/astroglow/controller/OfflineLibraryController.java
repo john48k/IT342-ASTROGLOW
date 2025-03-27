@@ -28,7 +28,7 @@ public class OfflineLibraryController {
     private OfflineLibraryService offlineLibraryService;
 
     // Get all offline library entries
-    @GetMapping
+    @GetMapping("/getAllOFLibrary")
     public ResponseEntity<List<OfflineLibraryEntity>> getAllOfflineLibraries() {
         List<OfflineLibraryEntity> offlineLibraries = offlineLibraryService.getAllOfflineLibraries();
         return new ResponseEntity<>(offlineLibraries, HttpStatus.OK);
@@ -86,7 +86,7 @@ public class OfflineLibraryController {
     }
 
     // Add an offline library entry (using request body)
-    @PostMapping
+    @PostMapping("/postOfflineLibrary")
     public ResponseEntity<?> addOfflineLibraryEntry(@RequestBody OfflineLibraryEntity offlineLibrary) {
         try {
             OfflineLibraryEntity savedOfflineLibrary = offlineLibraryService.addOfflineLibraryEntry(offlineLibrary);
@@ -101,7 +101,7 @@ public class OfflineLibraryController {
     }
 
     // Update an offline library entry
-    @PutMapping("/{id}")
+    @PutMapping("/putOffline-library/{id}")
     public ResponseEntity<?> updateOfflineLibraryEntry(@PathVariable("id") int id, @RequestBody OfflineLibraryEntity offlineLibrary) {
         try {
             OfflineLibraryEntity updatedOfflineLibrary = offlineLibraryService.updateOfflineLibraryEntry(id, offlineLibrary);
@@ -114,7 +114,7 @@ public class OfflineLibraryController {
     }
 
     // Delete an offline library entry
-    @DeleteMapping("/{id}")
+    @DeleteMapping("deleteLib/{id}")
     public ResponseEntity<String> deleteOfflineLibraryEntry(@PathVariable("id") int id) {
         String message = offlineLibraryService.deleteOfflineLibraryEntry(id);
         if (message.contains("not found")) {
