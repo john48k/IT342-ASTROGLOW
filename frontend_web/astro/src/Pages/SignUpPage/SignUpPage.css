@@ -1,170 +1,279 @@
 @font-face {
-    font-family: AstroGlow;
-    src: url(../../assets/fonts/13_Misa.TTF);
+  font-family: AstroGlow;
+  src: url(../../assets/fonts/13_Misa.TTF);
 }
 
 .SignUpPage {
-    display: flex;
-    flex-direction: column;
-    height: 100vh; 
-    overflow: hidden; 
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .split-screen {
-    display: flex;
-    flex: 1; 
+  display: flex;
+  flex: 1;
 }
 
-.left-side, .right-side {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.left-side,
+.right-side {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .left-side {
-    background: linear-gradient(to bottom, black 0%, black 50%, rgb(50, 0, 159) 100%); /* Gradient with more black in the middle */
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start; 
-    align-items: center; 
-    padding-top:    55px; 
+  background: linear-gradient(
+    to bottom,
+    black 0%,
+    black 50%,
+    rgb(50, 0, 159) 100%
+  ); /* Gradient with more black in the middle */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding-top: 55px;
 }
 
 .left-side-header {
-    color: white;
-    font-size: 32px;
-    font-weight: 500;
+  color: white;
+  font-size: 32px;
+  font-weight: 500;
 }
 
 .left-side-sub-title {
-    color: white;
-    font-size: 17px;
-    margin-top: 1%;
-    font-weight: 400;
+  color: white;
+  font-size: 17px;
+  margin-top: 1%;
+  font-weight: 400;
 }
 
-
 .full-size-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .right-side {
-    background-color: #ffffff; 
-    padding: 20px; 
+  background-color: #ffffff;
+  padding: 20px;
 }
 
 .signup-form {
-    width: 100%;
-    max-width: 400px;
-    padding: 20px;
-    background: #f9f9f9;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .signup-form h2 {
-    margin-bottom: 20px;
-    font-size: 24px;
-    color: #333;
+  margin-bottom: 20px;
+  font-size: 24px;
+  color: #333;
 }
 
 .form-group {
-    margin-bottom: 15px;
+  position: relative;
+  margin-bottom: 1.5rem;
 }
 
 .form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #555;
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
 }
 
 .form-group input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    color: black;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: black;
+}
+
+.form-group input.error {
+  border-color: #ff4444;
+  background-color: #fff8f8;
+}
+
+.error-text {
+  color: #ff4444;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.error-message {
+  background-color: #fff8f8;
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.success-message {
+  background-color: #f0fff4;
+  border: 1px solid #48bb78;
+  color: #2f855a;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
 }
 
 .signup-button {
-    width: 100%;
-    padding: 10px;
-    background-color: #007bff;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    font-size: 16px;
-    cursor: pointer;
-    transition: 0.3s;
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
 }
 
 .signup-button:hover {
-    background-color: #0056b3;
+  background-color: #0056b3;
+}
+
+.signup-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .signup-google-login {
-    margin-top: 20px;
-    text-align: center;
+  margin-top: 20px;
+  text-align: center;
 }
 
 .signup-google-login a {
-    color: #4285f4;
-    text-decoration: none;
-    font-weight: bold;
+  color: #4285f4;
+  text-decoration: none;
+  font-weight: bold;
 }
 
 .signup-google-login a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 .signup-login-link {
-    margin-top: 20px;
-    text-align: center;
+  margin-top: 20px;
+  text-align: center;
 }
 
 .signup-login-link a {
-    color: #007bff;
-    text-decoration: none;
-    font-weight: bold;
+  color: #007bff;
+  text-decoration: none;
+  font-weight: bold;
 }
 
 .signup-login-link a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
-.already{
-    color: black;
+.already {
+  color: black;
 }
 
 .astro-glow-font {
-    font-family: AstroGlow;
-    font-weight: 100; 
-    color: #c55af0;
-    animation: flicker 2s infinite alternate;
+  font-family: AstroGlow;
+  font-weight: 100;
+  color: #c55af0;
+  animation: flicker 2s infinite alternate;
 }
 
 .astro-pic {
-    margin-top: 20px;
+  margin-top: 20px;
 }
 
 @keyframes flicker {
-    0% {
-        opacity: 1;
-        color: #5a5af0; 
-    }
-    50% {
-        opacity: 0.5;
-        color: #0000ff; 
+  0% {
+    opacity: 1;
+    color: #5a5af0;
+  }
+  50% {
+    opacity: 0.5;
+    color: #0000ff;
+  }
+  100% {
+    opacity: 1;
+    color: #5a5af0;
+  }
+}
 
+/* Password strength indicator */
+.password-strength {
+  height: 4px;
+  margin-top: 0.5rem;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
 
-    }
-    100% {
-        opacity: 1;
-        color: #5a5af0; 
+.password-strength.weak {
+  background-color: #ff4444;
+  width: 25%;
+}
 
-    }
+.password-strength.medium {
+  background-color: #ffbb33;
+  width: 50%;
+}
+
+.password-strength.strong {
+  background-color: #00c851;
+  width: 100%;
+}
+
+/* Password input container and toggle button styles */
+.password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-container input {
+  width: 100%;
+  padding-right: 80px; /* Make room for the toggle button */
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+
+.toggle-password:hover {
+  color: #333;
+}
+
+.toggle-password:focus {
+  outline: none;
+}
+
+.toggle-password svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Ensure error states still work with the new container */
+.password-input-container input.error {
+  border-color: #ff4444;
+  background-color: #fff8f8;
 }

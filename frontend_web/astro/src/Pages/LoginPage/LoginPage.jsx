@@ -47,14 +47,18 @@ const LoginPage = () => {
         throw new Error("Failed to log in");
       }
 
-      const userData = await response.json();
-      console.log("Login successful:", userData);
+      const data = await response.json();
+      console.log("Login successful:", data);
 
-      // Store user data in localStorage or state management
-      localStorage.setItem("user", JSON.stringify(userData));
+      // Store user data in localStorage
+      localStorage.setItem("user", JSON.stringify(data.user));
 
-      // Redirect to home page
-      navigate("/home");
+      // Navigate to home page with user data
+      navigate("/home", {
+        state: {
+          user: data.user,
+        },
+      });
     } catch (error) {
       console.error("Login error:", error);
       setError(error.message || "An error occurred during login");

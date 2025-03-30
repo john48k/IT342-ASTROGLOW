@@ -33,6 +33,7 @@
   box-shadow: 0 0 36px 1px rgba(0, 0, 0, 0.2);
   border-radius: 10px;
   backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 99;
   padding: 2rem;
 }
@@ -51,6 +52,7 @@
   letter-spacing: 0.8px;
   font-size: 15px;
   backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
 }
 
 .login-container form input:focus {
@@ -211,3 +213,91 @@
 .github-icon:hover{
 background-color: white;
 } */
+
+/* Password input container and toggle button styles */
+.password-input-container {
+  position: relative;
+  width: 100%;
+  margin: 2rem 0;
+}
+
+.password-input-container input {
+  display: block;
+  padding: 14.5px;
+  padding-right: 45px;
+  width: 100%;
+  color: var(--color);
+  outline: none;
+  background-color: #9191911f;
+  border: none;
+  border-radius: 5px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  font-size: 15px;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+}
+
+.password-input-container input:focus {
+  box-shadow: 0 0 16px 1px rgba(0, 0, 0, 0.2);
+  animation: wobble 0.3s ease-in;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.toggle-password:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.toggle-password:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.toggle-password svg {
+  width: 16px;
+  height: 16px;
+  color: var(--color);
+  opacity: 0.8;
+  transition: transform 0.3s ease;
+}
+
+.toggle-password:hover svg {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+/* Disabled state styles */
+input:disabled,
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Error message styles */
+.errorMessage {
+  background-color: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  color: #ff4444;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  text-align: center;
+}

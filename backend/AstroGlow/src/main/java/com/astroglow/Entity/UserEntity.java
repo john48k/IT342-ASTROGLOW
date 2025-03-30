@@ -5,20 +5,23 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.util.List;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "user_name", name = "uk_user_name"),
+        @UniqueConstraint(columnNames = "user_email", name = "uk_user_email")
+})
 public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int userId;
 
-    @Column(name = "user_name", length = 255, nullable = false)
+    @Column(name = "user_name", length = 255, nullable = false, unique = true)
     private String userName;
 
     @Column(name = "user_password", length = 255, nullable = false)
     private String userPassword;
 
-    @Column(name = "user_email", length = 255, nullable = false)
+    @Column(name = "user_email", length = 255, nullable = false, unique = true)
     private String userEmail;
 
     @JsonManagedReference(value = "user-authentication")
