@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useUser } from "../../context/UserContext";
 import styles from "./LoginPage.module.css";
 
 const LoginPage = () => {
@@ -10,6 +11,7 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useUser();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,13 +27,11 @@ const LoginPage = () => {
     setError("");
 
     try {
-      // Create the login request payload
       const loginData = {
         userEmail: formData.userEmail,
         userPassword: formData.userPassword,
       };
 
-      // Make API call to the login endpoint
       const response = await fetch("http://localhost:8080/api/user/login", {
         method: "POST",
         headers: {
@@ -47,18 +47,19 @@ const LoginPage = () => {
         throw new Error("Failed to log in");
       }
 
-      const data = await response.json();
-      console.log("Login successful:", data);
+      const userData = await response.json();
+      console.log("Login response:", userData);
 
-      // Store user data in localStorage
-      localStorage.setItem("user", JSON.stringify(data.user));
+      if (!userData || !userData.userEmail) {
+        throw new Error("Invalid credentials");
+      }
 
-      // Navigate to home page with user data
-      navigate("/home", {
-        state: {
-          user: data.user,
-        },
-      });
+      // Since we don't have a token from backend yet, we'll use the userEmail as a simple session identifier
+      const sessionId = btoa(userData.userEmail + ":" + new Date().getTime());
+
+      // Call login with the user data and session ID
+      login(userData, sessionId);
+      navigate("/home");
     } catch (error) {
       console.error("Login error:", error);
       setError(error.message || "An error occurred during login");

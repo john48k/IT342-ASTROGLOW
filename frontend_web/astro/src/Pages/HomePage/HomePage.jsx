@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import NavBar from "../../components/NavBar/NavBar";
+import { useUser } from "../../context/UserContext";
 import styles from "./HomePage.module.css";
 
 export const HomePage = () => {
-  const [userName, setUserName] = useState("Guest");
-  const [userEmail, setUserEmail] = useState("");
+  const { user } = useUser();
+  const userName = user?.userName || "Guest";
 
   // Sample featured collections data
   const featuredCollections = [
@@ -38,21 +39,6 @@ export const HomePage = () => {
     "Solar Flares",
     "Orbital Groove",
   ];
-
-  useEffect(() => {
-    // Fetch user info from the backend
-    fetch("http://localhost:8080/api/user/user-info")
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.name) {
-          setUserName(data.name);
-        }
-        if (data.email) {
-          setUserEmail(data.email);
-        }
-      })
-      .catch((error) => console.error("Error fetching user info:", error));
-  }, []);
 
   return (
     <div className={styles.homePage}>
@@ -89,9 +75,6 @@ export const HomePage = () => {
           {/* User greeting and upload button */}
           <div className={styles.headerSection}>
             <h1 className={styles.nameTitle}>Good Day, {userName}!</h1>
-            {userEmail && (
-              <p className={styles.emailTitle}>Email: {userEmail}</p>
-            )}
             <button className={styles.uploadBtn}>
               <img
                 src="upload-arrow.png"
