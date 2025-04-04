@@ -49,26 +49,37 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    @SuppressWarnings("finally")
     public UserEntity putUser(int userId, UserEntity newUserDetails) {
-        UserEntity user = new UserEntity();
+        // First, check if the user exists
+        UserEntity existingUser = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
 
-        try {
-            user = userRepository.findById(userId).get();
-            validateUserData(newUserDetails);
-
-            user.setUserName(newUserDetails.getUserName());
-            user.setUserEmail(newUserDetails.getUserEmail());
-            if (newUserDetails.getUserPassword() != null && !newUserDetails.getUserPassword().isEmpty()) {
-                user.setUserPassword(passwordEncoder.encode(newUserDetails.getUserPassword()));
+        // Update fields if they are provided in the request
+        if (newUserDetails.getUserName() != null && !newUserDetails.getUserName().trim().isEmpty()) {
+            // Check if new username is already taken by another user
+            UserEntity userWithNewUsername = userRepository.findByUserName(newUserDetails.getUserName());
+            if (userWithNewUsername != null && userWithNewUsername.getUserId() != userId) {
+                throw new IllegalArgumentException("Username already taken");
             }
+            existingUser.setUserName(newUserDetails.getUserName());
+        }
 
-        } catch(NoSuchElementException nex) {
-            throw new IllegalArgumentException("User " + userId + " not found!");
+        if (newUserDetails.getUserEmail() != null && !newUserDetails.getUserEmail().trim().isEmpty()) {
+            // Check if new email is already taken by another user
+            UserEntity userWithNewEmail = userRepository.findByUserEmail(newUserDetails.getUserEmail());
+            if (userWithNewEmail != null && userWithNewEmail.getUserId() != userId) {
+                throw new IllegalArgumentException("Email already taken");
+            }
+            existingUser.setUserEmail(newUserDetails.getUserEmail());
         }
-        finally {
-            return userRepository.save(user);
+
+        if (newUserDetails.getUserPassword() != null && !newUserDetails.getUserPassword().trim().isEmpty()) {
+            // Encode the new password before saving
+            existingUser.setUserPassword(passwordEncoder.encode(newUserDetails.getUserPassword()));
         }
+
+        // Save and return the updated user
+        return userRepository.save(existingUser);
     }
 
     public String deleteUser(int id) {

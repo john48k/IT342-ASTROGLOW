@@ -35,9 +35,27 @@ public class UserController {
         return userService.getAllUsers();
     }
 
-    @PutMapping("/putUser")
-    public UserEntity putUser(@RequestParam int id, @RequestBody UserEntity newUserDetails) {
-        return userService.putUser(id, newUserDetails);
+    @PutMapping("/putUser/{id}")
+    public ResponseEntity<?> putUser(@PathVariable int id, @RequestBody UserEntity newUserDetails) {
+        try {
+            UserEntity updatedUser = userService.putUser(id, newUserDetails);
+            
+            // Create response without sensitive information
+            Map<String, Object> response = new HashMap<>();
+            response.put("userId", updatedUser.getUserId());
+            response.put("userName", updatedUser.getUserName());
+            response.put("userEmail", updatedUser.getUserEmail());
+            
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "An error occurred while updating the user");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 
     @DeleteMapping("/deleteUser/{id}")  // Fixed path variable in URL
