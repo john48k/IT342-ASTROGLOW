@@ -89,7 +89,6 @@ const LoginPage = () => {
             />
             <h1 className={styles.opacity}>LOGIN</h1>
 
-            {error && <div className={styles.errorMessage}>{error}</div>}
 
             <form onSubmit={handleSubmit}>
               <input
@@ -116,6 +115,10 @@ const LoginPage = () => {
                 {loading ? "LOGGING IN..." : "SUBMIT"}
               </button>
             </form>
+
+
+            {error && <div className={styles.errorMessage}>{error}</div>}
+
 
             <div className={`${styles["social-login"]} ${styles.opacity}`}>
               <p>Or login with</p>

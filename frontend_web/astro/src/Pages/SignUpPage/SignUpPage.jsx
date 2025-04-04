@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import NavBar from "../../components/NavBar/NavBar";
+import { useUser } from "../../context/UserContext";
 import "./SignUpPage.css";
 
 const SignUpPage = () => {
@@ -21,6 +22,7 @@ const SignUpPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+  const { login } = useUser();
 
   // Validation functions
   const validateUsername = (username) => {
@@ -99,6 +101,8 @@ const SignUpPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    // Reset errors
     setErrors({
       userName: "",
       userPassword: "",
@@ -107,77 +111,55 @@ const SignUpPage = () => {
     });
 
     // Validate all fields
-    const newErrors = {
-      userName: validateUsername(formData.userName),
-      userEmail: validateEmail(formData.userEmail),
-      userPassword: validatePassword(formData.userPassword),
-      confirmPassword: validateConfirmPassword(
-        formData.userPassword,
-        formData.confirmPassword
-      ),
-    };
+    const usernameError = validateUsername(formData.userName);
+    const emailError = validateEmail(formData.userEmail);
+    const passwordError = validatePassword(formData.userPassword);
+    const confirmPasswordError = validateConfirmPassword(
+      formData.userPassword,
+      formData.confirmPassword
+    );
 
-    // Check if there are any errors
-    if (Object.values(newErrors).some((error) => error !== "")) {
-      setErrors(newErrors);
+    if (usernameError || emailError || passwordError || confirmPasswordError) {
+      setErrors({
+        userName: usernameError,
+        userEmail: emailError,
+        userPassword: passwordError,
+        confirmPassword: confirmPasswordError,
+      });
       setLoading(false);
       return;
     }
 
     try {
-      // Map the form fields to the expected backend structure
-      const userData = {
-        userName: formData.userName,
-        userPassword: formData.userPassword,
-        userEmail: formData.userEmail,
-        authentication: null,
-        playlists: null,
-        offlineLibraries: null,
-        favorites: null,
-      };
-
-      // Make API call to the signup endpoint
       const response = await fetch("http://localhost:8080/api/user/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(userData),
+        body: JSON.stringify({
+          userName: formData.userName,
+          userEmail: formData.userEmail,
+          userPassword: formData.userPassword,
+        }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        const errorMessage = errorData.message || "Failed to sign up";
+      const data = await response.json();
 
-        // Set specific error messages for existing username/email
-        if (errorMessage.includes("Username already exists")) {
-          setErrors((prev) => ({
-            ...prev,
-            userName: "This username is already taken",
-          }));
-        } else if (errorMessage.includes("Email already exists")) {
-          setErrors((prev) => ({
-            ...prev,
-            userEmail: "This email is already registered",
-          }));
-        } else {
-          setErrors((prev) => ({
-            ...prev,
-            submit: errorMessage,
-          }));
-        }
-        setLoading(false);
-        return;
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to sign up");
       }
 
-      const data = await response.json();
       console.log("Signup successful:", data);
 
-      // Show success message and redirect after a delay
+      // Show success message
       setSuccess(true);
-      setTimeout(() => {
-        navigate("/home");
-      }, 2000);
+
+      // Automatically log in the user
+      const sessionId = btoa(data.userEmail + ":" + new Date().getTime());
+      login(data, sessionId);
+
+      // Navigate to home page
+      navigate("/home");
     } catch (error) {
       console.error("Signup error:", error);
       setErrors((prev) => ({

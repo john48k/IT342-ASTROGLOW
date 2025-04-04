@@ -108,7 +108,7 @@ public class UserService {
     // Login Method
     public UserEntity loginUser(String userEmail, String userPassword) {
         UserEntity user = userRepository.findByUserEmail(userEmail);
-        if (user != null && user.getUserPassword().equals(userPassword)) {
+        if (user != null && passwordEncoder.matches(userPassword, user.getUserPassword())) {
             return user; // Successful login
         }
         return null; // Login failed
