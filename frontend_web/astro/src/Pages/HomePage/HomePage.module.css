@@ -1,4 +1,8 @@
-body {
+
+
+/* old code */
+
+/* body {
     background-color: black;
     margin: 0;
     padding: 0;
@@ -6,7 +10,6 @@ body {
     color: white;
   }
   
-  /* Base layout styles (from original code) */
   .homePage {
     display: flex;
     flex-direction: column;
@@ -21,16 +24,15 @@ body {
     position: relative;
   }
   
-  /* Updated sidebar to scroll properly with content */
   .sidebar {
     width: 250px;
     background-color: #390056;
     color: white;
     padding: 1rem;
     position: sticky;
-    top: 70px; /* Matches the navbar height */
-    height: calc(378vh - 70px); /* Viewport height minus navbar height */
-    overflow-y: auto; /* Allow scrolling within sidebar if content is too tall */
+    top: 70px; 
+    height: calc(378vh - 70px); 
+    overflow-y: auto; 
     z-index: 10;
   }
   
@@ -57,17 +59,16 @@ body {
     color: #7f5af0;
   }
   
-  /* Updated main content to work with sticky sidebar */
+
   .mainContent {
     flex: 1;
     padding: 2rem;
     border-radius: 10px;
     background-image: linear-gradient(160deg, #000000 0%, #653895 100%);
     min-height: calc(100vh - 70px - 4rem);
-    margin-bottom: 60px; /* Space for now playing bar */
+    margin-bottom: 60px; 
   }
-  
-  /* Header section (from original code) */
+
   .headerSection {
     display: flex;
     justify-content: space-between;
@@ -119,7 +120,7 @@ body {
     height: 30px;
   }
   
-  /* Animated stars background */
+
   .starsBackground {
     position: fixed;
     inset: 0;
@@ -130,7 +131,7 @@ body {
     pointer-events: none;
   }
   
-  /* Hero Section */
+
   .heroSection {
     position: relative;
     padding: 3rem 0 4rem;
@@ -218,7 +219,7 @@ body {
     transform: translateX(4px);
   }
   
-  /* Music Visualization */
+
   .musicVisualization {
     position: relative;
     max-width: 900px;
@@ -274,7 +275,7 @@ body {
     animation: equalizer 1.5s ease-in-out infinite alternate;
   }
   
-  /* Featured Music Section */
+
   .featuredSection {
     position: relative;
     z-index: 2;
@@ -484,7 +485,6 @@ body {
     text-overflow: ellipsis;
   }
   
-  /* Now Playing Bar */
   .nowPlayingBar {
     position: fixed;
     bottom: 0;
@@ -592,7 +592,6 @@ body {
     color: white;
   }
   
-  /* Animations */
   @keyframes pulse {
     0% {
       opacity: 1;
@@ -611,7 +610,6 @@ body {
     }
   }
   
-  /* Media Queries */
   @media (min-width: 768px) {
     .playbackControls {
       display: block;
@@ -649,4 +647,4 @@ body {
     }
   }
   
-  
+   */
