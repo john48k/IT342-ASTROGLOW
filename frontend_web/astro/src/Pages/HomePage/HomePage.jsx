@@ -5,7 +5,6 @@ import { useGetTopChartsQuery } from '../../redux/services/shazamcore';
 
 export const HomePage = () => {
     const { data, isFetching, error } = useGetTopChartsQuery();
-    // console.log(genres);
     const genreTitle = 'Pop';
 
     console.log(data);
