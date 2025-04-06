@@ -19,6 +19,7 @@ function App() {
         <Route path="/profile" element={<UserProfilePage />} />
       </Routes>
     </UserProvider>
+
   );
 }
 
