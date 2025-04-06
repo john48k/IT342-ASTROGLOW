@@ -1,10 +1,14 @@
 import { Error, Loader, SongCard } from '../../components';
 import { genres } from '../../assets/constants';
 import { Link } from "react-router-dom";
+import { useGetTopChartsQuery } from '../../redux/services/shazamcore';
 
 export const HomePage = () => {
+    const { data, isFetching, error } = useGetTopChartsQuery();
     // console.log(genres);
     const genreTitle = 'Pop';
+
+    console.log(data);
     return (
         <div className="flex flex-col bg-gradient-to-br from-black to-purple-800 min-h-screen">
             <div className='w-full flex justify-between items-center sm:flex-row flex-col mt-4 mb-10'>
