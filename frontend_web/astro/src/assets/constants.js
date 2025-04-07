@@ -24,7 +24,7 @@ export const genres = [
 
 export const links = [
   // { name: "HomePage", to: "/", icon: HiOutlineHome },
-  { name: "../Pages/HomePage/HomePage.jsx", to: "/", icon: HiOutlineHome },
+  { name: "../Pages/HomePage/HomePage", to: "/", icon: HiOutlineHome },
 
   { name: "Around You", to: "/around-you", icon: HiOutlinePhotograph },
   { name: "Top Artists", to: "/top-artists", icon: HiOutlineUserGroup },
