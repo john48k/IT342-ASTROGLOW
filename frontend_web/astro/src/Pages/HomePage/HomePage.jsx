@@ -1,14 +1,20 @@
-import { usedDispatch, usedSelector, useSelector } from 'react-redux';
+// FIXED: Changed "usedDispatch" to "useDispatch" and removed duplicate "usedSelector"
+// The original code had typos in the import - "usedDispatch" instead of "useDispatch"
+// Also, both "usedSelector" and "useSelector" were imported which is redundant
+import { useDispatch, useSelector } from 'react-redux';
 import { Error, Loader, SongCard } from '../../components';
 import { genres } from '../../assets/constants';
 import { Link } from "react-router-dom";
-import { useGetTopChartsQuery } from '../../redux/services/shazamcore';
 
-
-
+// FIXED: Changed "shazamcore" to "shazamCore" in the import path
+// This matches the case of your actual file name (shazamCore.js vs shazamcore.js)
+// Case sensitivity matters in many file systems
+import { useGetTopChartsQuery } from '../../redux/services/shazamCore';
 
 const HomePage = () => {
-    const dispatch = usedDispatch();
+    // FIXED: Changed "usedDispatch()" to "useDispatch()"
+    // This matches the correct import and React Redux hook name
+    const dispatch = useDispatch();
     const { activeSong, isPlaying } = useSelector((state) => state.player);
     const { data, isFetching, error } = useGetTopChartsQuery();
     const genreTitle = 'Pop';
@@ -41,7 +47,7 @@ const HomePage = () => {
                     />
                 ))}
             </div>
-        </div >
+        </div>
     );
 };
 
