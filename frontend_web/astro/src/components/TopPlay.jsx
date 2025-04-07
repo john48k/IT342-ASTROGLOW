@@ -50,7 +50,8 @@ const TopPlay = () => {
     divRef.current.scrollIntoView({ behavior: 'smooth' });
   });
 
-  const topPlays = data?.slice(0, 5);
+
+  const topPlays = data?.data.slice(0, 5);
 
   const handlePauseClick = () => {
     dispatch(playPause(false));
@@ -74,7 +75,7 @@ const TopPlay = () => {
         <div className="mt-4 flex flex-col gap-1">
           {topPlays?.map((song, i) => (
             <TopChartCard
-              key={song.key}
+              key={song.key + i}
               song={song}
               i={i}
               isPlaying={isPlaying}
@@ -109,6 +110,8 @@ const TopPlay = () => {
               style={{ width: '25%', height: 'auto' }}
               className="shadow-lg rounded-full animate-slideright"
             >
+
+              {/* console log to find this problem the link to artist  */}
               <Link to={`/artists/${artist?.artists[0].adamid}`}>
                 <img src={artist?.images?.background} alt="Name" className="rounded-full w-full object-cover" />
               </Link>
