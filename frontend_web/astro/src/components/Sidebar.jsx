@@ -4,7 +4,6 @@ import { HiOutlineHashtag, HiOutlineHome, HiOutlineMenu, HiOutlinePhotograph, Hi
 import { RiCloseLine } from 'react-icons/ri';
 
 import { logo } from '../assets';
-import { links } from '../assets/constants';
 
 const links = [
   { name: 'Discover', to: '/', icon: HiOutlineHome },
