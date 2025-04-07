@@ -5,7 +5,7 @@ import { Searchbar, Sidebar, MusicPlayer, TopPlay } from './components';
 import { ArtistDetails, TopArtists, AroundYou, Discover, Search, SongDetails, TopCharts } from './Pages';
 
 import AboutPage from "./Pages/AboutPage/AboutPage";
-import { HomePage } from "./Pages/HomePage/HomePage";
+import HomePage from "./Pages/HomePage/HomePage";
 import LandingPage from "./Pages/LandingPage/LandingPage";
 import LoginPage from "./Pages/LoginPage/LoginPage";
 import SignUpPage from "./Pages/SignUpPage/SignUpPage";
