@@ -34,7 +34,6 @@ const App = () => {
                 <Route path="/profile" element={<UserProfilePage />} />
 
                 {/* New Routes */}
-                <Route path="/" element={<Discover />} />
                 <Route path="/top-artists" element={<TopArtists />} />
                 <Route path="/top-charts" element={<TopCharts />} />
                 <Route path="/around-you" element={<AroundYou />} />
