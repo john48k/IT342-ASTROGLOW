@@ -1,3 +1,7 @@
+import { useSelector } from 'react-redux';
+
+
+/* OLD STUDD*/
 import { Route, Routes } from "react-router-dom";
 import AboutPage from "./Pages/AboutPage/AboutPage";
 import { HomePage } from "./Pages/HomePage/HomePage";

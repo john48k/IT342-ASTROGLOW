@@ -1,9 +1,15 @@
+import { usedDispatch, usedSelector, useSelector } from 'react-redux';
 import { Error, Loader, SongCard } from '../../components';
 import { genres } from '../../assets/constants';
 import { Link } from "react-router-dom";
 import { useGetTopChartsQuery } from '../../redux/services/shazamcore';
 
-export const HomePage = () => {
+
+
+
+const HomePage = () => {
+    const dispatch = usedDispatch();
+    const { activeSong, isPlaying } = useSelector((state) => state.player);
     const { data, isFetching, error } = useGetTopChartsQuery();
     const genreTitle = 'Pop';
 
@@ -28,6 +34,9 @@ export const HomePage = () => {
                     <SongCard
                         key={song.key}
                         song={song}
+                        isPlaying={isPlaying}
+                        activeSong={activeSong}
+                        data={data}
                         i={i}
                     />
                 ))}
