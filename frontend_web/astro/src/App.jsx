@@ -5,6 +5,7 @@ import LandingPage from "./Pages/LandingPage/LandingPage";
 import LoginPage from "./Pages/LoginPage/LoginPage";
 import SignUpPage from "./Pages/SignUpPage/SignUpPage";
 import UserProfilePage from "./Pages/UserProfile/UserProfile";
+import OAuth2Redirect from "./components/OAuth2Redirect";
 import { UserProvider } from "./context/UserContext";
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/profile" element={<UserProfilePage />} />
+        <Route path="/oauth2/redirect" element={<OAuth2Redirect />} />
       </Routes>
     </UserProvider>
   );

@@ -166,4 +166,74 @@ public class UserService {
             }
         }
     }
+
+    /**
+     * Change a user's password after verifying the current password
+     * 
+     * @param userId ID of the user
+     * @param currentPassword Current password for verification
+     * @param newPassword New password to set
+     * @return true if password was changed successfully, false if current password is incorrect
+     */
+    public boolean changePassword(int userId, String currentPassword, String newPassword) {
+        logger.info("Attempting to change password for user ID: {}", userId);
+        
+        // Find the user
+        UserEntity user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+        
+        // Verify current password
+        if (!passwordEncoder.matches(currentPassword, user.getUserPassword())) {
+            logger.warn("Password change failed: Current password doesn't match for user ID: {}", userId);
+            return false;
+        }
+        
+        // Validate new password
+        if (!PASSWORD_PATTERN.matcher(newPassword).matches()) {
+            throw new IllegalArgumentException(
+                "Password must be at least 8 characters long and contain at least one uppercase letter, " +
+                "one lowercase letter, one number, and one special character"
+            );
+        }
+        
+        // Set and save new password
+        user.setUserPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        
+        logger.info("Password successfully changed for user ID: {}", userId);
+        return true;
+    }
+
+    /**
+     * Find a user by ID
+     * 
+     * @param userId ID of the user to find
+     * @return the user entity
+     * @throws IllegalArgumentException if user not found
+     */
+    public UserEntity findById(int userId) {
+        return userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+    }
+
+    /**
+     * Update a user's profile picture
+     * 
+     * @param userId ID of the user
+     * @param profilePictureData Base64 encoded string of the profile picture
+     * @return Updated user entity
+     */
+    public UserEntity updateProfilePicture(int userId, String profilePictureData) {
+        logger.info("Updating profile picture for user ID: {}", userId);
+        
+        // Find the user
+        UserEntity user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+        
+        // Update the profile picture
+        user.setProfilePicture(profilePictureData);
+        
+        // Save and return the updated user
+        return userRepository.save(user);
+    }
 }

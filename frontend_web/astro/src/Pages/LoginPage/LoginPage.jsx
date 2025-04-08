@@ -32,19 +32,24 @@ const LoginPage = () => {
         userPassword: formData.userPassword,
       };
 
+      console.log("Attempting to connect to backend at http://localhost:8080/api/user/login");
+
       const response = await fetch("http://localhost:8080/api/user/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(loginData),
+        // Add timeout to prevent long hangs
+        signal: AbortSignal.timeout(10000), // 10 second timeout
       });
 
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error("Invalid email or password");
         }
-        throw new Error("Failed to log in");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to log in");
       }
 
       const userData = await response.json();
@@ -62,8 +67,16 @@ const LoginPage = () => {
       navigate("/home");
     } catch (error) {
       console.error("Login error:", error);
-      setError(error.message || "An error occurred during login");
-    } finally {
+      
+      // Provide more specific error messages based on the error type
+      if (error.name === 'AbortError') {
+        setError("Request timed out. Please check if the server is running.");
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        setError("Cannot connect to the server. Please ensure the backend is running at http://localhost:8080");
+      } else {
+        setError(error.message || "An error occurred during login");
+      }
+    
       setLoading(false);
     }
   };
@@ -74,6 +87,25 @@ const LoginPage = () => {
 
   const handleGithubLogin = () => {
     window.location.href = "http://localhost:8080/oauth2/authorization/github";
+  };
+
+  // Function to check backend health
+  const checkBackendStatus = async () => {
+    try {
+      setError("Checking server status...");
+      const response = await fetch("http://localhost:8080/api/user/api-test", {
+        method: "GET",
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      });
+      
+      if (response.ok) {
+        setError("Server is running but login failed. Check your credentials.");
+      } else {
+        setError("Server responded with an error: " + response.status);
+      }
+    } catch (err) {
+      setError("Cannot connect to server. Please ensure backend is running.");
+    }
   };
 
   return (
@@ -117,7 +149,19 @@ const LoginPage = () => {
             </form>
 
 
-            {error && <div className={styles.errorMessage}>{error}</div>}
+            {error && (
+              <div className={styles.errorContainer}>
+                <div className={styles.errorMessage}>{error}</div>
+                {error.includes("Cannot connect") && (
+                  <button 
+                    className={styles.checkServerButton}
+                    onClick={checkBackendStatus}
+                  >
+                    Check Server Status
+                  </button>
+                )}
+              </div>
+            )}
 
 
             <div className={`${styles["social-login"]} ${styles.opacity}`}>

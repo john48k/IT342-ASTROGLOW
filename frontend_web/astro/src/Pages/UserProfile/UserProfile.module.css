@@ -103,8 +103,104 @@ body {
   font-size: 3rem;
   font-weight: bold;
   color: white;
-  margin: 0 auto 2rem;
+  margin: 0 auto 0.5rem;
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.profileAvatar.uploading {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.profileAvatar:hover .avatarOverlay {
+  opacity: 1;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.avatarOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  border-radius: 50%;
+}
+
+.spinnerOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.avatarOverlay span {
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.fileInput {
+  display: none;
+}
+
+.removeImageButton {
+  background: none;
+  border: none;
+  color: #a5a5a5;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.removeImageButton:hover:not(:disabled) {
+  color: #f43f5e;
+}
+
+.removeImageButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .welcomeTitle {
@@ -122,8 +218,135 @@ body {
   margin: 0 0 2.5rem;
 }
 
+/* Form styles */
+.editForm {
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.formGroup {
+  margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  color: #d1d1d1;
+}
+
+.passwordInputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.formInput {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.formInput:focus {
+  border-color: #8b5cf6;
+}
+
+.togglePasswordButton {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #a491c7;
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.togglePasswordButton:hover {
+  color: white;
+  background-color: rgba(140, 86, 220, 0.3);
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.saveButton, .editButton, .passwordButton {
+  background-image: linear-gradient(to right, #8b5cf6, #7c3aed);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+  flex: 1;
+}
+
+.saveButton:hover, .editButton:hover, .passwordButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+}
+
+.cancelButton {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+  flex: 1;
+}
+
+.cancelButton:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.successMessage, .errorMessage {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.successMessage {
+  background-color: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #10b981;
+}
+
+.errorMessage {
+  background-color: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.editButton, .passwordButton {
+  display: block;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.passwordButton {
+  background-image: linear-gradient(to right, #7c3aed, #ec4899);
+}
+
 .logoutButton {
-  background-image: linear-gradient(to right, #8b5cf6, #ec4899);
+  background-image: linear-gradient(to right, #ef4444, #f43f5e);
   color: white;
   border: none;
   padding: 0.75rem 2rem;
@@ -132,11 +355,60 @@ body {
   cursor: pointer;
   transition: all 0.3s;
   font-weight: 600;
+  width: 100%;
+  margin-top: 1.5rem;
 }
 
 .logoutButton:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+}
+
+.passwordRequirements {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.passwordRequirements p {
+  margin-top: 0;
+  color: #d1d1d1;
+}
+
+.passwordRequirements ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #a5a5a5;
+}
+
+.passwordRequirements li {
+  margin-bottom: 0.3rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.3s;
+}
+
+.validRequirement {
+  color: #10b981; /* Green color for valid requirements */
+  font-weight: 500;
+}
+
+.invalidRequirement {
+  color: #a5a5a5; /* Gray color for invalid requirements */
+}
+
+.validRequirement::before {
+  content: '';
+  margin-right: 8px;
+  display: inline-block;
+}
+
+.invalidRequirement::before {
+  content: '';
+  margin-right: 8px;
+  display: inline-block;
 }
 
 /* Media queries */
@@ -156,4 +428,233 @@ body {
   .welcomeTitle {
     font-size: 2rem;
   }
+  
+  .buttonGroup {
+    flex-direction: column;
+  }
+  
+  .saveButton, .cancelButton {
+    width: 100%;
+  }
+}
+
+.deleteAccountButton {
+  background-image: linear-gradient(to right, #f43f5e, #e11d48);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+  display: block;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.deleteAccountButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.4);
+}
+
+.deleteSection, .deleteConfirmationSection {
+  background-color: rgba(225, 29, 72, 0.1);
+  border: 1px solid rgba(225, 29, 72, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.deleteConfirmationSection {
+  text-align: center;
+}
+
+.deleteConfirmationSection .buttonGroup {
+  margin-top: 1.5rem;
+}
+
+.deleteTitle {
+  color: #f43f5e;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+}
+
+.deleteWarning {
+  color: #fb7185;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.deleteForm {
+  margin-bottom: 0;
+}
+
+.deleteButton {
+  background-image: linear-gradient(to right, #f43f5e, #be123c);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+  flex: 1;
+}
+
+.deleteButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.4);
+}
+
+/* Input box styles for edit fields */
+.inputBoxContainer {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.inputBoxLabel {
+  font-size: 0.85rem;
+  color: #a5a5a5;
+  margin-bottom: 0.5rem;
+  text-align: left;
+}
+
+.inputBox {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.inputBox:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.inputBox span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editIconButton {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #a491c7;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.editIconButton:hover {
+  color: white;
+  background-color: rgba(140, 86, 220, 0.3);
+}
+
+.editIcon {
+  font-size: 1rem;
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modalContent {
+  background-color: #1f1f1f;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modalBody {
+  padding: 2rem;
+}
+
+.modalCloseButton {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #a5a5a5;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 5px;
+  line-height: 1;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalCloseButton:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.modalContent .buttonGroup {
+  margin-top: 1.5rem;
+}
+
+/* Media queries for the modal */
+@media (max-width: 768px) {
+  .modalContent {
+    width: 95%;
+  }
+  
+  .modalBody {
+    padding: 1.5rem;
+  }
+}
+
+.deleteSection, .deleteConfirmationSection {
+  background-color: rgba(225, 29, 72, 0.1);
+  border: 1px solid rgba(225, 29, 72, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
 }

@@ -23,6 +23,10 @@ public class UserEntity {
 
     @Column(name = "user_email", length = 255, nullable = false, unique = true)
     private String userEmail;
+    
+    @Lob
+    @Column(name = "profile_picture", columnDefinition = "LONGTEXT")
+    private String profilePicture;
 
     @JsonManagedReference(value = "user-authentication")
     @OneToOne(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
@@ -44,11 +48,12 @@ public class UserEntity {
     public UserEntity() {
     }
 
-    public UserEntity(int userId, String userName, String userPassword, String userEmail, AuthenticationEntity authentication, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
+    public UserEntity(int userId, String userName, String userPassword, String userEmail, String profilePicture, AuthenticationEntity authentication, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
         this.userId = userId;
         this.userName = userName;
         this.userPassword = userPassword;
         this.userEmail = userEmail;
+        this.profilePicture = profilePicture;
         this.authentication = authentication;
         this.playlists = playlists;
         this.offlineLibraries = offlineLibraries;
@@ -85,6 +90,14 @@ public class UserEntity {
 
     public void setUserEmail(String userEmail) {
         this.userEmail = userEmail;
+    }
+    
+    public String getProfilePicture() {
+        return profilePicture;
+    }
+
+    public void setProfilePicture(String profilePicture) {
+        this.profilePicture = profilePicture;
     }
 
     public AuthenticationEntity getAuthentication() {
