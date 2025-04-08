@@ -64,12 +64,19 @@
 }
 
 .confirmButton {
-  background-color: #ff4757;
+  background-image: linear-gradient(to right, #8b5cf6, #ec4899);
   color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .confirmButton:hover {
-  background-color: #ff6b81;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
 }
 
 @keyframes modalAppear {
