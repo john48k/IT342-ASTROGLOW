@@ -4,42 +4,36 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import eduedu.cit.astroglow.ui.theme.AstroglowTheme
 
-class MainActivity : ComponentActivity() {
+class AboutActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             AstroglowTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -47,40 +41,34 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(Color(0xFFE81EDE), Color(0xFF251468))
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Color(0xFFE81EDE), Color(0xFF251468)),
+                                    startX = 0.0f,
+                                    endX = 1.0f,
+                                    startY = 0.0f,
+                                    endY = 1.0f
                                 )
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Image(
-                                painter = painterResource(id = R.drawable.moon_with_flag),
-                                contentDescription = "Moon with Flag",
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .size(450.dp),
-                                contentScale = ContentScale.Crop
-
-                            )
                             Text(
-                                text = "AstroGlow",
-                                fontSize = 46.sp,
+                                text = "About Us",
+                                fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = interFontFamily,
-                                color = Color.White,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
+                                color = Color.White
                             )
+                            
                             Text(
-                                text = "Welcome to AstroGlow, your trusted music provider. Listen to our latest beats from the coolest artist!",
+                                text = "Our team from AstroGlow, creates music and beats that you can listen to for free. We will develop a secure music library with integrated biometrics and face id system.",
                                 fontSize = 16.sp,
-                                fontFamily = interLightFontFamily,
                                 color = Color.White,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth()
+                                modifier = Modifier.padding(16.dp)
+                            )
+                            AsyncImage(
+                                model = R.drawable.about,
+                                contentDescription = "About Image",
+                                modifier = Modifier.padding(16.dp)
                             )
                         }
                         Row(
@@ -92,7 +80,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             IconButton(
                                 onClick = {
-                                    val intent = Intent(this@MainActivity, AboutActivity::class.java)
+                                    val intent = Intent(this@AboutActivity, CreateAccountActivity::class.java)
                                     startActivity(intent)
                                 },
                                 modifier = Modifier
@@ -112,30 +100,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    AstroglowTheme {
-        Greeting("Android")
-    }
-}
-
-// Define the font family using the local XML
-val interFontFamily = FontFamily(
-    Font(R.font.interdisplay_black),
-    Font(R.font.inter_blackitalic)
-)
-
-val interLightFontFamily = FontFamily(
-    Font(R.font.interdisplay_light)
-)
-
