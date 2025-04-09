@@ -213,7 +213,7 @@ export const HomePage = () => {
       }
       
       // Stop current audio if playing
-      if (audioElement) {
+      if (audioElement && audioElement.pause && typeof audioElement.pause === 'function') {
         audioElement.pause();
         audioElement.src = '';
         if (progressIntervalRef.current) {
@@ -337,7 +337,7 @@ export const HomePage = () => {
             console.error('Error playing audio:', err);
             alert('Error playing audio: ' + err.message);
           });
-      } else {
+      } else if (audioElement.pause && typeof audioElement.pause === 'function') {
         audioElement.pause();
       }
       // Force a re-render to update UI state
@@ -355,8 +355,16 @@ export const HomePage = () => {
         clearInterval(progressIntervalRef.current);
       }
       if (audioElement) {
-        audioElement.pause();
-        audioElement.src = '';
+        try {
+          if (audioElement.pause && typeof audioElement.pause === 'function') {
+            audioElement.pause();
+          }
+          if (audioElement.src) {
+            audioElement.src = '';
+          }
+        } catch (err) {
+          console.error('Error cleaning up audio element:', err);
+        }
       }
     };
   }, []);
@@ -621,9 +629,17 @@ export const HomePage = () => {
                 className={styles.openPlayerButton}
                 onClick={() => {
                   if (audioElement) {
-                    audioElement.pause();
+                    try {
+                      if (audioElement.pause && typeof audioElement.pause === 'function') {
+                        audioElement.pause();
+                      }
+                    } catch (err) {
+                      console.error('Error stopping audio:', err);
+                    }
+                    // Reset state regardless of whether pause succeeded
                     setCurrentlyPlaying(null);
                     setAudioProgress(0);
+                    setAudioElement(null);
                     if (progressIntervalRef.current) {
                       clearInterval(progressIntervalRef.current);
                       progressIntervalRef.current = null;
