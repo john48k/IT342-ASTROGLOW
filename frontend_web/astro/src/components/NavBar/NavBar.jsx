@@ -9,6 +9,7 @@ import Modal from "../Modal/Modal";
 const Navbar = () => {
   const { isAuthenticated, logout } = useUser();
   const navigate = useNavigate();
+  // Explicitly initialize modal to closed
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const handleLogoutClick = () => {
@@ -70,13 +71,16 @@ const Navbar = () => {
         </div>
       </nav>
 
-      <Modal
-        isOpen={showLogoutModal}
-        onClose={handleLogoutCancel}
-        onConfirm={handleLogoutConfirm}
-        title="Confirm Logout"
-        message="Are you sure you want to log out?"
-      />
+      {/* Only render the Modal when showLogoutModal is true */}
+      {showLogoutModal && (
+        <Modal
+          isOpen={true}
+          onClose={handleLogoutCancel}
+          onConfirm={handleLogoutConfirm}
+          title="Confirm Logout"
+          message="Are you sure you want to log out of your AstroGlow account?"
+        />
+      )}
     </>
   );
 };
