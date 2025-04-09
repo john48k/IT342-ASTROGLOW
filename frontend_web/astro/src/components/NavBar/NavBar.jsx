@@ -29,7 +29,10 @@ const Navbar = () => {
     <>
       <nav className="navbar">
         <div className="navbar-logo">
-          <Link to="" style={{ display: "flex", alignItems: "center" }}>
+          <Link
+            to={isAuthenticated ? "/home" : "/"}
+            style={{ display: "flex", alignItems: "center" }}
+          >
             <img src={logo} alt="AstroGlow Logo" />
             <h1 className="navbar-title-text">AstroGlow</h1>
           </Link>
