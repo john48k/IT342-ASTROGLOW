@@ -8,7 +8,7 @@ const Modal = ({ isOpen, onClose, onConfirm, title, message }) => {
     <div className={styles.modalOverlay}>
       <div className={styles.modalContent}>
         <h2 className={styles.modalTitle}>{title}</h2>
-        <p className={styles.modalMessage}>{message}</p>
+        <div className={styles.modalMessage}>{message}</div>
         <div className={styles.modalButtons}>
           <button
             className={`${styles.modalButton} ${styles.cancelButton}`}

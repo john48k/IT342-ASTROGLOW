@@ -2,6 +2,9 @@ package com.astroglow.Entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
 @Entity
@@ -24,6 +27,11 @@ public class MusicEntity {
     @Column(name = "time")
     private Integer time;
 
+    @Lob
+    @Column(name = "audio_data", columnDefinition = "LONGTEXT")
+    @JsonIgnore
+    private String audioData;
+
     @JsonManagedReference(value = "music-playlist")
     @OneToMany(mappedBy = "music", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<PlaylistEntity> playlists;
@@ -39,12 +47,13 @@ public class MusicEntity {
     public MusicEntity() {
     }
 
-    public MusicEntity(int musicId, String title, String artist, String genre, Integer time, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
+    public MusicEntity(int musicId, String title, String artist, String genre, Integer time, String audioData, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
         this.musicId = musicId;
         this.title = title;
         this.artist = artist;
         this.genre = genre;
         this.time = time;
+        this.audioData = audioData;
         this.playlists = playlists;
         this.offlineLibraries = offlineLibraries;
         this.favorites = favorites;
@@ -88,6 +97,14 @@ public class MusicEntity {
 
     public void setTime(Integer time) {
         this.time = time;
+    }
+
+    public String getAudioData() {
+        return audioData;
+    }
+
+    public void setAudioData(String audioData) {
+        this.audioData = audioData;
     }
 
     public List<PlaylistEntity> getPlaylists() {
