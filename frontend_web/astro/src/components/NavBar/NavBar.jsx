@@ -18,7 +18,7 @@ const Navbar = () => {
   const handleLogoutConfirm = () => {
     logout();
     setShowLogoutModal(false);
-    navigate("/login");
+    navigate("/");
   };
 
   const handleLogoutCancel = () => {
@@ -29,7 +29,7 @@ const Navbar = () => {
     <>
       <nav className="navbar">
         <div className="navbar-logo">
-          <Link to="/home" style={{ display: "flex", alignItems: "center" }}>
+          <Link to="" style={{ display: "flex", alignItems: "center" }}>
             <img src={logo} alt="AstroGlow Logo" />
             <h1 className="navbar-title-text">AstroGlow</h1>
           </Link>

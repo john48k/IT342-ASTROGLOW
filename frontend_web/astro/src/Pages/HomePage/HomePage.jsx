@@ -62,7 +62,7 @@ export const HomePage = () => {
       setPasswordError('Password cannot be empty');
       return;
     }
-    
+
     try {
       const response = await fetch('http://localhost:8080/api/user/login', {
         method: 'POST',
@@ -91,7 +91,7 @@ export const HomePage = () => {
     if (file && file.type === 'audio/mpeg') {
       setSelectedFile(file);
       setUploadError('');
-      
+
       // Try to extract title and artist from filename
       const filename = file.name.replace('.mp3', '');
       const parts = filename.split(' - ');
@@ -101,7 +101,7 @@ export const HomePage = () => {
       } else {
         setMusicTitle(filename);
       }
-      
+
       // Format file size for display
       let fileSize;
       if (file.size < 1024 * 1024) {
@@ -109,7 +109,7 @@ export const HomePage = () => {
       } else {
         fileSize = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
       }
-      
+
       setSelectedFileInfo({
         name: file.name,
         size: fileSize
@@ -126,7 +126,7 @@ export const HomePage = () => {
       setUploadError('Please select an MP3 file');
       return;
     }
-    
+
     if (!musicTitle || !musicArtist) {
       setUploadError('Please provide a title and artist for the music');
       return;
@@ -153,14 +153,14 @@ export const HomePage = () => {
         const errorData = await response.text();
         throw new Error(`Upload failed: ${errorData}`);
       }
-      
+
       // Get the response data
       const result = await response.json();
       console.log('Upload successful:', result);
-      
+
       // Show success message
       alert('Music uploaded successfully!');
-      
+
       // Refresh music list
       await fetchMusicList();
 
@@ -193,7 +193,7 @@ export const HomePage = () => {
     setMusicArtist('');
     setMusicGenre('');
   };
-  
+
   const playMusic = async (musicId) => {
     try {
       // If clicking on currently playing track, just toggle play/pause and return
@@ -208,10 +208,10 @@ export const HomePage = () => {
           audioElement.pause();
         }
         // Force a re-render to update UI state
-        setAudioElement({...audioElement});
+        setAudioElement({ ...audioElement });
         return;
       }
-      
+
       // Stop current audio if playing
       if (audioElement && audioElement.pause && typeof audioElement.pause === 'function') {
         audioElement.pause();
@@ -221,7 +221,7 @@ export const HomePage = () => {
           progressIntervalRef.current = null;
         }
       }
-      
+
       // Fetch the audio data
       const response = await fetch(`http://localhost:8080/api/music/audio/${musicId}`);
       if (!response.ok) {
@@ -230,42 +230,42 @@ export const HomePage = () => {
         if (!musicResponse.ok) {
           throw new Error(`Music with ID ${musicId} not found`);
         }
-        
+
         const musicData = await musicResponse.json();
         if (!musicData.audioData) {
           throw new Error(`No audio data available for this music`);
         }
-        
+
         throw new Error('Failed to fetch audio data');
       }
-      
+
       const base64Audio = await response.text();
       if (!base64Audio || base64Audio === 'null' || base64Audio.trim() === '') {
         throw new Error('No audio data available for this music');
       }
-      
+
       // Convert base64 to Blob
       const byteCharacters = atob(base64Audio);
       const byteArrays = [];
-      
+
       for (let i = 0; i < byteCharacters.length; i += 512) {
         const slice = byteCharacters.slice(i, i + 512);
         const byteNumbers = new Array(slice.length);
-        
+
         for (let j = 0; j < slice.length; j++) {
           byteNumbers[j] = slice.charCodeAt(j);
         }
-        
+
         const byteArray = new Uint8Array(byteNumbers);
         byteArrays.push(byteArray);
       }
-      
+
       const blob = new Blob(byteArrays, { type: 'audio/mpeg' });
       const audioUrl = URL.createObjectURL(blob);
-      
+
       // Create a new audio element with the blob URL
       const audio = new Audio(audioUrl);
-      
+
       // Set up event listeners
       const setupAudioEvents = () => {
         // Add event listener to clean up object URL when audio is done
@@ -278,12 +278,12 @@ export const HomePage = () => {
             progressIntervalRef.current = null;
           }
         };
-        
+
         // Set up progress tracking
         if (progressIntervalRef.current) {
           clearInterval(progressIntervalRef.current);
         }
-        
+
         progressIntervalRef.current = setInterval(() => {
           if (audio.duration) {
             const progress = (audio.currentTime / audio.duration) * 100;
@@ -294,32 +294,32 @@ export const HomePage = () => {
             });
           }
         }, 500);
-        
+
         // Force state update on play/pause to update UI
         audio.addEventListener('play', () => {
           setAudioElement(prevAudio => {
-            if (prevAudio === audio) return {...audio};
+            if (prevAudio === audio) return { ...audio };
             return audio;
           });
         });
-        
+
         audio.addEventListener('pause', () => {
           setAudioElement(prevAudio => {
-            if (prevAudio === audio) return {...audio};
+            if (prevAudio === audio) return { ...audio };
             return audio;
           });
         });
       };
-      
+
       // Set up events once audio is loaded
       audio.addEventListener('loadeddata', setupAudioEvents);
-      
+
       // Play the audio
       audio.play().catch(err => {
         console.error('Error playing audio:', err);
         alert('Error playing audio: ' + err.message);
       });
-      
+
       // Set state
       setAudioElement(audio);
       setCurrentlyPlaying(musicId);
@@ -341,7 +341,7 @@ export const HomePage = () => {
         audioElement.pause();
       }
       // Force a re-render to update UI state
-      setAudioElement({...audioElement});
+      setAudioElement({ ...audioElement });
     } else {
       // If not the current track, start playing the new track
       playMusic(musicId);
@@ -406,7 +406,7 @@ export const HomePage = () => {
     if (isNaN(seconds) || seconds === Infinity) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    
+
     // Only show minutes if we have them or if it's exactly 0 minutes
     if (mins > 0) {
       return `${mins}:${secs < 10 ? '0' + secs : secs}`;
@@ -436,11 +436,11 @@ export const HomePage = () => {
               />
               <p>Your Library</p>
             </div>
-            <Link to="/" className="">
+            <Link to="/home" className="">
               Your Home
             </Link>
             <br />
-            <Link to="/" className="">
+            <Link to="" className="">
               Favorites
             </Link>
           </ul>
@@ -467,8 +467,8 @@ export const HomePage = () => {
               <h2 className={styles.sectionTitle}>Your Uploaded Music</h2>
               <div className={styles.musicGrid}>
                 {musicList.map((music) => (
-                  <div key={music.musicId} 
-                    className={`${styles.musicCard} ${currentlyPlaying === music.musicId ? 
+                  <div key={music.musicId}
+                    className={`${styles.musicCard} ${currentlyPlaying === music.musicId ?
                       (audioElement && audioElement.paused ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
                   >
                     <div className={styles.musicImageContainer}>
@@ -476,7 +476,7 @@ export const HomePage = () => {
                         <span>{music.title.charAt(0)}</span>
                       </div>
                       <div className={styles.musicOverlay}></div>
-                      <button 
+                      <button
                         className={styles.musicPlayButton}
                         onClick={() => togglePlayPause(music.musicId)}
                       >
@@ -567,13 +567,13 @@ export const HomePage = () => {
 
       {/* Now Playing Bar */}
       {currentlyPlaying && (
-      <div className={styles.nowPlayingBar}>
-        <div className={styles.nowPlayingContent}>
-          <div className={styles.nowPlayingInfo}>
+        <div className={styles.nowPlayingBar}>
+          <div className={styles.nowPlayingContent}>
+            <div className={styles.nowPlayingInfo}>
               <div className={styles.nowPlayingImage}>
                 {musicList.find(m => m.musicId === currentlyPlaying)?.title.charAt(0)}
               </div>
-            <div>
+              <div>
                 <h4 className={styles.nowPlayingTitle}>
                   {musicList.find(m => m.musicId === currentlyPlaying)?.title}
                 </h4>
@@ -581,10 +581,10 @@ export const HomePage = () => {
                   {musicList.find(m => m.musicId === currentlyPlaying)?.artist}
                 </p>
               </div>
-          </div>
+            </div>
 
-          <div className={styles.playbackControls}>
-              <button 
+            <div className={styles.playbackControls}>
+              <button
                 className={styles.playbackButton}
                 onClick={() => {
                   if (audioElement) {
@@ -596,7 +596,7 @@ export const HomePage = () => {
               </button>
               <div className={styles.progressContainer}>
                 <span className={styles.timeDisplay}>{audioTime.elapsed}</span>
-                <div 
+                <div
                   className={styles.progressBar}
                   onClick={(e) => {
                     if (audioElement) {
@@ -615,17 +615,17 @@ export const HomePage = () => {
                     }
                   }}
                 >
-                  <div 
+                  <div
                     className={styles.progressFill}
                     style={{ width: `${audioProgress}%` }}
                   ></div>
                 </div>
                 <span className={styles.timeDisplay}>{audioTime.total}</span>
               </div>
-          </div>
+            </div>
 
-          <div className={styles.playerActions}>
-              <button 
+            <div className={styles.playerActions}>
+              <button
                 className={styles.openPlayerButton}
                 onClick={() => {
                   if (audioElement) {
