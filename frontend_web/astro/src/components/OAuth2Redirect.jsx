@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 
 const OAuth2Redirect = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useUser();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -17,14 +17,14 @@ const OAuth2Redirect = () => {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to get user information');
+          throw new Error();
         }
 
         const userData = await response.json();
         console.log('OAuth user data:', userData);
 
         if (!userData || Object.keys(userData).length === 0) {
-          throw new Error('No user data received');
+          throw new Error();
         }
 
         // Extract user information (format depends on the OAuth provider)
@@ -40,71 +40,38 @@ const OAuth2Redirect = () => {
         
         // Login the user
         login(userInfo, simpleToken);
-        setLoading(false);
         
-        // Redirect to home page
-        navigate('/home');
-      } catch (err) {
-        console.error('Error fetching OAuth user data:', err);
-        setError(err.message);
-        setLoading(false);
-        // Redirect to login page on error
-        setTimeout(() => navigate('/login'), 3000);
+        // Check if we have a redirect location from the protected route
+        const from = location.state?.from || '/home';
+        navigate(from);
+      } catch (error) {
+        console.error('OAuth error:', error);
+        navigate('/login');
       }
     };
 
     fetchUserInfo();
-  }, [login, navigate]);
+  }, [login, navigate, location.state]);
 
   if (loading) {
     return (
       <div style={{ 
         display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center', 
         justifyContent: 'center', 
+        alignItems: 'center', 
         height: '100vh',
-        background: 'linear-gradient(45deg, #1e0030, #3a0068)',
-        color: 'white',
-        fontFamily: 'Arial, sans-serif'
+        background: 'linear-gradient(135deg, #21295c, #1c1c3c)'
       }}>
         <div style={{
-          width: '50px',
-          height: '50px',
-          border: '5px solid rgba(255, 255, 255, 0.3)',
-          borderTop: '5px solid #8c52ff',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          marginBottom: '20px'
-        }}></div>
-        <h2>Logging you in...</h2>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        height: '100vh',
-        background: 'linear-gradient(45deg, #1e0030, #3a0068)',
-        color: 'white',
-        fontFamily: 'Arial, sans-serif',
-        padding: '0 20px',
-        textAlign: 'center'
-      }}>
-        <h2>Login Error</h2>
-        <p>{error}</p>
-        <p>Redirecting to login page...</p>
+          padding: '20px',
+          background: 'rgba(255, 255, 255, 0.1)',
+          borderRadius: '10px',
+          textAlign: 'center',
+          color: 'white'
+        }}>
+          <h2>Authenticating...</h2>
+          <p>Please wait while we complete your sign-in process.</p>
+        </div>
       </div>
     );
   }

@@ -79,6 +79,8 @@ const Navbar = () => {
           onConfirm={handleLogoutConfirm}
           title="Confirm Logout"
           message="Are you sure you want to log out of your AstroGlow account?"
+          confirmText="Logout"
+          showConfirmButton={true}
         />
       )}
     </>

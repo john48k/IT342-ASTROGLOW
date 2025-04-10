@@ -4,75 +4,97 @@ body {
     padding: 0;
     font-family: Arial, sans-serif;
     color: white;
+    overflow-x: hidden;
+    width: 100%;
+    height: 100%;
   }
   
-  /* Base layout styles (from original code) */
+  /* Fix for browser zooming issues */
+  @viewport {
+    width: device-width;
+    zoom: 1.0;
+  }
+  
+  /* Base layout styles */
   .homePage {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
     position: relative;
     overflow-x: hidden;
+    max-width: 100vw;
+    box-sizing: border-box;
+    padding-top: 70px; /* Add padding equal to navbar height */
   }
   
   .container {
     display: flex;
     flex: 1;
     position: relative;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   
-  /* Updated sidebar to scroll properly with content */
+  /* Sidebar styles */
   .sidebar {
-    width: 250px;
-    background-color: #390056;
-    color: white;
-    padding: 1rem;
-    position: sticky;
-    top: 70px; /* Matches the navbar height */
-    height: calc(378vh - 70px); /* Viewport height minus navbar height */
-    overflow-y: auto; /* Allow scrolling within sidebar if content is too tall */
-    z-index: 10;
+    width: 240px;
+    background-color: rgba(20, 20, 30, 0.7);
+    padding: 2rem 1rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    top: 70px;
+    height: calc(100vh - 70px);
+    overflow-y: auto;
+    z-index: 5;
   }
   
   .sidebar ul {
-    list-style: none;
+    list-style-type: none;
     padding: 0;
+    margin: 0;
   }
   
   .sidebar li {
     margin-bottom: 1rem;
   }
   
-  .sidebar a {
-    color: white;
+  .sidebarLink {
+    color: #d1d1d1;
     text-decoration: none;
-    font-size: 1.2rem;
-    transition: color 0.2s;
-    display: inline-block;
-    padding: 1px 19px;
-    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
   }
   
-  .sidebar a:hover {
-    color: #7f5af0;
+  .sidebarLink:hover {
+    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
   }
   
-  /* Updated main content to work with sticky sidebar */
+  /* Main content area */
   .mainContent {
     flex: 1;
     padding: 2rem;
     border-radius: 10px;
     background-image: linear-gradient(160deg, #000000 0%, #653895 100%);
-    min-height: calc(100vh - 70px - 4rem);
+    min-height: 100%;
     margin-bottom: 60px; /* Space for now playing bar */
+    margin-left: 240px; /* Space for fixed sidebar */
+    box-sizing: border-box;
   }
   
-  /* Header section (from original code) */
+  /* Header section */
   .headerSection {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
+    padding: 0.5rem 0;
   }
   
   .nameTitle {
@@ -80,6 +102,10 @@ body {
     color: white;
     font-family: Arial, Helvetica, sans-serif;
     margin: 0;
+    background-image: linear-gradient(to right, #c084fc, #f0abfc);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
   
   .libraryHeader {
@@ -93,48 +119,38 @@ body {
     width: auto;
   }
   
+  /* Upload button */
   .uploadBtn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 5px 15px;
+    gap: 12px;
+    padding: 10px 20px;
     border: none;
-    background-color: transparent;
-    border: 1px solid #7f5af0;
-    font-weight: 500;
+    background-image: linear-gradient(to right, #8b5cf6, #ec4899);
+    font-weight: 600;
     color: white;
     font-size: 16px;
     cursor: pointer;
-    border-radius: 5px;
-    transition: 0.3s;
+    border-radius: 8px;
+    transition: all 0.3s;
   }
   
   .uploadBtn:hover {
-    cursor: pointer;
-    background-color: #00558e71;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(139, 92, 246, 0.6);
   }
   
   .uploadIcon {
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
   }
   
-  /* Animated stars background */
-  .starsBackground {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    background-image: radial-gradient(white, rgba(255, 255, 255, 0) 2px);
-    background-size: 50px 50px;
-    opacity: 0.1;
-    pointer-events: none;
-  }
-  
-  /* Hero Section */
+  /* Hero section */
   .heroSection {
     position: relative;
-    padding: 3rem 0 4rem;
-    margin-bottom: 3rem;
+    padding: 4rem 0;
+    margin: 2rem 0 3rem;
+    text-align: center;
   }
   
   .purpleGlow {
@@ -170,14 +186,13 @@ body {
   }
   
   .heroTitle {
-    font-size: 3.5rem;
+    font-size: 3rem;
     font-weight: bold;
     margin-bottom: 1.5rem;
     background-image: linear-gradient(to right, #c084fc, #f0abfc, #c084fc);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    line-height: 1.2;
   }
   
   .heroSubtitle {
@@ -189,33 +204,169 @@ body {
     margin-right: auto;
   }
   
-  .ctaButton {
+  .uploadButton {
     background-image: linear-gradient(to right, #8b5cf6, #ec4899);
     color: white;
     border: none;
-    height: 56px;
+    height: 50px;
     padding: 0 2rem;
-    font-size: 1.125rem;
+    font-size: 1rem;
     border-radius: 9999px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
   }
   
-  .ctaButton:hover {
+  .uploadButton:hover {
     transform: scale(1.05);
-    background-image: linear-gradient(to right, #7c3aed, #db2777);
-  }
-  
-  .ctaButton:hover .arrowIcon {
-    transform: translateX(4px);
+    box-shadow: 0 12px 25px rgba(139, 92, 246, 0.7);
   }
   
   .arrowIcon {
     transition: transform 0.3s;
+    font-size: 1.25rem;
+    margin-left: 8px;
+  }
+  
+  .uploadButton:hover .arrowIcon {
+    transform: translateX(5px);
+  }
+  
+  /* Favorites filter */
+  .filterOptions {
+    display: flex;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    align-items: center;
+  }
+  
+  .filterLabel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+  }
+  
+  .filterCheckbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #8b5cf6;
+  }
+  
+  /* Music grid */
+  .uploadedMusicSection {
+    margin: 30px 0;
+    padding: 25px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+  }
+  
+  .musicGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+    margin-top: 15px;
+  }
+  
+  /* Favorite button styles */
+  .favoriteButton {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 10;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+  }
+  
+  .favoriteButton:hover {
+    transform: scale(1.1);
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  .favoriteButton.favorited {
+    color: #ffce00;
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.8);
+  }
+  
+  /* Media queries */
+  @media (max-width: 768px) {
+    .sidebar {
+      width: 70px;
+      padding: 1rem 0.5rem;
+    }
+    
+    .sidebarLinkText {
+      display: none;
+    }
+    
+    .mainContent {
+      padding: 1.5rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .container {
+      flex-direction: column;
+    }
+    
+    .sidebar {
+      width: 100%;
+      height: auto;
+      position: static;
+      padding: 0.5rem;
+      border-right: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .sidebar ul {
+      display: flex;
+      justify-content: space-around;
+    }
+    
+    .sidebar li {
+      margin-bottom: 0;
+    }
+    
+    .sidebarLink {
+      padding: 0.5rem;
+    }
+    
+    .mainContent {
+      padding: 1rem;
+    }
+    
+    .musicGrid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+  }
+  
+  /* Animated stars background */
+  .starsBackground {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image: radial-gradient(white, rgba(255, 255, 255, 0) 2px);
+    background-size: 50px 50px;
+    opacity: 0.1;
+    pointer-events: none;
   }
   
   /* Featured Music Section */
@@ -483,33 +634,58 @@ body {
   }
   
   .playbackControls {
-    flex: 2;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    flex: 1;
+    margin: 0 20px;
+    gap: 10px;
   }
   
   .playbackButton {
+    background: rgba(137, 70, 255, 0.1);
+    border: none;
     width: 36px;
     height: 36px;
-    background-image: linear-gradient(to right, #8b5cf6, #ec4899);
-    border: none;
     border-radius: 50%;
     color: white;
-    font-size: 1.1rem;
-    cursor: pointer;
+    font-size: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto;
-    transition: all 0.2s;
-    box-shadow: 0 2px 10px rgba(139, 92, 246, 0.5);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
   }
   
   .playbackButton:hover {
+    background: rgba(137, 70, 255, 0.3);
     transform: scale(1.1);
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+  }
+  
+  /* Add a subtle pulsing effect to indicate double-click possibility */
+  .playbackButton:first-child:hover::after,
+  .playbackButton:last-child:hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(137, 70, 255, 0.8);
+    animation: pulse-border 1.5s infinite;
+  }
+  
+  @keyframes pulse-border {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1.2);
+      opacity: 0;
+    }
   }
   
   .progressContainer {
@@ -576,44 +752,6 @@ body {
     }
     100% {
       opacity: 0.7;
-    }
-  }
-  
-  /* Media Queries */
-  @media (min-width: 768px) {
-    .playbackControls {
-      display: block;
-    }
-  
-    .heroTitle {
-      font-size: 4rem;
-    }
-  }
-  
-  @media (max-width: 768px) {
-    .mainContent {
-      margin-left: 0;
-      padding: 1rem;
-    }
-  
-    .sidebar {
-      display: none;
-    }
-  
-    .featuredGrid {
-      grid-template-columns: 1fr;
-    }
-  
-    .discoveriesGrid {
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    }
-  
-    .heroTitle {
-      font-size: 2.5rem;
-    }
-  
-    .heroSubtitle {
-      font-size: 1rem;
     }
   }
   
@@ -764,71 +902,17 @@ body {
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
   }
   
-  /* Uploaded Music Section */
-  .uploadedMusicSection {
-    margin: 30px 0;
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  
-  .musicGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 20px;
-    margin-top: 15px;
-  }
-  
   .musicCard {
     background: rgba(25, 25, 35, 0.7);
     border-radius: 8px;
     overflow: hidden;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    cursor: pointer;
+    position: relative;
   }
   
   .musicCard:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-  }
-  
-  .musicImageContainer {
-    position: relative;
-    width: 100%;
-    padding-top: 100%; /* 1:1 Aspect Ratio */
-    background-color: rgba(139, 92, 246, 0.2);
-    overflow: hidden;
-  }
-  
-  .musicPlaceholder {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 3rem;
-    font-weight: bold;
-    color: rgba(255, 255, 255, 0.7);
-    background-image: linear-gradient(45deg, #8b5cf6, #ec4899);
-  }
-  
-  .musicOverlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-  
-  .musicImageContainer:hover .musicOverlay {
-    opacity: 1;
   }
   
   .musicPlayButton {
@@ -839,8 +923,8 @@ body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.9);
-    color: #333;
+    background: rgba(137, 70, 255, 0.9);
+    color: white;
     border: none;
     font-size: 16px;
     display: flex;
@@ -858,7 +942,6 @@ body {
   }
   
   .musicPlayButton:hover {
-    background: white;
     transform: translate(-50%, -50%) scale(1.1);
   }
   
@@ -957,4 +1040,564 @@ body {
     opacity: 1;
   }
   
+  .musicImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+  }
+  
+  /* Now Playing Cover Image */
+  .nowPlayingCover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+  
+  .nowPlayingFallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    color: white;
+    font-size: 1.5rem;
+    font-weight: bold;
+    border-radius: 4px;
+  }
+  
+  .uploadOptions {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+  }
+  
+  .optionLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+  }
+  
+  .optionLabel:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .fileInfo {
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 6px;
+  }
+  
+  .fileName {
+    margin: 0 0 5px;
+    font-weight: 500;
+    color: #8b5cf6;
+  }
+  
+  .fileSize {
+    margin: 0;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .inputHelp {
+    margin: 5px 0 0;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+  }
+  
+  .uploadButton {
+    display: block;
+    width: 100%;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    color: white;
+    background-image: linear-gradient(to right, #8b5cf6, #ec4899);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3);
+  }
+  
+  .uploadButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 14px rgba(139, 92, 246, 0.5);
+  }
+  
+  .uploadButton:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 5px rgba(139, 92, 246, 0.3);
+  }
+  
+  .uploadButton:disabled {
+    background-image: linear-gradient(to right, #9ca3af, #6b7280);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.7;
+  }
+  
+  .fileInputWrapper {
+    margin: 15px 0;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .fileInputLabel {
+    background-image: linear-gradient(to right, #8b5cf6, #6366f1);
+    color: white;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-block;
+    transition: all 0.3s ease;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);
+  }
+  
+  .fileInputLabel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 14px rgba(99, 102, 241, 0.4);
+  }
+  
+  .fileInput {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+  }
+  
+  /* Album Section Styles */
+  .albumsSection {
+    margin-bottom: 3rem;
+  }
+  
+  .albumsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  
+  .albumCard {
+    background: rgba(22, 11, 51, 0.8);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    position: relative;
+  }
+  
+  .albumCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  }
+  
+  .albumPlayButton {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: rgba(137, 70, 255, 0.8);
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+  }
+  
+  .albumImageContainer:hover .albumPlayButton {
+    opacity: 1;
+  }
+  
+  .albumPlayButton:hover {
+    background-color: rgba(137, 70, 255, 1);
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  
+  .albumPlayButton.playing {
+    background-color: rgba(236, 72, 153, 0.8);
+    opacity: 1;
+  }
+  
+  .albumPlayButton.playing:hover {
+    background-color: rgba(236, 72, 153, 1);
+  }
+  
+  .albumInfo {
+    padding: 1rem;
+  }
+  
+  .albumTitle {
+    margin: 0 0 0.5rem;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .albumTracks {
+    margin: 0;
+    color: #a5a5a5;
+    font-size: 0.85rem;
+  }
+  
+  .createAlbumContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 200px;
+    border: 2px dashed rgba(137, 70, 255, 0.5);
+    border-radius: 12px;
+  }
+  
+  .createAlbumButton {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(137, 70, 255, 0.8);
+    text-decoration: none;
+    padding: 2rem;
+    transition: color 0.3s ease;
+  }
+  
+  .createAlbumButton span:first-child {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .createAlbumButton:hover {
+    color: rgba(137, 70, 255, 1);
+  }
+  
+  .musicCardControls {
+    position: absolute;
+    bottom: 50px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+  }
+  
+  .musicImageContainer:hover .musicCardControls {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .musicCardControlButton {
+    width: 30px;
+    height: 30px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    color: white;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .musicCardControlButton:hover {
+    background: rgba(137, 70, 255, 0.8);
+    transform: scale(1.1);
+  }
+  
+  .albumCardControls {
+    position: absolute;
+    bottom: 50px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+  }
+  
+  .albumImageContainer:hover .albumCardControls {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .albumCardControlButton {
+    width: 30px;
+    height: 30px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    color: white;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .albumCardControlButton:hover {
+    background: rgba(137, 70, 255, 0.8);
+    transform: scale(1.1);
+  }
+  
+  .musicImageContainer {
+    position: relative;
+    width: 100%;
+    padding-top: 100%; /* 1:1 Aspect Ratio */
+    background-color: rgba(139, 92, 246, 0.2);
+    overflow: hidden;
+  }
+  
+  .musicPlaceholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: bold;
+    color: rgba(255, 255, 255, 0.7);
+    background-image: linear-gradient(45deg, #8b5cf6, #ec4899);
+  }
+  
+  .musicOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .musicImageContainer:hover .musicOverlay {
+    opacity: 1;
+  }
+  
+  .albumImageContainer {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%; /* 1:1 Aspect Ratio */
+    overflow: hidden;
+  }
+  
+  .albumImage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+  
+  .albumCard:hover .albumImage {
+    transform: scale(1.05);
+  }
+  
+  .albumOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 60%);
+  }
+  
+  /* Styles for currently playing and double-click indicators */
+  .currentlyPlayingCard .musicPlayButton::after,
+  .pausedCard .musicPlayButton::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border: 2px dashed rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    animation: rotatePlay 8s linear infinite;
+    opacity: 0.7;
+    z-index: -1;
+  }
+  
+  .albumPlayButton.playing::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border: 2px dashed rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+    animation: rotatePlay 8s linear infinite;
+    opacity: 0.7;
+    z-index: -1;
+  }
+  
+  .musicPlayButton::before,
+  .albumPlayButton::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 50;
+  }
+  
+  .currentlyPlayingCard .musicPlayButton:hover::before,
+  .pausedCard .musicPlayButton:hover::before {
+    content: 'Play/Pause';
+    opacity: 1;
+  }
+  
+  .albumPlayButton.playing:hover::before {
+    content: 'Play/Pause';
+    opacity: 1;
+  }
+  
+  @keyframes rotatePlay {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .deleteButton {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: rgba(217, 48, 37, 0.7);
+    border: none;
+    color: white;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+  }
+  
+  .musicImageContainer:hover .deleteButton {
+    opacity: 1;
+  }
+  
+  .deleteButton:hover {
+    background-color: rgba(217, 48, 37, 1);
+    transform: scale(1.1);
+  }
+  
+  .editButton {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: rgba(59, 130, 246, 0.7);
+    border: none;
+    color: white;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+  }
+  
+  .musicImageContainer:hover .editButton {
+    opacity: 1;
+  }
+  
+  .editButton:hover {
+    background-color: rgba(59, 130, 246, 1);
+    transform: scale(1.1);
+  }
+  
+  .imagePreview {
+    margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 150px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .imagePreview img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    aspect-ratio: 1/1;
+  }
+  
+  .imagePreview p {
+    padding: 5px;
+    font-size: 12px;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   

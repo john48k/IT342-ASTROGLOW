@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.astroglow.Entity.MusicEntity;
+import com.astroglow.Entity.UserEntity;
 
 @Repository
 public interface MusicRepository extends JpaRepository<MusicEntity, Integer> {
@@ -27,4 +28,10 @@ public interface MusicRepository extends JpaRepository<MusicEntity, Integer> {
 
     // Find by time greater than or equal to specified duration
     List<MusicEntity> findByTimeGreaterThanEqual(Integer time);
+    
+    // Find by owner (user who uploaded the music)
+    List<MusicEntity> findByOwner(UserEntity owner);
+    
+    // Find by owner ID (user ID who uploaded the music)
+    List<MusicEntity> findByOwnerUserId(Integer userId);
 }

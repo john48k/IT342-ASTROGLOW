@@ -32,6 +32,10 @@ public class UserEntity {
     @OneToOne(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private AuthenticationEntity authentication;
 
+    @JsonManagedReference(value = "user-music")
+    @OneToMany(mappedBy = "owner", cascade = CascadeType.PERSIST)
+    private List<MusicEntity> music;
+
     @JsonManagedReference(value = "user-playlist")
     @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<PlaylistEntity> playlists;
@@ -48,13 +52,14 @@ public class UserEntity {
     public UserEntity() {
     }
 
-    public UserEntity(int userId, String userName, String userPassword, String userEmail, String profilePicture, AuthenticationEntity authentication, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
+    public UserEntity(int userId, String userName, String userPassword, String userEmail, String profilePicture, AuthenticationEntity authentication, List<MusicEntity> music, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
         this.userId = userId;
         this.userName = userName;
         this.userPassword = userPassword;
         this.userEmail = userEmail;
         this.profilePicture = profilePicture;
         this.authentication = authentication;
+        this.music = music;
         this.playlists = playlists;
         this.offlineLibraries = offlineLibraries;
         this.favorites = favorites;
@@ -106,6 +111,14 @@ public class UserEntity {
 
     public void setAuthentication(AuthenticationEntity authentication) {
         this.authentication = authentication;
+    }
+
+    public List<MusicEntity> getMusic() {
+        return music;
+    }
+
+    public void setMusic(List<MusicEntity> music) {
+        this.music = music;
     }
 
     public List<PlaylistEntity> getPlaylists() {

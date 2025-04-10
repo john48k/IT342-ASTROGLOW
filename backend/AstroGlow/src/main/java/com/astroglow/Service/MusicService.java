@@ -85,6 +85,11 @@ public class MusicService {
                 .orElseThrow(() -> new EntityNotFoundException("Music with ID " + id + " not found"));
     }
 
+    // Get all music by owner (user)
+    public List<MusicEntity> getMusicByOwnerId(int userId) {
+        return mrepo.findByOwnerUserId(userId);
+    }
+
     // Find music by maximum duration
     public List<MusicEntity> findByMaxDuration(Integer maxTime) {
         return mrepo.findByTimeLessThanEqual(maxTime);
@@ -93,5 +98,11 @@ public class MusicService {
     // Find music by minimum duration
     public List<MusicEntity> findByMinDuration(Integer minTime) {
         return mrepo.findByTimeGreaterThanEqual(minTime);
+    }
+
+    // Check if a song with the same title and artist already exists
+    public boolean existsByTitleAndArtist(String title, String artist) {
+        List<MusicEntity> existingMusic = mrepo.findByTitleAndArtist(title, artist);
+        return !existingMusic.isEmpty();
     }
 }

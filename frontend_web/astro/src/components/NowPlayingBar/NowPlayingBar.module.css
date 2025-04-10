@@ -1,0 +1,362 @@
+.nowPlayingBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 1000;
+}
+
+/* New container for the now playing section */
+.nowPlayingContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.nowPlayingContent {
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.nowPlayingInfo {
+  display: flex;
+  align-items: center;
+  width: 25%;
+  min-width: 200px;
+}
+
+.nowPlayingImage {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  margin-right: 15px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  background-image: linear-gradient(45deg, #8b5cf6, #ec4899);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+}
+
+.nowPlayingImage:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.nowPlayingCover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+/* Spinning animation for when music is playing */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.isPlaying .nowPlayingCover {
+  animation: spin 20s linear infinite;
+}
+
+.nowPlayingImage:hover .nowPlayingCover {
+  transform: scale(1.05);
+}
+
+.nowPlayingFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(45deg, #3a1c71, #d76d77, #ffaf7b);
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.nowPlayingTitle {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0;
+  color: white;
+}
+
+.nowPlayingArtist {
+  font-size: 0.75rem;
+  color: #a0a0a0;
+  margin: 0;
+}
+
+.playbackSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 60%;
+}
+
+.playbackControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 8px;
+  gap: 10px;
+}
+
+.playbackButton {
+  background: rgba(137, 70, 255, 0.1);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: white;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.playbackButton:hover {
+  background: rgba(137, 70, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.backwardButton,
+.forwardButton,
+.previousButton,
+.nextButton {
+  position: relative;
+}
+
+/* Tooltip style */
+.backwardButton::before,
+.forwardButton::before,
+.previousButton::before,
+.nextButton::before {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 3px 6px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.backwardButton:hover::before {
+  content: 'Rewind 10s';
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.forwardButton:hover::before {
+  content: 'Forward 10s';
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.previousButton:hover::before {
+  content: 'Previous Song';
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.nextButton:hover::before {
+  content: 'Next Song';
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Button highlight effect */
+.playbackButton:active {
+  background: rgba(236, 72, 153, 0.3);
+  transform: scale(0.95);
+}
+
+.progressContainer {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.timeDisplay {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 30px;
+  text-align: center;
+}
+
+.progressBar {
+  flex: 1;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.progressBar:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.progressFill {
+  height: 100%;
+  background-image: linear-gradient(to right, #8b5cf6, #ec4899);
+  pointer-events: none;
+}
+
+.playerActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 50px;
+}
+
+.openPlayerButton {
+  background-color: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #ffffff;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.openPlayerButton:hover {
+  background-color: rgba(236, 72, 153, 0.3);
+  border-color: #ec4899;
+}
+
+.stopButton {
+  background: rgba(236, 72, 153, 0.2);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: white;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.stopButton:hover {
+  background: rgba(236, 72, 153, 0.8);
+  transform: scale(1.1);
+}
+
+.stopButton::before {
+  content: 'Stop';
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 3px 6px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.stopButton:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Expanded Album View */
+.expandedAlbumView {
+  position: fixed;
+  bottom: 70px;
+  left: 20px;
+  width: 300px;
+  height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  pointer-events: none;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.nowPlayingImage:hover + .expandedAlbumView,
+.expandedAlbumView:hover {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.expandedCover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.expandedInfo {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  color: white;
+}
+
+.expandedTitle {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 0 0 5px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expandedArtist {
+  font-size: 0.9rem;
+  margin: 0;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+} 

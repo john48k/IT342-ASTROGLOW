@@ -1,7 +1,7 @@
 import React from "react";
 import styles from "./Modal.module.css";
 
-const Modal = ({ isOpen, onClose, onConfirm, title, message }) => {
+const Modal = ({ isOpen, onClose, onConfirm, title, message, confirmText = "Confirm", showConfirmButton = true }) => {
   if (isOpen !== true) return null;
 
   // Close modal when clicking on backdrop
@@ -32,12 +32,14 @@ const Modal = ({ isOpen, onClose, onConfirm, title, message }) => {
           >
             Cancel
           </button>
-          <button
-            className={`${styles.modalButton} ${styles.confirmButton}`}
-            onClick={onConfirm}
-          >
-            Confirm
-          </button>
+          {showConfirmButton && (
+            <button
+              className={`${styles.modalButton} ${styles.confirmButton}`}
+              onClick={onConfirm}
+            >
+              {confirmText}
+            </button>
+          )}
         </div>
       </div>
     </div>

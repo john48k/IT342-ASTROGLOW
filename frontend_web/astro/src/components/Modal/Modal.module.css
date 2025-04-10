@@ -11,13 +11,15 @@
   z-index: 1000;
   backdrop-filter: blur(8px);
   animation: fadeIn 0.2s ease-out;
+  padding: 15px;
+  box-sizing: border-box;
 }
 
 .modalContent {
   background: linear-gradient(145deg, #0f0f20, #1a1a36);
   border-radius: 16px;
   padding: 2.5rem 2rem;
-  width: 90%;
+  width: 100%;
   max-width: 420px;
   border: 1px solid rgba(138, 75, 255, 0.2);
   box-shadow: 
@@ -27,6 +29,9 @@
   animation: modalAppear 0.3s cubic-bezier(0.21, 1.02, 0.73, 1);
   transform-origin: center center;
   position: relative;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .closeButton {
@@ -138,5 +143,48 @@
   }
   to {
     opacity: 1;
+  }
+}
+
+/* Add responsiveness */
+@media (max-width: 768px) {
+  .modalContent {
+    padding: 2rem 1.5rem;
+  }
+  
+  .modalTitle {
+    font-size: 1.5rem;
+  }
+  
+  .modalMessage {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalContent {
+    padding: 1.5rem 1rem;
+  }
+  
+  .modalButtons {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .modalButton {
+    width: 100%;
+    padding: 0.75rem;
+  }
+  
+  .modalTitle {
+    font-size: 1.25rem;
+  }
+  
+  .closeButton {
+    top: 10px;
+    right: 10px;
+    width: 25px;
+    height: 25px;
+    font-size: 20px;
   }
 } 

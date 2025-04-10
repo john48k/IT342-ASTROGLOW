@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 import styles from "./LoginPage.module.css";
 
@@ -12,8 +12,9 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useUser();
-
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -35,6 +36,7 @@ const LoginPage = () => {
       const loginData = {
         userEmail: formData.userEmail,
         userPassword: formData.userPassword,
+        rememberMe: true // Added to request persistent cookie
       };
 
       console.log("Attempting to connect to backend at http://localhost:8080/api/user/login");
@@ -45,6 +47,7 @@ const LoginPage = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(loginData),
+        credentials: 'include', // Include cookies in the request
         // Add timeout to prevent long hangs
         signal: AbortSignal.timeout(10000), // 10 second timeout
       });
@@ -64,12 +67,18 @@ const LoginPage = () => {
         throw new Error("Invalid credentials");
       }
 
-      // Since we don't have a token from backend yet, we'll use the userEmail as a simple session identifier
+      // Generate a session ID with timestamp to ensure uniqueness
       const sessionId = btoa(userData.userEmail + ":" + new Date().getTime());
+
+      // Store a session cookie on the client side as well
+      document.cookie = `auth_session=${sessionId}; path=/; max-age=2592000`; // 30 days
 
       // Call login with the user data and session ID
       login(userData, sessionId);
-      navigate("/home");
+      
+      // Check if we have a redirect location from the protected route
+      const from = location.state?.from || "/home";
+      navigate(from);
     } catch (error) {
       console.error("Login error:", error);
       
@@ -125,7 +134,6 @@ const LoginPage = () => {
               className={styles.illustration}
             />
             <h1 className={styles.opacity}>LOGIN</h1>
-
 
             <form onSubmit={handleSubmit}>
               <input

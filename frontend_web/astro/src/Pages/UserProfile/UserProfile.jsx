@@ -413,16 +413,24 @@ export const UserProfile = () => {
             <NavBar />
 
             <div className={styles.container}>
-                {/* Sidebar */}
+                {/* Sidebar - Updated to match HomePage */}
                 <aside className={styles.sidebar}>
                     <ul>
-                        <div className={styles.libraryHeader}>
-                            <img className={styles.libraryLogo} src="library-music.png" alt="" />
-                            <p>Your Library</p>
-                        </div>
-                        <Link to="/home" className="">Your Home</Link>
-                        <br />
-                        <Link to="/home" className="">Favorites</Link>
+                        <li>
+                            <Link to="/home" className={styles.sidebarLink}>
+                                Your Home
+                            </Link>
+                        </li>
+                        <li>
+                            <Link to="/favorites" className={styles.sidebarLink}>
+                                Favorites
+                            </Link>
+                        </li>
+                        <li>
+                            <Link to="/album-creator" className={styles.sidebarLink}>
+                                Create Album
+                            </Link>
+                        </li>
                     </ul>
                 </aside>
 

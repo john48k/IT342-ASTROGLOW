@@ -6,26 +6,60 @@ export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Check for existing authentication on initial load
   useEffect(() => {
-    // Check localStorage for existing user and token on app load
-    const storedUser = localStorage.getItem("user");
-    const storedToken = localStorage.getItem("token");
-
-    // Only parse and set if the values exist
-    if (storedUser && storedToken) {
+    const checkAuth = async () => {
+      setIsLoading(true);
       try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        setToken(storedToken);
-        setIsAuthenticated(true);
+        // First check localStorage
+        const storedUser = localStorage.getItem("user");
+        const storedToken = localStorage.getItem("token");
+
+        // If found in localStorage, use it
+        if (storedUser && storedToken) {
+          const parsedUser = JSON.parse(storedUser);
+          console.log("Found stored user in localStorage:", parsedUser.userName);
+          
+          // Set user data from localStorage
+          setUser(parsedUser);
+          setToken(storedToken);
+          setIsAuthenticated(true);
+        } else {
+          // If not in localStorage, try sessionStorage as fallback
+          const sessionUser = sessionStorage.getItem("user");
+          const sessionToken = sessionStorage.getItem("token");
+          
+          if (sessionUser && sessionToken) {
+            const parsedUser = JSON.parse(sessionUser);
+            console.log("Found stored user in sessionStorage:", parsedUser.userName);
+            
+            // Copy from sessionStorage to localStorage for persistence
+            localStorage.setItem("user", sessionUser);
+            localStorage.setItem("token", sessionToken);
+            
+            // Set user data
+            setUser(parsedUser);
+            setToken(sessionToken);
+            setIsAuthenticated(true);
+          } else {
+            console.log("No stored auth data found in localStorage or sessionStorage");
+          }
+        }
       } catch (error) {
-        // If there's an error parsing the stored user data, clear it
-        console.error("Error parsing stored user data:", error);
+        console.error("Error checking authentication:", error);
+        // Clear potentially corrupted data
         localStorage.removeItem("user");
         localStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
+
+    checkAuth();
   }, []);
 
   const login = (userData, authToken) => {
@@ -44,9 +78,17 @@ export const UserProvider = ({ children }) => {
     }
 
     try {
-      // Store the data
+      // Store the data in localStorage for persistence across browser sessions
       localStorage.setItem("user", JSON.stringify(userData));
       localStorage.setItem("token", authToken);
+      
+      // Also try to store in sessionStorage as a backup (persists only for current tab)
+      try {
+        sessionStorage.setItem("user", JSON.stringify(userData));
+        sessionStorage.setItem("token", authToken);
+      } catch (e) {
+        console.log("Could not store in sessionStorage:", e);
+      }
 
       // Update state
       setUser(userData);
@@ -68,6 +110,21 @@ export const UserProvider = ({ children }) => {
     setIsAuthenticated(false);
     localStorage.removeItem("user");
     localStorage.removeItem("token");
+    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    
+    // Also try to clear server-side session if applicable
+    try {
+      fetch('http://localhost:8080/api/user/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).catch(err => console.log("Error logging out on server:", err));
+    } catch (e) {
+      console.log("Error during server logout:", e);
+    }
   };
 
   return (
@@ -76,6 +133,7 @@ export const UserProvider = ({ children }) => {
         user,
         token,
         isAuthenticated,
+        isLoading,
         login,
         logout,
       }}
