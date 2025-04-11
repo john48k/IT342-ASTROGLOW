@@ -1,4 +1,4 @@
-package eduedu.cit.astroglow
+package edu.cit.astroglow
 
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package eduedu.cit.astroglow
+package edu.cit.astroglow
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("eduedu.cit.astroglow", appContext.packageName)
+        assertEquals("edu.cit.astroglow", appContext.packageName)
     }
 }

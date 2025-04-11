@@ -1,10 +1,16 @@
-package eduedu.cit.astroglow
+package edu.cit.astroglow
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +41,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import eduedu.cit.astroglow.ui.theme.AstroglowTheme
+import edu.cit.astroglow.R
+import edu.cit.astroglow.ui.theme.AstroglowTheme
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.animateFloatAsState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,12 +54,73 @@ class MainActivity : ComponentActivity() {
         setContent {
             AstroglowTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
+                    // Animation for gradient colors
+                    val infiniteTransition = rememberInfiniteTransition()
+                    
+                    // Animate first color
+                    val firstColor by infiniteTransition.animateColor(
+                        initialValue = Color(0xFFE81EDE), // Pink
+                        targetValue = Color(0xFF9C27B0),  // Purple
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1000, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse
+                        )
+                    )
+                    
+                    // Animate second color
+                    val secondColor by infiniteTransition.animateColor(
+                        initialValue = Color(0xFF0050D0), // Blue
+                        targetValue = Color(0xFF2196F3),  // Light Blue
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(3000, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse
+                        )
+                    )
+                    
+                    // Sequential animations with different delays
+                    val logoScale by infiniteTransition.animateFloat(
+                        initialValue = 1f,
+                        targetValue = 1.05f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 2200, easing = LinearEasing),
+                            repeatMode = RepeatMode.Reverse
+                        )
+                    )
+                    
+                    // Title animation - vertical hover
+                    val titleOffset by infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = -10f, // Move up by 10dp
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(
+                                durationMillis = 1500, 
+                                easing = LinearEasing,
+                                delayMillis = 500 // Delay to create sequence
+                            ),
+                            repeatMode = RepeatMode.Reverse
+                        )
+                    )
+                    
+                    // Subtitle animation - vertical hover with same timing as title
+                    val subtitleOffset by infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = -8f, // Move up by 8dp
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(
+                                durationMillis = 1500, // Same duration as title
+                                easing = LinearEasing,
+                                delayMillis = 500 // Same delay as title
+                            ),
+                            repeatMode = RepeatMode.Reverse
+                        )
+                    )
+                    
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(Color(0xFFE81EDE), Color(0xFF251468))
+                                brush = Brush.linearGradient(
+                                    colors = listOf(firstColor, secondColor)
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -59,9 +131,12 @@ class MainActivity : ComponentActivity() {
                                 contentDescription = "Moon with Flag",
                                 modifier = Modifier
                                     .padding(16.dp)
-                                    .size(450.dp),
+                                    .size(450.dp)
+                                    .graphicsLayer(
+                                        scaleX = logoScale,
+                                        scaleY = logoScale
+                                    ),
                                 contentScale = ContentScale.Crop
-
                             )
                             Text(
                                 text = "AstroGlow",
@@ -70,7 +145,11 @@ class MainActivity : ComponentActivity() {
                                 fontFamily = interFontFamily,
                                 color = Color.White,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .graphicsLayer(
+                                        translationY = titleOffset
+                                    )
                             )
                             Text(
                                 text = "Welcome to AstroGlow, your trusted music provider. Listen to our latest beats from the coolest artist!",
@@ -81,6 +160,9 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier
                                     .padding(16.dp)
                                     .fillMaxWidth()
+                                    .graphicsLayer(
+                                        translationY = subtitleOffset
+                                    )
                             )
                         }
                         Row(

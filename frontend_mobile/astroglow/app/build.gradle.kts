@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "eduedu.cit.astroglow"
+    namespace = "edu.cit.astroglow"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "eduedu.cit.astroglow"
+        applicationId = "edu.cit.astroglow"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -57,4 +57,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     implementation(libs.androidx.ui.text.google.fonts)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.material.icons.extended)
 }

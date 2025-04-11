@@ -33,6 +33,31 @@
             android:exported="true"
             android:label="Create Account"
             android:theme="@style/Theme.Astroglow" />
+        <activity
+            android:name=".SignUpActivity"
+            android:exported="true"
+            android:label="Sign Up"
+            android:theme="@style/Theme.Astroglow" />
+        <activity
+            android:name=".OurTeamActivity"
+            android:exported="true"
+            android:label="Our Team"
+            android:theme="@style/Theme.Astroglow" />
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true"
+            android:label="Login"
+            android:theme="@style/Theme.Astroglow" />
+        <activity
+            android:name=".HomeActivity"
+            android:exported="true"
+            android:label="Home"
+            android:theme="@style/Theme.Astroglow" />
+        <activity
+            android:name=".SearchActivity"
+            android:exported="false"
+            android:label="Search"
+            android:theme="@style/Theme.Astroglow" />
     </application>
 
 </manifest>

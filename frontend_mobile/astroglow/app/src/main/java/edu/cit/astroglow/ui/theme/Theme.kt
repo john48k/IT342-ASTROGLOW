@@ -1,4 +1,4 @@
-package eduedu.cit.astroglow.ui.theme
+package edu.cit.astroglow.ui.theme
 
 import android.app.Activity
 import android.os.Build
