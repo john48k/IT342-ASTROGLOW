@@ -72,11 +72,17 @@
 
 .navbar-title-text{
     font: 100;
+    text-decoration: none;
 }
 
 .navbar-logo {
     display: flex;
     align-items: center;
+}
+
+.navbar-logo a {
+    text-decoration: none;
+    outline: none;
 }
 
 .navbar-logo img {
@@ -91,8 +97,8 @@
     font-weight: 700;
     color: #7f5af0;
     text-shadow: 0 0 10px rgba(127, 90, 240, 0.5);
-    animation: flicker1 0.79s infinite alternate; 
     font-family: landing-page-font;
+    text-decoration: none;
 }
 
 
@@ -101,6 +107,10 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+}
+
+.navbar-links a {
+    text-decoration: none;
 }
 
 .navbar-button {
@@ -145,6 +155,7 @@
     font-weight: 500;
     color: rgb(255, 255, 255);
     transition: 0.5s;
+    text-decoration: none;
 }
 
 .about-us:hover{
