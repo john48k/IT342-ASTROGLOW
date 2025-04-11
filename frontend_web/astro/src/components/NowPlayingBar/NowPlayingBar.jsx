@@ -23,38 +23,40 @@ const NowPlayingBar = () => {
   const [musicList, setMusicList] = useState([]);
   const [albums, setAlbums] = useState([]);
   
-  // Fetch music list and albums when component mounts
+  // Fetch music list and albums when a track is playing
   useEffect(() => {
-    // Fetch music list
-    const fetchMusicList = async () => {
-      try {
-        const response = await fetch('http://localhost:8080/api/music/getAllMusic');
-        if (response.ok) {
-          const data = await response.json();
-          setMusicList(data);
-        } else {
-          console.error('Failed to fetch music list');
+    if (currentlyPlaying) {
+      // Fetch music list
+      const fetchMusicList = async () => {
+        try {
+          const response = await fetch('http://localhost:8080/api/music/getAllMusic');
+          if (response.ok) {
+            const data = await response.json();
+            setMusicList(data);
+          } else {
+            console.error('Failed to fetch music list');
+          }
+        } catch (error) {
+          console.error('Error fetching music list:', error);
         }
-      } catch (error) {
-        console.error('Error fetching music list:', error);
-      }
-    };
-    
-    // Get albums from localStorage
-    const getAlbums = () => {
-      try {
-        const savedAlbums = localStorage.getItem('albums');
-        if (savedAlbums) {
-          setAlbums(JSON.parse(savedAlbums));
+      };
+      
+      // Get albums from localStorage
+      const getAlbums = () => {
+        try {
+          const savedAlbums = localStorage.getItem('albums');
+          if (savedAlbums) {
+            setAlbums(JSON.parse(savedAlbums));
+          }
+        } catch (error) {
+          console.error('Error fetching albums from localStorage:', error);
         }
-      } catch (error) {
-        console.error('Error fetching albums from localStorage:', error);
-      }
-    };
-    
-    fetchMusicList();
-    getAlbums();
-  }, []);
+      };
+      
+      fetchMusicList();
+      getAlbums();
+    }
+  }, [currentlyPlaying]);
   
   // Debouncing mechanism to prevent rapid successive clicks
   const isActionAllowedRef = useRef(true);
