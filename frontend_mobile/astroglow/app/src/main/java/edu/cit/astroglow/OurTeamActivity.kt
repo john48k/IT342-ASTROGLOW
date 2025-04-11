@@ -167,15 +167,29 @@ fun TeamInfo(
             )
             .padding(16.dp)
     ) {
-        // Role Section
-        Text(
-            text = role,
-            fontFamily = interLightFontFamily,
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        // Role Section with gradient background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFFE81EDE), Color(0xFF0050D0))
+                    )
+                )
+                .padding(vertical = 8.dp, horizontal = 12.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = role,
+                fontFamily = interFontFamily,
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
         
         // Email Section
         Column {
@@ -184,12 +198,12 @@ fun TeamInfo(
                     painter = painterResource(id = R.drawable.ic_outlook),
                     contentDescription = "Outlook Account",
                     tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Email",
-                    fontFamily = interLightFontFamily,
+                    fontFamily = interFontFamily,
                     color = Color.White,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
@@ -200,11 +214,11 @@ fun TeamInfo(
                 fontFamily = interLightFontFamily,
                 color = Color.White,
                 fontSize = 16.sp,
-                modifier = Modifier.padding(start = 32.dp)
+                modifier = Modifier.padding(start = 28.dp, top = 4.dp)
             )
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         
         // Google Account Section
         Column {
@@ -213,12 +227,12 @@ fun TeamInfo(
                     painter = painterResource(id = R.drawable.ic_google),
                     contentDescription = "Google Account",
                     tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Google",
-                    fontFamily = interLightFontFamily,
+                    fontFamily = interFontFamily,
                     color = Color.White,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
@@ -229,11 +243,11 @@ fun TeamInfo(
                 fontFamily = interLightFontFamily,
                 color = Color.White,
                 fontSize = 16.sp,
-                modifier = Modifier.padding(start = 32.dp)
+                modifier = Modifier.padding(start = 28.dp, top = 4.dp)
             )
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         
         // Facebook Account Section
         Column {
@@ -242,12 +256,12 @@ fun TeamInfo(
                     painter = painterResource(id = R.drawable.ic_facebook),
                     contentDescription = "Facebook Account",
                     tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Facebook",
-                    fontFamily = interLightFontFamily,
+                    fontFamily = interFontFamily,
                     color = Color.White,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
@@ -258,7 +272,7 @@ fun TeamInfo(
                 fontFamily = interLightFontFamily,
                 color = Color.White,
                 fontSize = 16.sp,
-                modifier = Modifier.padding(start = 32.dp)
+                modifier = Modifier.padding(start = 28.dp, top = 4.dp)
             )
         }
     }
