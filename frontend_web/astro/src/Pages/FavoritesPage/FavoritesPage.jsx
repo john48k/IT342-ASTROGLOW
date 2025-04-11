@@ -355,11 +355,6 @@ export const FavoritesPage = () => {
                 Favorites
               </Link>
             </li>
-            <li>
-              <Link to="/album-creator" className={styles.sidebarLink}>
-                Create Album
-              </Link>
-            </li>
           </ul>
         </aside>
 
