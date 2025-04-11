@@ -15,37 +15,37 @@ const resizeImage = (file, maxWidth = 800, maxHeight = 600, quality = 0.7) => {
     reader.onload = (event) => {
       const img = new Image();
       img.src = event.target.result;
-      
+
       img.onload = () => {
         // Calculate new dimensions while maintaining aspect ratio
         let width = img.width;
         let height = img.height;
-        
+
         if (width > maxWidth) {
           height = Math.round(height * (maxWidth / width));
           width = maxWidth;
         }
-        
+
         if (height > maxHeight) {
           width = Math.round(width * (maxHeight / height));
           height = maxHeight;
         }
-        
+
         // Create canvas and resize
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
-        
+
         // Draw resized image
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        
+
         // Convert to base64 with reduced quality
         const resizedBase64 = canvas.toDataURL(file.type, quality);
-        
+
         // Log size reduction
-        console.log(`Original size: ~${Math.round(event.target.result.length/1024)}KB, Resized: ~${Math.round(resizedBase64.length/1024)}KB`);
-        
+        console.log(`Original size: ~${Math.round(event.target.result.length / 1024)}KB, Resized: ~${Math.round(resizedBase64.length / 1024)}KB`);
+
         resolve(resizedBase64);
       };
     };
@@ -55,11 +55,11 @@ const resizeImage = (file, maxWidth = 800, maxHeight = 600, quality = 0.7) => {
 export const HomePage = () => {
   const { user } = useUser();
   const { favorites, toggleFavorite } = useFavorites();
-  const { 
-    currentlyPlaying, 
+  const {
+    currentlyPlaying,
     isPlaying,
-    playMusic, 
-    togglePlayPause, 
+    playMusic,
+    togglePlayPause,
     playAlbumTrack,
     playNextSong,
     playPreviousSong,
@@ -67,7 +67,7 @@ export const HomePage = () => {
     stopPlayback,
     getImageUrl
   } = useAudioPlayer();
-  
+
   const userName = user?.userName || "Guest";
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [enteredPassword, setEnteredPassword] = useState('');
@@ -117,26 +117,26 @@ export const HomePage = () => {
       if (response.ok) {
         const data = await response.json();
         console.log('Got music data from server:', data);
-        
+
         // Process the data to ensure image URLs are properly preserved
         const processedData = data.map(music => {
           // Check for stored image in localStorage
           const storedImage = localStorage.getItem(`music-image-${music.musicId}`);
-          
+
           // If the music doesn't have an imageUrl but we have a stored one, use it
           if (!music.imageUrl && storedImage) {
             console.log(`Restoring image for music ${music.musicId} from localStorage`);
             music.imageUrl = storedImage;
-          } 
+          }
           // If we have an image URL from the server, store it for future sessions
           else if (music.imageUrl) {
             console.log(`Storing image URL for music ${music.musicId} in localStorage`);
             localStorage.setItem(`music-image-${music.musicId}`, music.imageUrl);
           }
-          
+
           return music;
         });
-        
+
         setMusicList(processedData);
       }
     } catch (error) {
@@ -200,11 +200,11 @@ export const HomePage = () => {
     const file = e.target.files[0];
     if (file && (file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/gif')) {
       setSelectedImageFile(file);
-      
+
       try {
         // Check file size - if over 1MB, resize the image
         if (file.size > 1024 * 1024) {
-          console.log(`Image is large (${(file.size/1024/1024).toFixed(2)}MB), resizing...`);
+          console.log(`Image is large (${(file.size / 1024 / 1024).toFixed(2)}MB), resizing...`);
           const resizedImage = await resizeImage(file);
           setMusicImageUrl(resizedImage);
         } else {
@@ -215,7 +215,7 @@ export const HomePage = () => {
           };
           reader.readAsDataURL(file);
         }
-        
+
         // Set useImageUrl to true since we're using a data URI
         setUseImageUrl(true);
         setUploadError('');
@@ -247,8 +247,8 @@ export const HomePage = () => {
     }
 
     // Check for duplicate music (same title and artist)
-    const isDuplicate = musicList.some(music => 
-      music.title.toLowerCase() === musicTitle.toLowerCase() && 
+    const isDuplicate = musicList.some(music =>
+      music.title.toLowerCase() === musicTitle.toLowerCase() &&
       music.artist.toLowerCase() === musicArtist.toLowerCase()
     );
 
@@ -268,7 +268,7 @@ export const HomePage = () => {
         formData.append('artist', musicArtist);
         formData.append('genre', musicGenre || 'Unknown');
         formData.append('audioUrl', musicUrl);
-        
+
         // We're always using the imageUrl input field now
         if (musicImageUrl) {
           formData.append('imageUrl', musicImageUrl);
@@ -282,26 +282,26 @@ export const HomePage = () => {
           body: formData
         });
       } else {
-      // Use FormData to send the file and metadata
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('title', musicTitle);
-      formData.append('artist', musicArtist);
-      formData.append('genre', musicGenre || 'Unknown');
-          
+        // Use FormData to send the file and metadata
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('title', musicTitle);
+        formData.append('artist', musicArtist);
+        formData.append('genre', musicGenre || 'Unknown');
+
         // We now always use imageUrl field to handle both URLs and base64 data
         if (musicImageUrl) {
           formData.append('imageUrl', musicImageUrl);
         }
 
-      // Log the data being sent
-      console.log('Uploading file:', selectedFile.name, 'Size:', selectedFile.size);
+        // Log the data being sent
+        console.log('Uploading file:', selectedFile.name, 'Size:', selectedFile.size);
         console.log('Image URL provided:', musicImageUrl ? 'Yes (length: ' + musicImageUrl.substring(0, 20) + '...)' : 'No');
 
         response = await fetch('http://localhost:8080/api/music/upload', {
-        method: 'POST',
-        body: formData,
-      });
+          method: 'POST',
+          body: formData,
+        });
       }
 
       if (!response.ok) {
@@ -312,7 +312,7 @@ export const HomePage = () => {
       // Get the response data
       const result = await response.json();
       console.log('Upload successful:', result);
-      
+
       // Store the image URL in localStorage for persistence
       if (result.musicId && musicImageUrl) {
         localStorage.setItem(`music-image-${result.musicId}`, musicImageUrl);
@@ -371,11 +371,11 @@ export const HomePage = () => {
     if (!musicList || musicList.length === 0) {
       return [];
     }
-    
+
     // Use a deterministic selection method based on musicId to avoid shuffling on each render
     // Sort first by musicId to ensure stable order
     const sortedMusic = [...musicList].sort((a, b) => a.musicId - b.musicId);
-    
+
     // Take the first 4 tracks (or fewer if there aren't enough)
     // These will be stable across renders
     return sortedMusic.slice(0, Math.min(4, sortedMusic.length));
@@ -387,11 +387,11 @@ export const HomePage = () => {
     if (!musicList || musicList.length === 0) {
       return [];
     }
-    
+
     // Sort by newest tracks (assuming higher musicId means newer)
     // This ensures a stable sorting that won't change on re-renders
     const sorted = [...musicList].sort((a, b) => b.musicId - a.musicId);
-    
+
     // Return up to 6 tracks for weekly discoveries, but handle if we have fewer
     return sorted.slice(0, Math.min(6, sorted.length));
   };
@@ -411,10 +411,10 @@ export const HomePage = () => {
   // Handle click on music card play button - properly toggle play/pause
   const handleMusicPlayClick = (e, musicId) => {
     e.stopPropagation();
-    
+
     // Prevent the card click handler from also firing
     e.preventDefault();
-    
+
     if (currentlyPlaying === musicId) {
       // If already playing this track, toggle play/pause
       togglePlayPause(musicId);
@@ -427,7 +427,7 @@ export const HomePage = () => {
   // Handle click on music card - play music or pause if already playing
   const handleMusicCardClick = (e, musicId) => {
     e.stopPropagation();
-    
+
     if (currentlyPlaying === musicId) {
       // If this is the current track, toggle play/pause
       togglePlayPause(musicId);
@@ -440,7 +440,7 @@ export const HomePage = () => {
   // Add function to delete music
   const handleDeleteMusic = async (musicId, event) => {
     event.stopPropagation(); // Prevent triggering card click
-    
+
     if (window.confirm('Are you sure you want to delete this song? This action cannot be undone.')) {
       try {
         const response = await fetch(`http://localhost:8080/api/music/deleteMusic/${musicId}`, {
@@ -449,7 +449,7 @@ export const HomePage = () => {
             'Content-Type': 'application/json',
           },
         });
-        
+
         if (response.ok) {
           // Remove the deleted music from the state
           setMusicList(prevList => prevList.filter(music => music.musicId !== musicId));
@@ -471,7 +471,7 @@ export const HomePage = () => {
 
   const handleEditClick = (music, event) => {
     event.stopPropagation(); // Prevent triggering card click
-    
+
     setEditingMusic(music);
     setUseImageUrl(true);
     setShowEditModal(true);
@@ -545,18 +545,18 @@ export const HomePage = () => {
       setMusicList(prevList => prevList.map(item => {
         if (item.musicId === editingMusic.musicId) {
           // Create an updated item
-          const updatedItem = { 
-            ...item, 
-            title: musicTitle, 
+          const updatedItem = {
+            ...item,
+            title: musicTitle,
             artist: musicArtist,
             genre: musicGenre || item.genre,
           };
-          
+
           // Update the imageUrl if changed
           if (musicImageUrl) {
             updatedItem.imageUrl = musicImageUrl;
           }
-          
+
           return updatedItem;
         }
         return item;
@@ -564,7 +564,7 @@ export const HomePage = () => {
 
       // Close modal
       handleCloseEditModal();
-      
+
     } catch (error) {
       console.error('Failed to update music:', error);
       setUploadError(`Failed to update: ${error.message}`);
@@ -577,7 +577,7 @@ export const HomePage = () => {
   const getImageUrlWithFallback = (music) => {
     // First use the getImageUrl from AudioPlayerContext to process any URL
     let imageUrl = getImageUrl(music.imageUrl);
-    
+
     // If no image URL was found, try to get it from localStorage
     if (!imageUrl) {
       const storedImage = localStorage.getItem(`music-image-${music.musicId}`);
@@ -586,7 +586,7 @@ export const HomePage = () => {
         imageUrl = getImageUrl(storedImage);
       }
     }
-    
+
     return imageUrl;
   };
 
@@ -604,13 +604,13 @@ export const HomePage = () => {
           <ul>
             <li>
               <Link to="/home" className={styles.sidebarLink}>
-              Your Home
-            </Link>
+                Your Home
+              </Link>
             </li>
             <li>
               <Link to="/favorites" className={styles.sidebarLink}>
-              Favorites
-            </Link>
+                Favorites
+              </Link>
             </li>
             <li>
               <Link to="/album-creator" className={styles.sidebarLink}>
@@ -658,18 +658,18 @@ export const HomePage = () => {
                     const imageUrl = getImageUrlWithFallback(music);
                     const isFavorite = favorites.includes(music.musicId);
                     const isCurrentlyPlaying = currentlyPlaying === music.musicId;
-                    
+
                     return (
-                  <div key={music.musicId}
+                      <div key={music.musicId}
                         className={`${styles.musicCard} ${isCurrentlyPlaying ?
                           (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
                         onClick={(e) => handleMusicCardClick(e, music.musicId)}
-                  >
-                    <div className={styles.musicImageContainer}>
+                      >
+                        <div className={styles.musicImageContainer}>
                           {imageUrl ? (
-                            <img 
-                              src={imageUrl} 
-                              alt={music.title} 
+                            <img
+                              src={imageUrl}
+                              alt={music.title}
                               className={styles.musicImage}
                               onLoad={() => {
                                 console.log("Image loaded successfully:", imageUrl.substring(0, 50) + '...');
@@ -693,22 +693,22 @@ export const HomePage = () => {
                               <span>{music.title ? music.title.charAt(0).toUpperCase() : '♪'}</span>
                             </div>
                           )}
-                          <div 
+                          <div
                             className={styles.musicPlaceholder}
                             style={{ display: imageUrl ? 'none' : 'flex' }}
                           >
                             <span>{music.title ? music.title.charAt(0).toUpperCase() : '♪'}</span>
-                      </div>
-                      <div className={styles.musicOverlay}></div>
-                      <button
-                        className={styles.musicPlayButton}
+                          </div>
+                          <div className={styles.musicOverlay}></div>
+                          <button
+                            className={styles.musicPlayButton}
                             onClick={(e) => {
                               handleMusicPlayClick(e, music.musicId);
                             }}
                           >
                             {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
                           </button>
-                          <button 
+                          <button
                             className={`${styles.favoriteButton} ${isFavorite ? styles.favorited : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -717,28 +717,28 @@ export const HomePage = () => {
                             title={isFavorite ? "Remove from favorites" : "Add to favorites"}
                           >
                             {isFavorite ? '★' : '☆'}
-                      </button>
-                      <button 
-                        className={styles.deleteButton}
-                        onClick={(e) => handleDeleteMusic(music.musicId, e)}
-                        title="Delete song"
-                      >
-                        🗑️
-                      </button>
-                      <button 
-                        className={styles.editButton}
-                        onClick={(e) => handleEditClick(music, e)}
-                        title="Edit song"
-                      >
-                        ✏️
-                      </button>
-                    </div>
-                    <div className={styles.musicInfo}>
-                      <h3 className={styles.musicTitle}>{music.title}</h3>
-                      <p className={styles.musicArtist}>{music.artist}</p>
-                      {music.genre && <p className={styles.musicGenre}>{music.genre}</p>}
-                    </div>
-                  </div>
+                          </button>
+                          <button
+                            className={styles.deleteButton}
+                            onClick={(e) => handleDeleteMusic(music.musicId, e)}
+                            title="Delete song"
+                          >
+                            🗑️
+                          </button>
+                          <button
+                            className={styles.editButton}
+                            onClick={(e) => handleEditClick(music, e)}
+                            title="Edit song"
+                          >
+                            ✏️
+                          </button>
+                        </div>
+                        <div className={styles.musicInfo}>
+                          <h3 className={styles.musicTitle}>{music.title}</h3>
+                          <p className={styles.musicArtist}>{music.artist}</p>
+                          {music.genre && <p className={styles.musicGenre}>{music.genre}</p>}
+                        </div>
+                      </div>
                     );
                   })}
               </div>
@@ -746,8 +746,8 @@ export const HomePage = () => {
           )}
 
           {/* Hero Section */}
-          <section className={styles.heroSection}>
-            {/* Decorative elements */}
+          {/* Your universe of sound section */}
+          {/* <section className={styles.heroSection}>
             <div className={styles.purpleGlow}></div>
             <div className={styles.pinkGlow}></div>
 
@@ -762,7 +762,7 @@ export const HomePage = () => {
                 <span className={styles.arrowIcon}>→</span>
               </button>
             </div>
-          </section>
+          </section> */}
 
           {/* Featured Music Section */}
           <section className={styles.featuredSection}>
@@ -773,88 +773,88 @@ export const HomePage = () => {
               {getFeaturedMusic().map((music) => {
                 const imageUrl = getImageUrlWithFallback(music);
                 const isCurrentlyPlaying = currentlyPlaying === music.musicId;
-                
+
                 return (
-                  <div 
-                    key={music.musicId} 
+                  <div
+                    key={music.musicId}
                     className={styles.playlistCard}
                     onClick={() => playMusic(music.musicId)}
                   >
-                  <div className={styles.playlistImageContainer}>
+                    <div className={styles.playlistImageContainer}>
                       {imageUrl ? (
-                    <img
+                        <img
                           src={imageUrl}
                           alt={music.title}
-                      className={styles.playlistImage}
-                    />
+                          className={styles.playlistImage}
+                        />
                       ) : (
                         <div className={styles.musicPlaceholder}>
                           <span>{music.title ? music.title.charAt(0).toUpperCase() : '♪'}</span>
                         </div>
                       )}
-                    <div className={styles.playlistOverlay}></div>
-                      <button 
+                      <div className={styles.playlistOverlay}></div>
+                      <button
                         className={`${styles.playlistPlayButton} ${isCurrentlyPlaying && isPlaying ? styles.playing : ''}`}
                         onClick={(e) => handleFeaturedPlayClick(e, music.musicId)}
                       >
                         {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
                       </button>
-                  </div>
-                  <div className={styles.playlistInfo}>
+                    </div>
+                    <div className={styles.playlistInfo}>
                       <h3 className={styles.playlistTitle}>{music.title}</h3>
-                    <p className={styles.playlistDescription}>
+                      <p className={styles.playlistDescription}>
                         {music.artist}
-                    </p>
+                      </p>
                       <p className={styles.playlistTracks}>{music.genre || 'Music'}</p>
+                    </div>
                   </div>
-                </div>
                 );
               })}
             </div>
 
-            {/* Discoveries from uploaded music */}
-            <h3 className={styles.subsectionTitle}>Weekly Discoveries</h3>
+            {/* Weekly discovories section*/}
+            {/* <h3 className={styles.subsectionTitle}>Weekly Discoveries</h3>
 
             <div className={styles.discoveriesGrid}>
               {getDiscoveries().map((music) => {
                 const imageUrl = getImageUrlWithFallback(music);
                 const isCurrentlyPlaying = currentlyPlaying === music.musicId;
-                
+
                 return (
-                  <div 
-                    key={music.musicId} 
+                  <div
+                    key={music.musicId}
                     className={styles.trackCard}
                     onClick={() => playMusic(music.musicId)}
                   >
-                  <div className={styles.trackImageContainer}>
+                    <div className={styles.trackImageContainer}>
                       {imageUrl ? (
-                    <img
+                        <img
                           src={imageUrl}
                           alt={music.title}
-                      className={styles.trackImage}
-                    />
+                          className={styles.trackImage}
+                        />
                       ) : (
                         <div className={styles.musicPlaceholder}>
                           <span>{music.title ? music.title.charAt(0).toUpperCase() : '♪'}</span>
-                  </div>
+                        </div>
                       )}
                       <div className={styles.trackOverlay}></div>
-              <button
+                      <button
                         className={styles.trackPlayButton}
                         onClick={(e) => handleDiscoveryPlayClick(e, music.musicId)}
                       >
                         {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
-              </button>
-                </div>
+                      </button>
+                    </div>
                     <h3 className={styles.trackTitle}>{music.title}</h3>
                     <p className={styles.trackArtist}>{music.artist}</p>
-              </div>
+                  </div>
                 );
               })}
-            </div>
+            </div> */}
           </section>
         </main>
-            </div>
+      </div>
 
       <Modal
         isOpen={showUploadModal}
@@ -952,7 +952,7 @@ export const HomePage = () => {
 
               <div className={styles.formField}>
                 <label>Cover Image</label>
-                
+
                 <div className={styles.uploadOptions}>
                   <label className={styles.optionLabel}>
                     <input
@@ -973,7 +973,7 @@ export const HomePage = () => {
                     Upload Image File
                   </label>
                 </div>
-                
+
                 {useImageUrl ? (
                   <div>
                     <input
@@ -986,7 +986,7 @@ export const HomePage = () => {
                     <p className={styles.inputHelp}>Enter a direct URL to an image (JPG, PNG, etc.)</p>
                     {musicImageUrl && (
                       <div className={styles.imagePreview}>
-                        <img 
+                        <img
                           src={musicImageUrl}
                           alt="Cover preview"
                           onError={(e) => {
@@ -1014,7 +1014,7 @@ export const HomePage = () => {
                     </div>
                     {selectedImageFile && (
                       <div className={styles.imagePreview}>
-                        <img 
+                        <img
                           src={URL.createObjectURL(selectedImageFile)}
                           alt="Cover preview"
                         />
@@ -1027,8 +1027,8 @@ export const HomePage = () => {
 
               {uploadError && <p className={styles.errorMessage}>{uploadError}</p>}
               {isUploading && <p className={styles.uploadingMessage}>Uploading...</p>}
-              
-              <button 
+
+              <button
                 className={styles.uploadButton}
                 onClick={handleUpload}
                 disabled={isUploading}
@@ -1081,7 +1081,7 @@ export const HomePage = () => {
 
             <div className={styles.formField}>
               <label>Cover Image</label>
-              
+
               <div className={styles.uploadOptions}>
                 <label className={styles.optionLabel}>
                   <input
@@ -1102,7 +1102,7 @@ export const HomePage = () => {
                   Upload Image File
                 </label>
               </div>
-              
+
               {useImageUrl ? (
                 <div>
                   <input
@@ -1115,7 +1115,7 @@ export const HomePage = () => {
                   <p className={styles.inputHelp}>Enter a direct URL to an image (JPG, PNG, etc.)</p>
                   {musicImageUrl && (
                     <div className={styles.imagePreview}>
-                      <img 
+                      <img
                         src={musicImageUrl}
                         alt="Cover preview"
                         onError={(e) => {
@@ -1143,7 +1143,7 @@ export const HomePage = () => {
                   </div>
                   {selectedImageFile && (
                     <div className={styles.imagePreview}>
-                      <img 
+                      <img
                         src={URL.createObjectURL(selectedImageFile)}
                         alt="Cover preview"
                       />
@@ -1156,8 +1156,8 @@ export const HomePage = () => {
 
             {uploadError && <p className={styles.errorMessage}>{uploadError}</p>}
             {isEditing && <p className={styles.uploadingMessage}>Updating...</p>}
-            
-            <button 
+
+            <button
               className={styles.uploadButton}
               onClick={handleSaveEdit}
               disabled={isEditing}
