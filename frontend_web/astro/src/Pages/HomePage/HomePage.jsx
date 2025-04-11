@@ -74,7 +74,7 @@ export const HomePage = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadError, setUploadError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const [isPasswordVerified, setIsPasswordVerified] = useState(false);
+  const [isPasswordVerified, setIsPasswordVerified] = useState(true);
   const [passwordError, setPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [musicTitle, setMusicTitle] = useState('');
@@ -146,8 +146,7 @@ export const HomePage = () => {
 
   const handleUploadClick = () => {
     setShowUploadModal(true);
-    setIsPasswordVerified(false);
-    setEnteredPassword('');
+    setIsPasswordVerified(true);
     setSelectedFile(null);
     setSelectedImageFile(null);
     setUploadError('');
@@ -160,35 +159,6 @@ export const HomePage = () => {
     setMusicImageUrl('');
     setUseExternalUrl(false);
     setUseImageUrl(true);
-  };
-
-  const verifyPassword = async () => {
-    if (!enteredPassword) {
-      setPasswordError('Password cannot be empty');
-      return;
-    }
-
-    try {
-      const response = await fetch('http://localhost:8080/api/user/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userEmail: user.userEmail,
-          userPassword: enteredPassword
-        }),
-      });
-
-      if (response.ok) {
-        setIsPasswordVerified(true);
-        setPasswordError('');
-      } else {
-        setPasswordError('Incorrect password. Please try again.');
-      }
-    } catch (error) {
-      setPasswordError('Error verifying password. Please try again.');
-    }
   };
 
   const handleFileChange = (e) => {
@@ -362,7 +332,7 @@ export const HomePage = () => {
       setSelectedFileInfo(null);
       setShowUploadModal(false);
       setUploadError('');
-      setIsPasswordVerified(false);
+      setIsPasswordVerified(true);
       setMusicTitle('');
       setMusicArtist('');
       setMusicGenre('');
@@ -385,7 +355,7 @@ export const HomePage = () => {
     setSelectedImageFile(null);
     setUploadError('');
     setPasswordError('');
-    setIsPasswordVerified(false);
+    setIsPasswordVerified(true);
     setMusicTitle('');
     setMusicArtist('');
     setMusicGenre('');
@@ -889,251 +859,183 @@ export const HomePage = () => {
       <Modal
         isOpen={showUploadModal}
         onClose={handleCloseModal}
-        title={isPasswordVerified ? "Upload Music" : "Verify Password"}
+        title="Upload Music"
         message={
           <div className={styles.uploadModalContent}>
-            {!isPasswordVerified ? (
-              <>
-                <div className={styles.passwordInputContainer}>
+            <>
+              <div className={styles.uploadOptions}>
+                <label className={styles.optionLabel}>
                   <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your account password"
-                    value={enteredPassword}
-                    onChange={(e) => setEnteredPassword(e.target.value)}
-                    className={styles.passwordInput}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        verifyPassword();
-                      }
-                    }}
+                    type="radio"
+                    name="uploadType"
+                    checked={!useExternalUrl}
+                    onChange={() => setUseExternalUrl(false)}
                   />
-                  <button
-                    type="button"
-                    className={styles.togglePasswordButton}
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                      </svg>
-                    ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    )}
-                  </button>
-                </div>
-                {passwordError && <p className={styles.errorMessage}>{passwordError}</p>}
-                <button 
-                  className={styles.uploadButton}
-                  onClick={verifyPassword}
-                  disabled={!enteredPassword}
-                  style={{ marginTop: '20px' }}
-                >
-                  Verify Password
-                </button>
-              </>
-            ) : (
-              <>
-                <p className={styles.verifiedMessage}>Password verified successfully!</p>
+                  Upload MP3 File
+                </label>
+                <label className={styles.optionLabel}>
+                  <input
+                    type="radio"
+                    name="uploadType"
+                    checked={useExternalUrl}
+                    onChange={() => setUseExternalUrl(true)}
+                  />
+                  Use External URL
+                </label>
+              </div>
 
+              <div className={styles.formField}>
+                <label>Music Title</label>
+                <input
+                  type="text"
+                  value={musicTitle}
+                  onChange={(e) => setMusicTitle(e.target.value)}
+                  placeholder="Enter music title"
+                  className={styles.textInput}
+                />
+              </div>
+              <div className={styles.formField}>
+                <label>Artist</label>
+                <input
+                  type="text"
+                  value={musicArtist}
+                  onChange={(e) => setMusicArtist(e.target.value)}
+                  placeholder="Enter artist name"
+                  className={styles.textInput}
+                />
+              </div>
+              <div className={styles.formField}>
+                <label>Genre (optional)</label>
+                <input
+                  type="text"
+                  value={musicGenre}
+                  onChange={(e) => setMusicGenre(e.target.value)}
+                  placeholder="Enter genre"
+                  className={styles.textInput}
+                />
+              </div>
+
+              {useExternalUrl ? (
+                <div className={styles.formField}>
+                  <label>Music URL</label>
+                  <input
+                    type="text"
+                    value={musicUrl}
+                    onChange={(e) => setMusicUrl(e.target.value)}
+                    placeholder="Enter URL to audio file (MP3, etc.)"
+                    className={styles.textInput}
+                  />
+                  <p className={styles.inputHelp}>Enter a direct link to an audio file (must end with .mp3, .wav, etc.)</p>
+                </div>
+              ) : (
+                <>
+                  <div className={styles.fileInputWrapper}>
+                    <label htmlFor="musicFile" className={styles.fileInputLabel}>
+                      Choose MP3 File
+                      <input
+                        id="musicFile"
+                        type="file"
+                        accept="audio/mpeg"
+                        onChange={handleFileChange}
+                        className={styles.fileInput}
+                      />
+                    </label>
+                  </div>
+                  {selectedFileInfo && (
+                    <div className={styles.fileInfo}>
+                      <p className={styles.fileName}>{selectedFileInfo.name}</p>
+                      <p className={styles.fileSize}>{selectedFileInfo.size}</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className={styles.formField}>
+                <label>Cover Image</label>
+                
                 <div className={styles.uploadOptions}>
                   <label className={styles.optionLabel}>
                     <input
                       type="radio"
-                      name="uploadType"
-                      checked={!useExternalUrl}
-                      onChange={() => setUseExternalUrl(false)}
+                      name="imageUploadType"
+                      checked={useImageUrl}
+                      onChange={() => setUseImageUrl(true)}
                     />
-                    Upload MP3 File
+                    Use Image URL
                   </label>
                   <label className={styles.optionLabel}>
                     <input
                       type="radio"
-                      name="uploadType"
-                      checked={useExternalUrl}
-                      onChange={() => setUseExternalUrl(true)}
+                      name="imageUploadType"
+                      checked={!useImageUrl}
+                      onChange={() => setUseImageUrl(false)}
                     />
-                    Use External URL
+                    Upload Image File
                   </label>
                 </div>
-
-                <div className={styles.formField}>
-                  <label>Music Title</label>
-                  <input
-                    type="text"
-                    value={musicTitle}
-                    onChange={(e) => setMusicTitle(e.target.value)}
-                    placeholder="Enter music title"
-                    className={styles.textInput}
-                  />
-                </div>
-                <div className={styles.formField}>
-                  <label>Artist</label>
-                  <input
-                    type="text"
-                    value={musicArtist}
-                    onChange={(e) => setMusicArtist(e.target.value)}
-                    placeholder="Enter artist name"
-                    className={styles.textInput}
-                  />
-                </div>
-                <div className={styles.formField}>
-                  <label>Genre (optional)</label>
-                  <input
-                    type="text"
-                    value={musicGenre}
-                    onChange={(e) => setMusicGenre(e.target.value)}
-                    placeholder="Enter genre"
-                    className={styles.textInput}
-                  />
-                </div>
-
-                {useExternalUrl ? (
-                  <div className={styles.formField}>
-                    <label>Music URL</label>
-                <input
+                
+                {useImageUrl ? (
+                  <div>
+                    <input
                       type="text"
-                      value={musicUrl}
-                      onChange={(e) => setMusicUrl(e.target.value)}
-                      placeholder="Enter URL to audio file (MP3, etc.)"
+                      value={musicImageUrl}
+                      onChange={(e) => setMusicImageUrl(e.target.value)}
+                      placeholder="Enter URL to cover image"
                       className={styles.textInput}
                     />
-                    <p className={styles.inputHelp}>Enter a direct link to an audio file (must end with .mp3, .wav, etc.)</p>
+                    <p className={styles.inputHelp}>Enter a direct URL to an image (JPG, PNG, etc.)</p>
+                    {musicImageUrl && (
+                      <div className={styles.imagePreview}>
+                        <img 
+                          src={musicImageUrl}
+                          alt="Cover preview"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "/placeholder.jpg";
+                            e.target.style.opacity = 0.5;
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <>
                     <div className={styles.fileInputWrapper}>
-                      <label htmlFor="musicFile" className={styles.fileInputLabel}>
-                        Choose MP3 File
-                <input
-                          id="musicFile"
-                  type="file"
-                  accept="audio/mpeg"
-                  onChange={handleFileChange}
-                  className={styles.fileInput}
-                />
+                      <label htmlFor="coverImageFile" className={styles.fileInputLabel}>
+                        Choose Image File
+                        <input
+                          id="coverImageFile"
+                          type="file"
+                          accept="image/jpeg,image/png,image/gif"
+                          onChange={handleImageFileChange}
+                          className={styles.fileInput}
+                        />
                       </label>
                     </div>
-                {selectedFileInfo && (
-                      <div className={styles.fileInfo}>
-                        <p className={styles.fileName}>{selectedFileInfo.name}</p>
-                        <p className={styles.fileSize}>{selectedFileInfo.size}</p>
+                    {selectedImageFile && (
+                      <div className={styles.imagePreview}>
+                        <img 
+                          src={URL.createObjectURL(selectedImageFile)}
+                          alt="Cover preview"
+                        />
+                        <p>{selectedImageFile.name}</p>
                       </div>
                     )}
                   </>
                 )}
+              </div>
 
-                <div className={styles.formField}>
-                  <label>Cover Image</label>
-                  
-                  <div className={styles.uploadOptions}>
-                    <label className={styles.optionLabel}>
-                      <input
-                        type="radio"
-                        name="imageUploadType"
-                        checked={useImageUrl}
-                        onChange={() => setUseImageUrl(true)}
-                      />
-                      Use Image URL
-                    </label>
-                    <label className={styles.optionLabel}>
-                      <input
-                        type="radio"
-                        name="imageUploadType"
-                        checked={!useImageUrl}
-                        onChange={() => setUseImageUrl(false)}
-                      />
-                      Upload Image File
-                    </label>
-                  </div>
-                  
-                  {useImageUrl ? (
-                    <div>
-                      <input
-                        type="text"
-                        value={musicImageUrl}
-                        onChange={(e) => setMusicImageUrl(e.target.value)}
-                        placeholder="Enter URL to cover image"
-                        className={styles.textInput}
-                      />
-                      <p className={styles.inputHelp}>Enter a direct URL to an image (JPG, PNG, etc.)</p>
-                      {musicImageUrl && (
-                        <div className={styles.imagePreview}>
-                          <img 
-                            src={musicImageUrl}
-                            alt="Cover preview"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = "/placeholder.jpg";
-                              e.target.style.opacity = 0.5;
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <div className={styles.fileInputWrapper}>
-                        <label htmlFor="coverImageFile" className={styles.fileInputLabel}>
-                          Choose Image File
-                          <input
-                            id="coverImageFile"
-                            type="file"
-                            accept="image/jpeg,image/png,image/gif"
-                            onChange={handleImageFileChange}
-                            className={styles.fileInput}
-                          />
-                        </label>
-                      </div>
-                      {selectedImageFile && (
-                        <div className={styles.imagePreview}>
-                          <img 
-                            src={URL.createObjectURL(selectedImageFile)}
-                            alt="Cover preview"
-                          />
-                          <p>{selectedImageFile.name}</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {uploadError && <p className={styles.errorMessage}>{uploadError}</p>}
-                {isUploading && <p className={styles.uploadingMessage}>Uploading...</p>}
-                
-                <button 
-                  className={styles.uploadButton}
-                  onClick={handleUpload}
-                  disabled={isUploading}
-                >
-                  {isUploading ? 'Uploading...' : 'Upload Music'}
-                </button>
-              </>
-            )}
+              {uploadError && <p className={styles.errorMessage}>{uploadError}</p>}
+              {isUploading && <p className={styles.uploadingMessage}>Uploading...</p>}
+              
+              <button 
+                className={styles.uploadButton}
+                onClick={handleUpload}
+                disabled={isUploading}
+              >
+                {isUploading ? 'Uploading...' : 'Upload Music'}
+              </button>
+            </>
           </div>
         }
         showConfirmButton={false}
