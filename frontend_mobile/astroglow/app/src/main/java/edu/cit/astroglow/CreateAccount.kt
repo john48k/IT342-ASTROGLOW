@@ -46,6 +46,8 @@ import edu.cit.astroglow.SignUpActivity
 import edu.cit.astroglow.LoginActivity
 import edu.cit.astroglow.interFontFamily
 import edu.cit.astroglow.interLightFontFamily
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 
 
 class CreateAccountActivity : ComponentActivity() {
@@ -67,6 +69,10 @@ class CreateAccountActivity : ComponentActivity() {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(16.dp)
                         ) {
 
                             // Add animation setup

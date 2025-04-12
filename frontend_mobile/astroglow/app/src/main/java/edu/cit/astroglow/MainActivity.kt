@@ -46,6 +46,8 @@ import edu.cit.astroglow.ui.theme.AstroglowTheme
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -125,7 +127,12 @@ class MainActivity : ComponentActivity() {
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        ) {
                             Image(
                                 painter = painterResource(id = R.drawable.moon_with_flag),
                                 contentDescription = "Moon with Flag",
