@@ -60,6 +60,8 @@ import edu.cit.astroglow.R
 import edu.cit.astroglow.ui.theme.AstroglowTheme
 import androidx.compose.foundation.BorderStroke
 import edu.cit.astroglow.interFontFamily
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,7 +82,10 @@ class LoginActivity : ComponentActivity() {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp)
                         ) {
                             val infiniteTransition = rememberInfiniteTransition()
                             val scale by infiniteTransition.animateFloat(

@@ -48,6 +48,8 @@ import androidx.compose.ui.Alignment
 import edu.cit.astroglow.components.BottomNavBar
 import edu.cit.astroglow.interFontFamily
 import edu.cit.astroglow.interLightFontFamily
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 
 class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -137,7 +139,7 @@ fun HomeScreen(userName: String) {
                     }
                 },
                 colors = TopAppBarDefaults.smallTopAppBarColors(
-                    containerColor = Color.Transparent
+                    containerColor = Color.Black
                 )
             )
         },
@@ -185,6 +187,7 @@ fun ProfileTab() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.Start
     ) {
@@ -297,6 +300,7 @@ fun HomeTabWithSearch(userName: String) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.Start
     ) {
@@ -627,6 +631,7 @@ fun FavoritesTab() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -662,6 +667,7 @@ fun PlaylistTab() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -714,6 +720,7 @@ fun SettingsTab() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
         // Large "Settings" title

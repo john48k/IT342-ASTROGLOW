@@ -1,6 +1,7 @@
 package edu.cit.astroglow
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,6 +35,9 @@ import edu.cit.astroglow.R
 import edu.cit.astroglow.interFontFamily
 import edu.cit.astroglow.interLightFontFamily
 import edu.cit.astroglow.ui.theme.AstroglowTheme
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.platform.LocalConfiguration
 
 
 class SignUpActivity : ComponentActivity() {
@@ -62,6 +66,11 @@ fun SignUpScreen(
     var rePassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var rePasswordVisible by remember { mutableStateOf(false) }
+    
+    // Get screen configuration
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val bottomMargin = if (isLandscape) 100.dp else 42.dp
 
     Box(
         modifier = Modifier
@@ -75,8 +84,9 @@ fun SignUpScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
-            verticalArrangement = Arrangement.SpaceBetween // Push button to bottom
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column(horizontalAlignment = Alignment.Start) {
                 Spacer(modifier = Modifier.height(40.dp)) // Add space at the top
@@ -191,6 +201,7 @@ fun SignUpScreen(
                         unfocusedBorderColor = Color.Transparent
                     )
                 )
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             // Create Account Button at the bottom
@@ -202,7 +213,7 @@ fun SignUpScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 42.dp)
+                    .padding(bottom = bottomMargin)
                     .height(56.dp)
             ) {
                 Text(text = "Create Account", color = Color.White, fontFamily = interFontFamily, fontSize = 16.sp)
