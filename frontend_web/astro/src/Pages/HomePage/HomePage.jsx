@@ -6,6 +6,7 @@ import { useFavorites } from "../../context/FavoritesContext";
 import { useAudioPlayer } from "../../context/AudioPlayerContext";
 import styles from "./HomePage.module.css";
 import Modal from '../../components/Modal/Modal';
+import AudioUploader from "../../components/AudioUploader";
 
 // Add this function after imports and before the component definition
 const resizeImage = (file, maxWidth = 800, maxHeight = 600, quality = 0.7) => {
@@ -614,6 +615,9 @@ export const HomePage = () => {
             </li>
           </ul>
         </aside>
+
+
+
 
         {/* Main content area */}
         <main className={styles.mainContent}>

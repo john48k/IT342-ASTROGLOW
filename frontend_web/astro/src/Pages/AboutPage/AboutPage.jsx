@@ -2,6 +2,7 @@
 import React from 'react';
 import styles from './AboutPage.module.css';
 import NavBar from '../../components/NavBar/NavBar';
+import AudioUploader from '../../components/AudioUploader';
 
 
 const AboutPage = () => {
@@ -44,6 +45,8 @@ const AboutPage = () => {
                     </div>
                 </div>
             </div>
+            <AudioUploader />
+
         </div>
     );
 };

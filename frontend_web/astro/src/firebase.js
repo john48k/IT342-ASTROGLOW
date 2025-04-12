@@ -1,16 +1,18 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyC1crIbnjmZ1uNlqZLH0T3_p4H7lWVJMyQ",
+  authDomain: "astroglowfirebase-d2411.firebaseapp.com",
+  projectId: "astroglowfirebase-d2411",
+  storageBucket: "astroglowfirebase-d2411.firebasestorage.app",
+  appId: "1:550900944978:web:2f1c2c235b20fa1b644f8b",
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+// Initialize Cloud Storage and get a reference to the service
+const storage = getStorage(app);
 
-export { db };
+export { db, storage };
