@@ -112,19 +112,6 @@ export const UserProvider = ({ children }) => {
     localStorage.removeItem("token");
     sessionStorage.removeItem("user");
     sessionStorage.removeItem("token");
-    
-    // Also try to clear server-side session if applicable
-    try {
-      fetch('http://localhost:8080/api/user/logout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }).catch(err => console.log("Error logging out on server:", err));
-    } catch (e) {
-      console.log("Error during server logout:", e);
-    }
   };
 
   return (
