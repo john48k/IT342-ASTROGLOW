@@ -93,12 +93,12 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
     padding: 0.5rem 0;
   }
   
   .nameTitle {
-    font-size: 30px;
+    font-size: 28px;
     color: white;
     font-family: Arial, Helvetica, sans-serif;
     margin: 0;
@@ -123,26 +123,26 @@ body {
   .uploadBtn {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 20px;
+    gap: 8px;
+    padding: 8px 16px;
     border: none;
     background-image: linear-gradient(to right, #8b5cf6, #ec4899);
-    font-weight: 600;
+    font-weight: 500;
     color: white;
-    font-size: 16px;
+    font-size: 14px;
     cursor: pointer;
-    border-radius: 8px;
+    border-radius: 6px;
     transition: all 0.3s;
   }
   
   .uploadBtn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(139, 92, 246, 0.6);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
   }
   
   .uploadIcon {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
   }
   
   /* Hero section */
@@ -205,21 +205,38 @@ body {
   }
   
   .uploadButton {
-    background-image: linear-gradient(to right, #8b5cf6, #ec4899);
+    display: block;
+    width: auto;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: center;
     color: white;
+    background-image: linear-gradient(to right, #8b5cf6, #ec4899);
     border: none;
-    height: 50px;
-    padding: 0 2rem;
-    font-size: 1rem;
-    border-radius: 9999px;
-    font-weight: 600;
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.3s;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2);
   }
   
   .uploadButton:hover {
-    transform: scale(1.05);
-    box-shadow: 0 12px 25px rgba(139, 92, 246, 0.7);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
+  }
+  
+  .uploadButton:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(139, 92, 246, 0.2);
+  }
+  
+  .uploadButton:disabled {
+    background-image: linear-gradient(to right, #9ca3af, #6b7280);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.7;
   }
   
   .arrowIcon {
@@ -1121,41 +1138,6 @@ body {
     font-style: italic;
   }
   
-  .uploadButton {
-    display: block;
-    width: 100%;
-    padding: 12px 24px;
-    font-size: 1rem;
-    font-weight: 600;
-    text-align: center;
-    color: white;
-    background-image: linear-gradient(to right, #8b5cf6, #ec4899);
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    margin-top: 20px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 6px rgba(139, 92, 246, 0.3);
-  }
-  
-  .uploadButton:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 7px 14px rgba(139, 92, 246, 0.5);
-  }
-  
-  .uploadButton:active {
-    transform: translateY(1px);
-    box-shadow: 0 3px 5px rgba(139, 92, 246, 0.3);
-  }
-  
-  .uploadButton:disabled {
-    background-image: linear-gradient(to right, #9ca3af, #6b7280);
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-    opacity: 0.7;
-  }
-  
   .fileInputWrapper {
     margin: 15px 0;
     display: flex;
@@ -1509,95 +1491,27 @@ body {
   }
   
   @keyframes rotatePlay {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-  
-  .deleteButton {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background-color: rgba(217, 48, 37, 0.7);
-    border: none;
-    color: white;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    opacity: 0;
-  }
-  
-  .musicImageContainer:hover .deleteButton {
-    opacity: 1;
-  }
-  
-  .deleteButton:hover {
-    background-color: rgba(217, 48, 37, 1);
-    transform: scale(1.1);
-  }
-  
-  .editButton {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background-color: rgba(59, 130, 246, 0.7);
-    border: none;
-    color: white;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    opacity: 0;
-  }
-  
-  .musicImageContainer:hover .editButton {
-    opacity: 1;
-  }
-  
-  .editButton:hover {
-    background-color: rgba(59, 130, 246, 1);
-    transform: scale(1.1);
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
   
   .imagePreview {
-    margin-top: 10px;
-    border-radius: 8px;
-    overflow: hidden;
-    max-width: 150px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-  
-  .imagePreview img {
     width: 100%;
-    height: auto;
-    display: block;
-    object-fit: cover;
-    aspect-ratio: 1/1;
-  }
-  
-  .imagePreview p {
-    padding: 5px;
-    font-size: 12px;
+    max-width: 300px;
+    margin: 1rem auto;
     text-align: center;
-    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .imagePreview img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+  }
+
+  .imagePreview p {
+    color: #9ca3af;
+    font-size: 0.875rem;
     margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
   

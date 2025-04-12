@@ -1,12 +1,26 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import NavBar from "../../components/NavBar/NavBar";
+import Sidebar from "../../components/Sidebar/Sidebar";
 import { useUser } from "../../context/UserContext";
 import { useFavorites } from "../../context/FavoritesContext";
 import { useAudioPlayer } from "../../context/AudioPlayerContext";
 import styles from "./HomePage.module.css";
 import Modal from '../../components/Modal/Modal';
 import AudioUploader from "../../components/AudioUploader";
+
+// Helper function to check if a string is a data URI
+const isDataUri = (str) => {
+  if (!str) return false;
+  return str.startsWith('data:');
+};
+
+// Helper function to safely get image URL
+const getSafeImageUrl = (imageUrl, getImageUrl) => {
+  if (!imageUrl) return null;
+  if (isDataUri(imageUrl)) return imageUrl;
+  return getImageUrl(imageUrl);
+};
 
 // Add this function after imports and before the component definition
 const resizeImage = (file, maxWidth = 800, maxHeight = 600, quality = 0.7) => {
@@ -55,7 +69,7 @@ const resizeImage = (file, maxWidth = 800, maxHeight = 600, quality = 0.7) => {
 
 export const HomePage = () => {
   const { user } = useUser();
-  const { favorites, toggleFavorite } = useFavorites();
+  const { favorites, toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
   const {
     currentlyPlaying,
     isPlaying,
@@ -89,7 +103,6 @@ export const HomePage = () => {
   const [musicList, setMusicList] = useState([]);
   const [selectedFileInfo, setSelectedFileInfo] = useState(null);
   const [isImageLoading, setIsImageLoading] = useState(true);
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMusic, setEditingMusic] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -102,6 +115,13 @@ export const HomePage = () => {
   useEffect(() => {
     fetchMusicList();
   }, []);
+
+  // Update the useEffect that fetches favorites
+  useEffect(() => {
+    if (user && user.userId) {
+      refreshFavorites();
+    }
+  }, [user, refreshFavorites]);
 
   useEffect(() => {
     if (editingMusic) {
@@ -130,7 +150,7 @@ export const HomePage = () => {
             music.imageUrl = storedImage;
           }
           // If we have an image URL from the server, store it for future sessions
-          else if (music.imageUrl) {
+          else if (music.imageUrl && !isDataUri(music.imageUrl)) {
             console.log(`Storing image URL for music ${music.musicId} in localStorage`);
             localStorage.setItem(`music-image-${music.musicId}`, music.imageUrl);
           }
@@ -501,13 +521,13 @@ export const HomePage = () => {
     try {
       // Create a music object with the updated information
       const musicUpdate = {
-        musicId: editingMusic.musicId, // Include musicId in the request body
+        musicId: editingMusic.musicId,
         title: musicTitle,
         artist: musicArtist,
         genre: musicGenre || 'Unknown',
       };
 
-      // Add image URL if available (now musicImageUrl is always populated with data URI if file was selected)
+      // Add image URL if available
       if (musicImageUrl) {
         musicUpdate.imageUrl = musicImageUrl;
       } else if (editingMusic.imageUrl) {
@@ -531,12 +551,10 @@ export const HomePage = () => {
 
       // Get the response data
       const result = await response.json();
-      console.log('Update successful:', result);
 
       // Store the updated image URL in localStorage for persistence
       if (musicImageUrl) {
         localStorage.setItem(`music-image-${editingMusic.musicId}`, musicImageUrl);
-        console.log(`Updated image URL for music ${editingMusic.musicId} in localStorage`);
       }
 
       // Show success message
@@ -574,62 +592,15 @@ export const HomePage = () => {
     }
   };
 
-  // Custom function to get image URL with localStorage fallback
-  const getImageUrlWithFallback = (music) => {
-    // First use the getImageUrl from AudioPlayerContext to process any URL
-    let imageUrl = getImageUrl(music.imageUrl);
-
-    // If no image URL was found, try to get it from localStorage
-    if (!imageUrl) {
-      const storedImage = localStorage.getItem(`music-image-${music.musicId}`);
-      if (storedImage) {
-        console.log(`Found image in localStorage for music ${music.musicId}`);
-        imageUrl = getImageUrl(storedImage);
-      }
-    }
-
-    return imageUrl;
-  };
-
   return (
     <div className={styles.homePage}>
-      {/* Animated stars background */}
-      <div className={styles.starsBackground}></div>
-
-      {/* Keep the existing navbar */}
       <NavBar />
-
-      <div className={styles.container}>
-        {/* Sidebar */}
-        <aside className={styles.sidebar}>
-          <ul>
-            <li>
-              <Link to="/home" className={styles.sidebarLink}>
-                Your Home
-              </Link>
-            </li>
-            <li>
-              <Link to="/favorites" className={styles.sidebarLink}>
-                Favorites
-              </Link>
-            </li>
-          </ul>
-        </aside>
-
-
-
-
-        {/* Main content area */}
+      <div className={styles.pageContent}>
+        <Sidebar />
         <main className={styles.mainContent}>
-          {/* User greeting and upload button */}
           <div className={styles.headerSection}>
-            <h1 className={styles.nameTitle}>Good Day, {userName}!</h1>
-            <button className={styles.uploadBtn} onClick={handleUploadClick}>
-              <img
-                src="/upload-arrow.png"
-                alt="Upload"
-                className={styles.uploadIcon}
-              />
+            <h1 className={styles.pageTitle}>Welcome, {userName}!</h1>
+            <button onClick={handleUploadClick} className={styles.uploadButton}>
               Upload Music
             </button>
           </div>
@@ -638,108 +609,69 @@ export const HomePage = () => {
           {musicList.length > 0 && (
             <section className={styles.uploadedMusicSection}>
               <h2 className={styles.sectionTitle}>Your Uploaded Music</h2>
-              <div className={styles.filterOptions}>
-                <label className={styles.filterLabel}>
-                  <input
-                    type="checkbox"
-                    checked={showFavoritesOnly}
-                    onChange={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                    className={styles.filterCheckbox}
-                  />
-                  Show Favorites Only
-                </label>
-              </div>
               <div className={styles.musicGrid}>
-                {musicList
-                  .filter(music => !showFavoritesOnly || favorites.includes(music.musicId))
-                  .map((music) => {
-                    // Process the image URL with improved handler
-                    const imageUrl = getImageUrlWithFallback(music);
-                    const isFavorite = favorites.includes(music.musicId);
-                    const isCurrentlyPlaying = currentlyPlaying === music.musicId;
+                {musicList.map((music) => {
+                  // Process the image URL with improved handler
+                  const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
+                  const isFavorited = isFavorite(music.musicId);
+                  const isCurrentlyPlaying = currentlyPlaying === music.musicId;
 
-                    return (
-                      <div key={music.musicId}
-                        className={`${styles.musicCard} ${isCurrentlyPlaying ?
-                          (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
-                        onClick={(e) => handleMusicCardClick(e, music.musicId)}
-                      >
-                        <div className={styles.musicImageContainer}>
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={music.title}
-                              className={styles.musicImage}
-                              onLoad={() => {
-                                console.log("Image loaded successfully:", imageUrl.substring(0, 50) + '...');
-                                setIsImageLoading(false);
-                              }}
-                              onError={(e) => {
-                                console.error("Failed to load image:", imageUrl?.substring(0, 50) + '...');
-                                e.target.onerror = null; // Prevent infinite loop
-                                e.target.style.display = 'none';
-                                // Show the placeholder
-                                const placeholderElement = e.target.parentNode.querySelector(`.${styles.musicPlaceholder}`);
-                                if (placeholderElement) {
-                                  placeholderElement.style.display = 'flex';
-                                }
-                                setIsImageLoading(false);
-                              }}
-                            />
-                          ) : (
-                            // Show placeholder if no image URL
-                            <div className={styles.musicPlaceholder} style={{ display: 'flex' }}>
-                              <span>{music.title ? music.title.charAt(0).toUpperCase() : '♪'}</span>
-                            </div>
-                          )}
-                          <div
-                            className={styles.musicPlaceholder}
-                            style={{ display: imageUrl ? 'none' : 'flex' }}
-                          >
+                  return (
+                    <div key={music.musicId}
+                      className={`${styles.musicCard} ${isCurrentlyPlaying ?
+                        (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
+                      onClick={(e) => handleMusicCardClick(e, music.musicId)}
+                    >
+                      <div className={styles.musicImageContainer}>
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={music.title}
+                            className={styles.musicImage}
+                            onLoad={() => setIsImageLoading(false)}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.style.display = 'none';
+                              const placeholderElement = e.target.parentNode.querySelector(`.${styles.musicPlaceholder}`);
+                              if (placeholderElement) {
+                                placeholderElement.style.display = 'flex';
+                              }
+                              setIsImageLoading(false);
+                            }}
+                          />
+                        ) : (
+                          <div className={styles.musicPlaceholder}>
                             <span>{music.title ? music.title.charAt(0).toUpperCase() : '♪'}</span>
                           </div>
-                          <div className={styles.musicOverlay}></div>
-                          <button
-                            className={styles.musicPlayButton}
-                            onClick={(e) => {
-                              handleMusicPlayClick(e, music.musicId);
-                            }}
-                          >
-                            {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
-                          </button>
-                          <button
-                            className={`${styles.favoriteButton} ${isFavorite ? styles.favorited : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFavorite(music.musicId);
-                            }}
-                            title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                          >
-                            {isFavorite ? '★' : '☆'}
-                          </button>
-                          <button
-                            className={styles.deleteButton}
-                            onClick={(e) => handleDeleteMusic(music.musicId, e)}
-                            title="Delete song"
-                          >
-                            🗑️
-                          </button>
-                          <button
-                            className={styles.editButton}
-                            onClick={(e) => handleEditClick(music, e)}
-                            title="Edit song"
-                          >
-                            ✏️
-                          </button>
-                        </div>
-                        <div className={styles.musicInfo}>
-                          <h3 className={styles.musicTitle}>{music.title}</h3>
-                          <p className={styles.musicArtist}>{music.artist}</p>
-                          {music.genre && <p className={styles.musicGenre}>{music.genre}</p>}
-                        </div>
+                        )}
+                        <div className={styles.musicOverlay}></div>
+                        <button
+                          className={styles.musicPlayButton}
+                          onClick={(e) => {
+                            handleMusicPlayClick(e, music.musicId);
+                          }}
+                        >
+                          {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
+                        </button>
+                        <button
+                          className={`${styles.favoriteButton} ${isFavorited ? styles.favorited : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(music.musicId);
+                          }}
+                          title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                        >
+                          {isFavorited ? '★' : '☆'}
+                        </button>
                       </div>
-                    );
-                  })}
+                      <div className={styles.musicInfo}>
+                        <h3 className={styles.musicTitle}>{music.title}</h3>
+                        <p className={styles.musicArtist}>{music.artist}</p>
+                        {music.genre && <p className={styles.musicGenre}>{music.genre}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </section>
           )}
@@ -770,7 +702,7 @@ export const HomePage = () => {
             {/* Featured songs from uploaded music */}
             <div className={styles.featuredGrid}>
               {getFeaturedMusic().map((music) => {
-                const imageUrl = getImageUrlWithFallback(music);
+                const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
                 const isCurrentlyPlaying = currentlyPlaying === music.musicId;
 
                 return (
@@ -855,190 +787,18 @@ export const HomePage = () => {
         </main>
       </div>
 
-      <Modal
-        isOpen={showUploadModal}
-        onClose={handleCloseModal}
-        title="Upload Music"
-        message={
-          <div className={styles.uploadModalContent}>
-            <>
-              <div className={styles.uploadOptions}>
-                <label className={styles.optionLabel}>
-                  <input
-                    type="radio"
-                    name="uploadType"
-                    checked={!useExternalUrl}
-                    onChange={() => setUseExternalUrl(false)}
-                  />
-                  Upload MP3 File
-                </label>
-                <label className={styles.optionLabel}>
-                  <input
-                    type="radio"
-                    name="uploadType"
-                    checked={useExternalUrl}
-                    onChange={() => setUseExternalUrl(true)}
-                  />
-                  Use External URL
-                </label>
-              </div>
-
-              <div className={styles.formField}>
-                <label>Music Title</label>
-                <input
-                  type="text"
-                  value={musicTitle}
-                  onChange={(e) => setMusicTitle(e.target.value)}
-                  placeholder="Enter music title"
-                  className={styles.textInput}
-                />
-              </div>
-              <div className={styles.formField}>
-                <label>Artist</label>
-                <input
-                  type="text"
-                  value={musicArtist}
-                  onChange={(e) => setMusicArtist(e.target.value)}
-                  placeholder="Enter artist name"
-                  className={styles.textInput}
-                />
-              </div>
-              <div className={styles.formField}>
-                <label>Genre (optional)</label>
-                <input
-                  type="text"
-                  value={musicGenre}
-                  onChange={(e) => setMusicGenre(e.target.value)}
-                  placeholder="Enter genre"
-                  className={styles.textInput}
-                />
-              </div>
-
-              {useExternalUrl ? (
-                <div className={styles.formField}>
-                  <label>Music URL</label>
-                  <input
-                    type="text"
-                    value={musicUrl}
-                    onChange={(e) => setMusicUrl(e.target.value)}
-                    placeholder="Enter URL to audio file (MP3, etc.)"
-                    className={styles.textInput}
-                  />
-                  <p className={styles.inputHelp}>Enter a direct link to an audio file (must end with .mp3, .wav, etc.)</p>
-                </div>
-              ) : (
-                <>
-                  <div className={styles.fileInputWrapper}>
-                    <label htmlFor="musicFile" className={styles.fileInputLabel}>
-                      Choose MP3 File
-                      <input
-                        id="musicFile"
-                        type="file"
-                        accept="audio/mpeg"
-                        onChange={handleFileChange}
-                        className={styles.fileInput}
-                      />
-                    </label>
-                  </div>
-                  {selectedFileInfo && (
-                    <div className={styles.fileInfo}>
-                      <p className={styles.fileName}>{selectedFileInfo.name}</p>
-                      <p className={styles.fileSize}>{selectedFileInfo.size}</p>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <div className={styles.formField}>
-                <label>Cover Image</label>
-
-                <div className={styles.uploadOptions}>
-                  <label className={styles.optionLabel}>
-                    <input
-                      type="radio"
-                      name="imageUploadType"
-                      checked={useImageUrl}
-                      onChange={() => setUseImageUrl(true)}
-                    />
-                    Use Image URL
-                  </label>
-                  <label className={styles.optionLabel}>
-                    <input
-                      type="radio"
-                      name="imageUploadType"
-                      checked={!useImageUrl}
-                      onChange={() => setUseImageUrl(false)}
-                    />
-                    Upload Image File
-                  </label>
-                </div>
-
-                {useImageUrl ? (
-                  <div>
-                    <input
-                      type="text"
-                      value={musicImageUrl}
-                      onChange={(e) => setMusicImageUrl(e.target.value)}
-                      placeholder="Enter URL to cover image"
-                      className={styles.textInput}
-                    />
-                    <p className={styles.inputHelp}>Enter a direct URL to an image (JPG, PNG, etc.)</p>
-                    {musicImageUrl && (
-                      <div className={styles.imagePreview}>
-                        <img
-                          src={musicImageUrl}
-                          alt="Cover preview"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "/placeholder.jpg";
-                            e.target.style.opacity = 0.5;
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    <div className={styles.fileInputWrapper}>
-                      <label htmlFor="coverImageFile" className={styles.fileInputLabel}>
-                        Choose Image File
-                        <input
-                          id="coverImageFile"
-                          type="file"
-                          accept="image/jpeg,image/png,image/gif"
-                          onChange={handleImageFileChange}
-                          className={styles.fileInput}
-                        />
-                      </label>
-                    </div>
-                    {selectedImageFile && (
-                      <div className={styles.imagePreview}>
-                        <img
-                          src={URL.createObjectURL(selectedImageFile)}
-                          alt="Cover preview"
-                        />
-                        <p>{selectedImageFile.name}</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {uploadError && <p className={styles.errorMessage}>{uploadError}</p>}
-              {isUploading && <p className={styles.uploadingMessage}>Uploading...</p>}
-
-              <button
-                className={styles.uploadButton}
-                onClick={handleUpload}
-                disabled={isUploading}
-              >
-                {isUploading ? 'Uploading...' : 'Upload Music'}
-              </button>
-            </>
-          </div>
-        }
-        showConfirmButton={false}
-      />
+      {showUploadModal && (
+        <Modal
+          isOpen={true}
+          onClose={handleCloseModal}
+          title="Upload Music"
+        >
+          <AudioUploader
+            onClose={handleCloseModal}
+            onUploadSuccess={handleUpload}
+          />
+        </Modal>
+      )}
 
       {/* Edit Music Modal */}
       <Modal

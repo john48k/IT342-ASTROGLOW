@@ -27,12 +27,176 @@ body {
   padding-top: 70px; /* Add padding equal to navbar height */
 }
 
-.container {
-  display: flex;
+.mainContent {
   flex: 1;
-  position: relative;
-  max-width: 100%;
+  padding: 2rem;
+  border-radius: 10px;
+  background-image: linear-gradient(160deg, #000000 0%, #653895 100%);
+  min-height: 100%;
+  margin-bottom: 60px; /* Space for now playing bar */
+  margin-left: 240px; /* Space for fixed sidebar */
   box-sizing: border-box;
+}
+
+.pageTitle {
+  font-size: 30px;
+  color: white;
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0 0 2.5rem 0;
+  background-image: linear-gradient(to right, #c084fc, #f0abfc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 1.2rem;
+  color: #888;
+}
+
+.noFavorites {
+  text-align: center;
+  padding: 50px;
+  color: #888;
+}
+
+.noFavorites h2 {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  color: #f0abfc;
+}
+
+.noFavorites p {
+  margin-bottom: 20px;
+}
+
+.browseLink {
+  display: inline-block;
+  padding: 10px 20px;
+  background-image: linear-gradient(to right, #8b5cf6, #ec4899);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.browseLink:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(139, 92, 246, 0.6);
+}
+
+.musicGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 20px 0;
+}
+
+.musicCard {
+  background-color: rgba(40, 40, 40, 0.8);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s, background-color 0.2s;
+  cursor: pointer;
+}
+
+.musicCard:hover {
+  transform: translateY(-5px);
+  background-color: rgba(60, 60, 60, 0.8);
+}
+
+.musicImageContainer {
+  position: relative;
+  width: 100%;
+  padding-top: 100%; /* 1:1 Aspect Ratio */
+}
+
+.musicImage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.musicPlaceholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(45deg, #8b5cf6, #ec4899);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: white;
+}
+
+.musicOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.musicCard:hover .musicOverlay {
+  opacity: 1;
+}
+
+.playButton,
+.favoriteButton {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 10px;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  z-index: 2;
+}
+
+.playButton:hover,
+.favoriteButton:hover {
+  transform: scale(1.1);
+}
+
+.musicInfo {
+  padding: 15px;
+}
+
+.musicTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 5px 0;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.musicArtist {
+  font-size: 0.9rem;
+  color: #b3b3b3;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Sidebar styles */
@@ -76,18 +240,6 @@ body {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Main content area */
-.mainContent {
-  flex: 1;
-  padding: 2rem;
-  border-radius: 10px;
-  background-image: linear-gradient(160deg, #000000 0%, #653895 100%);
-  min-height: 100%;
-  margin-bottom: 60px; /* Space for now playing bar */
-  margin-left: 240px; /* Space for fixed sidebar */
-  box-sizing: border-box;
-}
-
 /* Header section */
 .headerSection {
   display: flex;
@@ -124,13 +276,6 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-
-.musicGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
-  margin-top: 15px;
 }
 
 /* Music card styles */
@@ -266,39 +411,6 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* Favorite button styles */
-.favoriteButton {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.6);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  z-index: 10;
-  opacity: 0.7;
-  transition: all 0.2s ease;
-}
-
-.favoriteButton:hover {
-  transform: scale(1.1);
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.8);
-}
-
-.favoriteButton.favorited {
-  color: #ffce00;
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.8);
 }
 
 /* Now playing bar */
@@ -589,4 +701,39 @@ body {
   .playerActions {
     justify-content: center;
   }
+}
+
+.error {
+  text-align: center;
+  padding: 50px;
+  color: #ef4444;
+  font-size: 1.1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.favoriteButton {
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.favoriteButton:hover {
+  transform: scale(1.1);
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.favoriteButton.favorited {
+  color: #ffd700;
+  background: rgba(0, 0, 0, 0.8);
 } 

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.astroglow.Entity.FavoritesEntity;
+import com.astroglow.Entity.MusicEntity;
 import com.astroglow.Service.FavoritesService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -25,6 +26,24 @@ public class FavoritesController {
 
     @Autowired
     private FavoritesService favoritesService;
+
+    // Get music details for a favorite
+    @GetMapping("/{favoriteId}/music")
+    public ResponseEntity<MusicEntity> getMusicForFavorite(@PathVariable("favoriteId") int favoriteId) {
+        try {
+            FavoritesEntity favorite = favoritesService.getFavoriteById(favoriteId);
+            if (favorite == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            MusicEntity music = favorite.getMusic();
+            if (music == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+            return new ResponseEntity<>(music, HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 
     // Get all favorites
     @GetMapping("/getAllFavorites")
@@ -130,6 +149,20 @@ public class FavoritesController {
         try {
             boolean isFavorite = favoritesService.isFavorite(userId, musicId);
             return new ResponseEntity<>(isFavorite, HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    // Get all favorite music details for a user
+    @GetMapping("/user/{userId}/music-details")
+    public ResponseEntity<List<MusicEntity>> getFavoritesMusicByUserId(@PathVariable("userId") int userId) {
+        try {
+            List<FavoritesEntity> favorites = favoritesService.getFavoritesByUserId(userId);
+            List<MusicEntity> musicList = favorites.stream()
+                .map(FavoritesEntity::getMusic)
+                .toList();
+            return new ResponseEntity<>(musicList, HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
