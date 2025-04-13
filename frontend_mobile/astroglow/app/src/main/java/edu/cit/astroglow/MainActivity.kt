@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -48,6 +50,8 @@ import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,6 +60,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             AstroglowTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
+                    // Get screen configuration
+                    val configuration = LocalConfiguration.current
+                    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                    val bottomMargin = if (isLandscape) 100.dp else 32.dp
+                    
                     // Animation for gradient colors
                     val infiniteTransition = rememberInfiniteTransition()
                     
@@ -129,15 +138,18 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp)
                         ) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            
                             Image(
                                 painter = painterResource(id = R.drawable.moon_with_flag),
                                 contentDescription = "Moon with Flag",
                                 modifier = Modifier
-                                    .padding(16.dp)
                                     .size(450.dp)
                                     .graphicsLayer(
                                         scaleX = logoScale,
@@ -145,6 +157,9 @@ class MainActivity : ComponentActivity() {
                                     ),
                                 contentScale = ContentScale.Crop
                             )
+                            
+                            Spacer(modifier = Modifier.height(32.dp))
+                            
                             Text(
                                 text = "AstroGlow",
                                 fontSize = 46.sp,
@@ -158,6 +173,9 @@ class MainActivity : ComponentActivity() {
                                         translationY = titleOffset
                                     )
                             )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
+                            
                             Text(
                                 text = "Welcome to AstroGlow, your trusted music provider. Listen to our latest beats from the coolest artist!",
                                 fontSize = 16.sp,
@@ -165,35 +183,34 @@ class MainActivity : ComponentActivity() {
                                 color = Color.White,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier
-                                    .padding(16.dp)
                                     .fillMaxWidth()
                                     .graphicsLayer(
                                         translationY = subtitleOffset
                                     )
                             )
+                            
+                            Spacer(modifier = Modifier.height(bottomMargin))
+                            
+                            Spacer(modifier = Modifier.weight(1f))
                         }
-                        Row(
+                        
+                        // Navigation button at bottom right
+                        IconButton(
+                            onClick = {
+                                val intent = Intent(this@MainActivity, AboutActivity::class.java)
+                                startActivity(intent)
+                            },
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(end = 16.dp, bottom = 32.dp),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.Bottom
+                                .align(Alignment.BottomEnd)
+                                .padding(16.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
                         ) {
-                            IconButton(
-                                onClick = {
-                                    val intent = Intent(this@MainActivity, AboutActivity::class.java)
-                                    startActivity(intent)
-                                },
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(Color.White)
-                            ) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.baseline_navigate_next_24),
-                                    contentDescription = "Navigate Next",
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                            Image(
+                                painter = painterResource(id = R.drawable.baseline_navigate_next_24),
+                                contentDescription = "Navigate Next",
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                     }
                 }
