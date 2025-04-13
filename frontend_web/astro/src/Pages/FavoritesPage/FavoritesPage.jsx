@@ -3,10 +3,35 @@ import { Link } from "react-router-dom";
 import NavBar from "../../components/NavBar/NavBar";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import { useUser } from "../../context/UserContext";
+import { useAudioPlayer } from "../../context/AudioPlayerContext";
+import { useFavorites } from "../../context/FavoritesContext";
 import styles from "./FavoritesPage.module.css";
+
+// Helper function to check if a string is a data URI
+const isDataUri = (str) => {
+  if (!str) return false;
+  return str.startsWith('data:');
+};
+
+// Helper function to safely get image URL
+const getSafeImageUrl = (imageUrl, getImageUrl) => {
+  if (!imageUrl) return null;
+  if (isDataUri(imageUrl)) return imageUrl;
+  return getImageUrl(imageUrl);
+};
 
 export const FavoritesPage = () => {
   const { user } = useUser();
+  const { 
+    currentlyPlaying, 
+    isPlaying, 
+    playMusic, 
+    togglePlayPause,
+    getImageUrl
+  } = useAudioPlayer();
+  
+  const { isFavorite, toggleFavorite } = useFavorites();
+  
   const [favoriteMusic, setFavoriteMusic] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -149,6 +174,38 @@ export const FavoritesPage = () => {
     fetchFavoriteMusic();
   };
 
+  // Handle play button click
+  const handlePlayClick = (e, musicId) => {
+    e.stopPropagation();
+    
+    if (currentlyPlaying === musicId) {
+      // If already playing this track, toggle play/pause
+      togglePlayPause(musicId);
+    } else {
+      // If not playing this track, start playing it
+      playMusic(musicId);
+    }
+  };
+
+  // Handle click on music card
+  const handleMusicCardClick = (e, musicId) => {
+    e.stopPropagation();
+    
+    if (currentlyPlaying === musicId) {
+      // If this is the current track, toggle play/pause
+      togglePlayPause(musicId);
+    } else {
+      // If not the current track, start playing it
+      playMusic(musicId);
+    }
+  };
+
+  // Handle favorite button click
+  const handleFavoriteClick = (e, musicId) => {
+    e.stopPropagation();
+    toggleFavorite(musicId);
+  };
+
   return (
     <div className={styles.favoritesPage}>
       <NavBar />
@@ -179,30 +236,52 @@ export const FavoritesPage = () => {
             </div>
           ) : (
             <div className={styles.musicGrid}>
-              {favoriteMusic.map((music) => (
-                <div 
-                  key={`favorite-${music.musicId}`} 
-                  className={styles.musicCard}
-                >
-                  <div className={styles.musicImageContainer}>
-                    {imageUrls[music.musicId] ? (
-                      <img 
-                        src={imageUrls[music.musicId]} 
-                        alt={music.title} 
-                        className={styles.musicImage}
-                      />
-                    ) : (
-                      <div className={styles.musicPlaceholder}>
-                        <span>{music?.title?.charAt(0).toUpperCase() || '?'}</span>
-                      </div>
-                    )}
+              {favoriteMusic.map((music) => {
+                const imageUrl = getSafeImageUrl(imageUrls[music.musicId], getImageUrl);
+                const isCurrentlyPlaying = currentlyPlaying === music.musicId;
+                const isFavorited = isFavorite(music.musicId);
+                
+                return (
+                  <div 
+                    key={`favorite-${music.musicId}`} 
+                    className={`${styles.musicCard} ${isCurrentlyPlaying ? 
+                      (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
+                    onClick={(e) => handleMusicCardClick(e, music.musicId)}
+                  >
+                    <div className={styles.musicImageContainer}>
+                      {imageUrl ? (
+                        <img 
+                          src={imageUrl} 
+                          alt={music.title} 
+                          className={styles.musicImage}
+                        />
+                      ) : (
+                        <div className={styles.musicPlaceholder}>
+                          <span>{music?.title?.charAt(0).toUpperCase() || '?'}</span>
+                        </div>
+                      )}
+                      <div className={styles.musicOverlay}></div>
+                      <button 
+                        className={styles.musicPlayButton}
+                        onClick={(e) => handlePlayClick(e, music.musicId)}
+                      >
+                        {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
+                      </button>
+                      <button 
+                        className={`${styles.favoriteButton} ${isFavorited ? styles.favorited : ''}`}
+                        onClick={(e) => handleFavoriteClick(e, music.musicId)}
+                        title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                      >
+                        {isFavorited ? '★' : '☆'}
+                      </button>
+                    </div>
+                    <div className={styles.musicInfo}>
+                      <h3 className={styles.musicTitle}>{music.title || 'Untitled'}</h3>
+                      <p className={styles.musicArtist}>{music.artist || 'Unknown Artist'}</p>
+                    </div>
                   </div>
-                  <div className={styles.musicInfo}>
-                    <h3 className={styles.musicTitle}>{music.title || 'Untitled'}</h3>
-                    <p className={styles.musicArtist}>{music.artist || 'Unknown Artist'}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </main>
