@@ -7,45 +7,98 @@ export const FavoritesProvider = ({ children }) => {
   const [favorites, setFavorites] = useState([]);
   const { user } = useUser();
 
-  // Load favorites from localStorage when component mounts or user changes
+  // Load favorites from backend when component mounts or user changes
   useEffect(() => {
-    const loadFavorites = () => {
-      const storedFavorites = localStorage.getItem('favorites');
-      if (storedFavorites) {
-        setFavorites(JSON.parse(storedFavorites));
+    const loadFavorites = async () => {
+      if (user?.userId) {
+        try {
+          console.log(`Loading favorites for user ID: ${user.userId}`);
+          const response = await fetch(`http://localhost:8080/api/favorites/user/${user.userId}`, {
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            },
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log(`Loaded ${data.length} favorites for user ID: ${user.userId}`);
+            setFavorites(data);
+          } else {
+            console.error(`Error loading favorites: ${response.status} ${response.statusText}`);
+          }
+        } catch (error) {
+          console.error('Error loading favorites:', error);
+        }
       }
     };
     
     loadFavorites();
-  }, [user?.userId]); // Only reload when user changes
+  }, [user?.userId]);
 
   // Memoize refreshFavorites to prevent unnecessary re-renders
-  const refreshFavorites = useCallback(() => {
-    const storedFavorites = localStorage.getItem('favorites');
-    if (storedFavorites) {
-      setFavorites(JSON.parse(storedFavorites));
+  const refreshFavorites = useCallback(async () => {
+    if (user?.userId) {
+      try {
+        console.log(`Refreshing favorites for user ID: ${user.userId}`);
+        const response = await fetch(`http://localhost:8080/api/favorites/user/${user.userId}`, {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          },
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`Refreshed ${data.length} favorites for user ID: ${user.userId}`);
+          setFavorites(data);
+        } else {
+          console.error(`Error refreshing favorites: ${response.status} ${response.statusText}`);
+        }
+      } catch (error) {
+        console.error('Error refreshing favorites:', error);
+      }
     }
-  }, []); // Empty dependency array since it doesn't depend on any props or state
+  }, [user?.userId]);
 
-  const toggleFavorite = useCallback((musicId) => {
-    setFavorites(prevFavorites => {
-      // Check if the music is already in favorites
-      const isFavorited = prevFavorites.includes(musicId);
-      
-      // Create new favorites array
-      const newFavorites = isFavorited
-        ? prevFavorites.filter(id => id !== musicId)
-        : [...prevFavorites, musicId];
+  const toggleFavorite = useCallback(async (musicId) => {
+    if (!user?.userId) return;
 
-      // Update localStorage
-      localStorage.setItem('favorites', JSON.stringify(newFavorites));
-      
-      return newFavorites;
-    });
-  }, []); // Empty dependency array since it doesn't depend on any props or state
+    try {
+      // First check if the music is already favorited
+      const checkResponse = await fetch(`http://localhost:8080/api/favorites/user/${user.userId}/music/${musicId}/check`);
+      const isFavorited = await checkResponse.json();
+
+      let response;
+      if (isFavorited) {
+        // Remove from favorites
+        response = await fetch(`http://localhost:8080/api/favorites/user/${user.userId}/music/${musicId}`, {
+          method: 'DELETE'
+        });
+      } else {
+        // Add to favorites
+        response = await fetch(`http://localhost:8080/api/favorites/user/${user.userId}/music/${musicId}`, {
+          method: 'POST'
+        });
+      }
+
+      if (response.ok) {
+        // Refresh the favorites list
+        await refreshFavorites();
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  }, [user?.userId, refreshFavorites]);
 
   const isFavorite = useCallback((musicId) => {
-    return favorites.includes(musicId);
+    return favorites.some(fav => Number(fav.music?.musicId) === Number(musicId));
   }, [favorites]);
 
   return (

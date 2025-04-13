@@ -114,6 +114,9 @@ body {
   position: relative;
   width: 100%;
   padding-top: 100%; /* 1:1 Aspect Ratio */
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #f0f0f0;
 }
 
 .musicImage {
@@ -123,6 +126,7 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: opacity 0.3s ease;
 }
 
 .musicPlaceholder {
@@ -131,12 +135,17 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: linear-gradient(45deg, #8b5cf6, #ec4899);
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #e0e0e0;
+  color: #666;
   font-size: 2rem;
-  color: white;
+  font-weight: bold;
+}
+
+.musicPlaceholder span {
+  opacity: 0.7;
 }
 
 .musicOverlay {
@@ -711,6 +720,25 @@ body {
   background: rgba(239, 68, 68, 0.1);
   border-radius: 8px;
   margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.retryButton {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.retryButton:hover {
+  background: #dc2626;
 }
 
 .favoriteButton {
