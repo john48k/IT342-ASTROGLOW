@@ -13,40 +13,43 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { UserProvider } from "./context/UserContext";
 import { FavoritesProvider } from "./context/FavoritesContext";
 import { AudioPlayerProvider } from "./context/AudioPlayerContext";
+import { PlaylistProvider } from "./context/PlaylistContext";
 import NowPlayingBar from "./components/NowPlayingBar/NowPlayingBar";
 
 function App() {
   return (
     <UserProvider>
-      <FavoritesProvider>
-        <AudioPlayerProvider>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/signup" element={<SignUpPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/oauth2/redirect" element={<OAuth2Redirect />} />
-            
-            {/* Protected Routes - Require Authentication */}
-            <Route path="/home" element={
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <UserProfilePage />
-              </ProtectedRoute>
-            } />
-            <Route path="/favorites" element={
-              <ProtectedRoute>
-                <FavoritesPage />
-              </ProtectedRoute>
-            } />
-          </Routes>
-          <NowPlayingBar />
-        </AudioPlayerProvider>
-      </FavoritesProvider>
+      <AudioPlayerProvider>
+        <FavoritesProvider>
+          <PlaylistProvider>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/signup" element={<SignUpPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/oauth2/redirect" element={<OAuth2Redirect />} />
+              
+              {/* Protected Routes - Require Authentication */}
+              <Route path="/home" element={
+                <ProtectedRoute>
+                  <HomePage />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile" element={
+                <ProtectedRoute>
+                  <UserProfilePage />
+                </ProtectedRoute>
+              } />
+              <Route path="/favorites" element={
+                <ProtectedRoute>
+                  <FavoritesPage />
+                </ProtectedRoute>
+              } />
+            </Routes>
+            <NowPlayingBar />
+          </PlaylistProvider>
+        </FavoritesProvider>
+      </AudioPlayerProvider>
     </UserProvider>
   );
 }

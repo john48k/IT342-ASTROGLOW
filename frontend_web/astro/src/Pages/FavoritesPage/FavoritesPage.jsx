@@ -5,6 +5,8 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import { useUser } from "../../context/UserContext";
 import { useAudioPlayer } from "../../context/AudioPlayerContext";
 import { useFavorites } from "../../context/FavoritesContext";
+import { usePlaylist } from "../../context/PlaylistContext";
+import PlaylistModal from "../../components/PlaylistModal/PlaylistModal";
 import styles from "./FavoritesPage.module.css";
 
 // Helper function to check if a string is a data URI
@@ -31,6 +33,7 @@ export const FavoritesPage = () => {
   } = useAudioPlayer();
   
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { openPlaylistModal } = usePlaylist();
   
   const [favoriteMusic, setFavoriteMusic] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -206,6 +209,12 @@ export const FavoritesPage = () => {
     toggleFavorite(musicId);
   };
 
+  // Handle add to playlist button click
+  const handleAddToPlaylistClick = (e, musicId) => {
+    e.stopPropagation();
+    openPlaylistModal(musicId);
+  };
+
   return (
     <div className={styles.favoritesPage}>
       <NavBar />
@@ -274,6 +283,13 @@ export const FavoritesPage = () => {
                       >
                         {isFavorited ? '★' : '☆'}
                       </button>
+                      <button 
+                        className={styles.addToPlaylistButton}
+                        onClick={(e) => handleAddToPlaylistClick(e, music.musicId)}
+                        title="Add to playlist"
+                      >
+                        +
+                      </button>
                     </div>
                     <div className={styles.musicInfo}>
                       <h3 className={styles.musicTitle}>{music.title || 'Untitled'}</h3>
@@ -286,6 +302,7 @@ export const FavoritesPage = () => {
           )}
         </main>
       </div>
+      <PlaylistModal />
     </div>
   );
 };

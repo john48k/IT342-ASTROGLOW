@@ -1,0 +1,244 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  padding: 20px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  color: white;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  color: #fff;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.closeButton:hover {
+  color: #ff4081;
+}
+
+.errorMessage {
+  background-color: rgba(255, 0, 0, 0.1);
+  color: #ff6b6b;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.successMessage {
+  background-color: rgba(0, 255, 0, 0.1);
+  color: #4caf50;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.playlistsContainer {
+  margin-bottom: 20px;
+}
+
+.playlistsContainer h3 {
+  margin-top: 0;
+  color: #fff;
+}
+
+.noPlaylists {
+  color: #888;
+  text-align: center;
+  padding: 20px;
+}
+
+.playlistList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.playlistItem {
+  margin-bottom: 10px;
+  background-color: #2a2a2a;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.playlistHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+}
+
+.playlistInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.playlistName {
+  font-weight: 500;
+  color: #fff;
+}
+
+.songCount {
+  color: #888;
+  font-size: 0.9em;
+}
+
+.playlistActions {
+  display: flex;
+  gap: 10px;
+}
+
+.expandButton {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 5px;
+  font-size: 12px;
+  transition: color 0.2s;
+}
+
+.expandButton:hover {
+  color: #fff;
+}
+
+.addButton {
+  background-color: #ff4081;
+  color: white;
+  border: none;
+  padding: 5px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.addButton:hover {
+  background-color: #f50057;
+}
+
+.musicList {
+  list-style: none;
+  padding: 10px 15px;
+  margin: 0;
+  background-color: #222;
+}
+
+.musicItem {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  gap: 12px;
+  border-bottom: 1px solid #333;
+}
+
+.musicItem:last-child {
+  border-bottom: none;
+}
+
+.musicThumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.musicInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.musicTitle {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.musicArtist {
+  color: #888;
+  font-size: 12px;
+}
+
+.createPlaylistContainer {
+  border-top: 1px solid #333;
+  padding-top: 20px;
+}
+
+.createPlaylistContainer h3 {
+  margin-top: 0;
+  color: #fff;
+}
+
+.createPlaylistForm {
+  display: flex;
+  gap: 10px;
+}
+
+.playlistInput {
+  flex: 1;
+  background-color: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: white;
+  font-size: 14px;
+}
+
+.playlistInput:focus {
+  outline: none;
+  border-color: #ff4081;
+}
+
+.createButton {
+  background-color: #ff4081;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.createButton:hover {
+  background-color: #f50057;
+}
+
+.createButton:disabled {
+  background-color: #666;
+  cursor: not-allowed;
+} 

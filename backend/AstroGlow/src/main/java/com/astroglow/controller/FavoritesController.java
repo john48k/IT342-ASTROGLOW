@@ -168,16 +168,16 @@ public class FavoritesController {
     public ResponseEntity<?> getFavoritesMusicByUserId(@PathVariable int userId) {
         try {
             List<FavoritesEntity> favorites = favoritesService.getFavoritesByUserId(userId);
-            
+
             if (favorites.isEmpty()) {
                 return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body("[]");
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("[]");
             }
 
             // Create a list to hold the music details
             List<Map<String, Object>> musicDetails = new ArrayList<>();
-            
+
             // Process each favorite and extract music details
             for (FavoritesEntity favorite : favorites) {
                 MusicEntity music = favorite.getMusic();
@@ -196,9 +196,9 @@ public class FavoritesController {
             }
 
             return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(musicDetails);
-            
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(musicDetails);
+
         } catch (EntityNotFoundException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {
