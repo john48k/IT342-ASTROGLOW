@@ -600,6 +600,7 @@ export const HomePage = () => {
         <main className={styles.mainContent}>
           <div className={styles.headerSection}>
             <h1 className={styles.pageTitle}>Welcome, {userName}!</h1>
+            <AudioUploader />
             <button onClick={handleUploadClick} className={styles.uploadButton}>
               Upload Music
             </button>

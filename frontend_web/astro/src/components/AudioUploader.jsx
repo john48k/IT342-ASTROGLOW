@@ -59,7 +59,7 @@ const AudioUploader = () => {
                 borderRadius: '12px',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }} className="hover:scale-103">
-                Upload Music
+                Upload Music (This connects to firebase)
             </label>
             {uploadProgress > 0 && <p>Uploading: {uploadProgress.toFixed(0)}%</p>}
             {downloadURL && (
