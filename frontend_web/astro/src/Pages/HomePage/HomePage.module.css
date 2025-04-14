@@ -1508,3 +1508,20 @@ body {
     margin: 0;
   }
   
+  .uploadModalButton {
+    padding: 8px 20px;
+    background: linear-gradient(to right, #8b5cf6, #ec4899);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-left: auto; /* Push it to the right */
+  }
+  
+  .uploadModalButton:hover {
+    filter: brightness(1.1);
+    transform: scale(1.03);
+  }
+  

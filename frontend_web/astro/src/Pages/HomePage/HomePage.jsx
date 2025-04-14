@@ -8,6 +8,7 @@ import { useAudioPlayer } from "../../context/AudioPlayerContext";
 import styles from "./HomePage.module.css";
 import Modal from '../../components/Modal/Modal';
 import AudioUploader from "../../components/AudioUploader";
+import UploadModal from '../../components/UploadModal';
 
 // Helper function to check if a string is a data URI
 const isDataUri = (str) => {
@@ -107,6 +108,7 @@ export const HomePage = () => {
   const [editingMusic, setEditingMusic] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [firebaseMusicList, setFirebaseMusicList] = useState([]);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // Add refs for tracking double clicks
   const lastClickTimeRef = useRef({});
@@ -739,65 +741,45 @@ export const HomePage = () => {
     }
   };
 
-  // Handle file uploaded through Firebase
-  const handleFirebaseFileUploaded = async (fileName, fileUrl) => {
-    console.log('Home: File uploaded to Firebase:', fileName, fileUrl);
+  // Function to handle opening the upload modal
+  const openUploadModal = () => {
+    setIsUploadModalOpen(true);
+  };
+
+  // Function to handle closing the upload modal
+  const closeUploadModal = () => {
+    setIsUploadModalOpen(false);
+  };
+
+  // Function to handle the final upload data from the modal
+  const handleUploadComplete = (uploadData) => {
+    console.log('HomePage: Upload Complete Data:', uploadData);
     
-    // Create a new music object for the uploaded file
-    let artist = "Unknown Artist";
-    let title = fileName.replace(".mp3", "");
-    let genre = "Music";
+    // Here, you'll likely want to refresh your music lists (both Firebase and potentially DB)
+    // Option 1: If the modal saves to your DB, refresh the DB list
+    fetchMusicList(); 
     
-    // Parse artist and title if filename follows format
-    const parts = fileName.split(' - ');
-    if (parts.length >= 2) {
-      artist = parts[0];
-      title = parts[1].replace('.mp3', '');
-      
-      // If there's genre info in brackets like [Genre], extract it
-      const genreMatch = title.match(/\[(.*?)\]/);
-      if (genreMatch && genreMatch[1]) {
-        genre = genreMatch[1];
-        title = title.replace(/\[.*?\]/, '').trim();
-      }
-    }
-    
-    // Create the new music object
-    const newMusic = {
-      id: `firebase-${fileName}`,
-      title,
-      artist,
-      genre,
-      audioUrl: fileUrl
+    // Option 2: Add the new Firebase item directly to the UI (similar to previous approach)
+    const newFirebaseMusic = {
+        id: `firebase-${uploadData.audioFileName || Date.now()}`,
+        title: uploadData.title,
+        artist: uploadData.artist,
+        genre: uploadData.genre,
+        audioUrl: uploadData.audioUrl,
+        imageUrl: uploadData.imageUrl // Use the image from the modal
     };
     
-    console.log('Adding new music to list:', newMusic);
-    
-    // Immediately add to UI without waiting for refresh
     setFirebaseMusicList(prev => {
-      // Check if this file already exists (replace if it does)
-      const exists = prev.some(item => item.id === newMusic.id);
-      if (exists) {
-        return prev.map(item => item.id === newMusic.id ? newMusic : item);
-      } else {
-        return [...prev, newMusic];
-      }
+        const exists = prev.some(item => item.id === newFirebaseMusic.id);
+        if (exists) {
+          return prev.map(item => item.id === newFirebaseMusic.id ? newFirebaseMusic : item);
+        } else {
+          return [...prev, newFirebaseMusic];
+        }
     });
-    
-    // Also refresh the entire list to ensure we have everything
-    setTimeout(() => {
-      fetchFirebaseMusic().then(() => {
-        console.log('Firebase music list refreshed after upload');
-      });
-    }, 1000);
-    
-    // Scroll to the uploaded music section to show the new file
-    setTimeout(() => {
-      const uploadedMusicSection = document.querySelector(`.${styles.uploadedMusicSection}`);
-      if (uploadedMusicSection) {
-        uploadedMusicSection.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 500);
+
+    // Potentially also refresh the full Firebase list from storage after a delay
+    setTimeout(() => fetchFirebaseMusic(), 1500);
   };
 
   return (
@@ -808,7 +790,9 @@ export const HomePage = () => {
         <main className={styles.mainContent}>
           <div className={styles.headerSection}>
             <h1 className={styles.pageTitle}>Welcome, {userName}!</h1>
-            <AudioUploader onFileUploaded={handleFirebaseFileUploaded} />
+            <button onClick={openUploadModal} className={styles.uploadModalButton}>
+              Upload New Music
+            </button>
           </div>
 
           {/* Uploaded Music Section */}
@@ -820,6 +804,8 @@ export const HomePage = () => {
                 {firebaseMusicList.map((music) => {
                   const isCurrentlyPlaying = currentlyPlaying === music.id;
                   const isFavorited = isFavorite(music.id);
+                  // Use getSafeImageUrl for Firebase images too
+                  const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
                   
                   return (
                     <div key={music.id}
@@ -828,9 +814,26 @@ export const HomePage = () => {
                       onClick={(e) => handleMusicCardClick(e, music.id)}
                     >
                       <div className={styles.musicImageContainer}>
-                        <div className={styles.musicPlaceholder}>
-                          <span>{music.artist ? music.artist.charAt(0).toUpperCase() : '♪'}</span>
-                        </div>
+                        {/* Conditionally render image or placeholder */}
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={music.title}
+                            className={styles.musicImage} // Use the same class as DB images
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.style.display = 'none';
+                              const placeholderElement = e.target.parentNode.querySelector(`.${styles.musicPlaceholder}`);
+                              if (placeholderElement) {
+                                placeholderElement.style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className={styles.musicPlaceholder}>
+                            <span>{music.artist ? music.artist.charAt(0).toUpperCase() : '♪'}</span>
+                          </div>
+                        )}
                         <div className={styles.musicOverlay}></div>
                         <button
                           className={styles.musicPlayButton}
@@ -1036,18 +1039,12 @@ export const HomePage = () => {
         </main>
       </div>
 
-      {showUploadModal && (
-        <Modal
-          isOpen={true}
-          onClose={handleCloseModal}
-          title="Upload Music"
-        >
-          <AudioUploader
-            onClose={handleCloseModal}
-            onUploadSuccess={handleUpload}
-          />
-        </Modal>
-      )}
+      {/* Add the UploadModal component */}
+      <UploadModal 
+        isOpen={isUploadModalOpen} 
+        onClose={closeUploadModal} 
+        onUploadComplete={handleUploadComplete}
+      />
 
       {/* Edit Music Modal */}
       <Modal

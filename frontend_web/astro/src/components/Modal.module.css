@@ -1,0 +1,61 @@
+/* frontend_web/astro/src/components/Modal.module.css */
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modalContent {
+  background-color: #2d3748; /* Dark background */
+  color: #e2e8f0; /* Light text */
+  padding: 25px 30px;
+  border-radius: 8px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #4a5568;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #cbd5e0;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #a0aec0;
+  cursor: pointer;
+  padding: 0 5px;
+  line-height: 1;
+}
+
+.closeButton:hover {
+  color: #e2e8f0;
+}
+
+.modalBody {
+  /* Styles for the content area */
+} 

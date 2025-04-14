@@ -1,0 +1,92 @@
+/* frontend_web/astro/src/components/UploadModal.module.css */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.fieldGroup label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #a0aec0; /* Lighter label color */
+}
+
+.fieldGroup input[type="text"] {
+  padding: 10px 12px;
+  border: 1px solid #4a5568; /* Darker border */
+  border-radius: 4px;
+  background-color: #1a202c; /* Very dark input background */
+  color: #e2e8f0; /* Light text */
+  font-size: 1rem;
+}
+
+.fieldGroup input[type="text"]:focus {
+  outline: none;
+  border-color: #8b5cf6; /* Highlight color on focus */
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+}
+
+.buttonGroup {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #4a5568;
+}
+
+.backButton,
+.submitButton {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.backButton {
+  background-color: #4a5568;
+  color: #e2e8f0;
+}
+
+.backButton:hover {
+  background-color: #718096;
+}
+
+.backButton:disabled {
+  background-color: #4a5568;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submitButton {
+  background: linear-gradient(to right, #8b5cf6, #ec4899);
+  color: white;
+}
+
+.submitButton:hover {
+  filter: brightness(1.1);
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(50%);
+}
+
+.errorText {
+  color: #f56565; /* Red for errors */
+  background-color: rgba(245, 101, 101, 0.1);
+  border: 1px solid rgba(245, 101, 101, 0.3);
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+} 
