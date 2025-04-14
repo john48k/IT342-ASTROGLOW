@@ -18,7 +18,7 @@ export const UserProfile = () => {
         confirmPassword: ''
     });
     const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleteStep, setDeleteStep] = useState('confirmation'); // 'confirmation' or 'password'
+    const [deleteStep, setDeleteStep] = useState('confirmation');
     const [deletePassword, setDeletePassword] = useState('');
     const [deleteError, setDeleteError] = useState('');
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -45,7 +45,7 @@ export const UserProfile = () => {
         } else {
             // Initialize form with current username
             setNameForm({ userName: user.userName || '' });
-            
+
             // Fetch the user's profile picture from the server
             fetchProfilePicture();
         }
@@ -53,18 +53,18 @@ export const UserProfile = () => {
 
     const fetchProfilePicture = async () => {
         if (!user || !user.userId) return;
-        
+
         try {
             const response = await fetch(`http://localhost:8080/api/user/profile-picture/${user.userId}`, {
                 method: 'GET',
             });
-            
+
             if (!response.ok) {
                 throw new Error('Failed to fetch profile picture');
             }
-            
+
             const data = await response.json();
-            
+
             if (data.status === 'success' && data.profilePicture) {
                 setProfileImageUrl(data.profilePicture);
             }
@@ -77,7 +77,7 @@ export const UserProfile = () => {
     // Validate password requirements as user types
     useEffect(() => {
         const { newPassword, confirmPassword } = passwordForm;
-        
+
         setPasswordValidation({
             length: newPassword.length >= 8,
             upperCase: /[A-Z]/.test(newPassword),
@@ -114,27 +114,27 @@ export const UserProfile = () => {
     const handleImageChange = async (e) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            
+
             // Check if file is an image
             if (!file.type.match('image.*')) {
                 setUpdateError('Please select an image file');
                 return;
             }
-            
+
             // Check file size (limit to 2MB)
             if (file.size > 2 * 1024 * 1024) {
                 setUpdateError('Image size should be less than 2MB');
                 return;
             }
-            
+
             try {
                 setIsUploadingImage(true);
-                
+
                 // Convert image file to base64 string
                 const reader = new FileReader();
                 reader.onload = async (event) => {
                     const base64Image = event.target.result;
-                    
+
                     // Upload the image to the server
                     const response = await fetch(`http://localhost:8080/api/user/update-profile-picture/${user.userId}`, {
                         method: 'PUT',
@@ -145,22 +145,22 @@ export const UserProfile = () => {
                             profilePicture: base64Image
                         }),
                     });
-                    
+
                     if (!response.ok) {
                         const errorData = await response.json();
                         throw new Error(errorData.message || 'Failed to upload profile picture');
                     }
-                    
+
                     // Update the UI with the new image
                     setProfileImageUrl(base64Image);
                     setUpdateSuccess('Profile picture updated successfully');
                     setTimeout(() => setUpdateSuccess(''), 3000);
                     setIsUploadingImage(false);
                 };
-                
+
                 reader.readAsDataURL(file);
                 setProfileImage(file);
-                
+
             } catch (error) {
                 console.error('Error uploading profile picture:', error);
                 setUpdateError(error.message || 'Failed to upload profile picture');
@@ -172,7 +172,7 @@ export const UserProfile = () => {
     const handleRemoveImage = async () => {
         try {
             setIsUploadingImage(true);
-            
+
             // Send request to clear the profile picture
             const response = await fetch(`http://localhost:8080/api/user/update-profile-picture/${user.userId}`, {
                 method: 'PUT',
@@ -183,18 +183,18 @@ export const UserProfile = () => {
                     profilePicture: '' // Empty string to clear the image
                 }),
             });
-            
+
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'Failed to remove profile picture');
             }
-            
+
             // Clear the image from UI
             setProfileImageUrl('');
             setProfileImage(null);
             setUpdateSuccess('Profile picture removed');
             setTimeout(() => setUpdateSuccess(''), 3000);
-            
+
         } catch (error) {
             console.error('Error removing profile picture:', error);
             setUpdateError(error.message || 'Failed to remove profile picture');
@@ -230,21 +230,21 @@ export const UserProfile = () => {
             }
 
             const updatedUser = await response.json();
-            
+
             // Update the user in context
             // We need to maintain all current user fields and just update the name
             const updatedUserInfo = {
                 ...user,
                 userName: updatedUser.userName
             };
-            
+
             // This would typically be done through the context, but for simplicity,
             // we can update localStorage directly and refresh the page
             localStorage.setItem('user', JSON.stringify(updatedUserInfo));
-            
+
             setUpdateSuccess('Name updated successfully');
             setIsEditingName(false);
-            
+
             // Refresh the page after a short delay to update the user context
             setTimeout(() => window.location.reload(), 1000);
         } catch (error) {
@@ -381,7 +381,7 @@ export const UserProfile = () => {
             }
         };
         window.addEventListener('keydown', handleEsc);
-        
+
         return () => {
             window.removeEventListener('keydown', handleEsc);
         };
@@ -389,14 +389,14 @@ export const UserProfile = () => {
 
     // Close modal when clicking outside of it
     const modalContentRef = useRef(null);
-    
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (showDeleteModal && modalContentRef.current && !modalContentRef.current.contains(event.target)) {
                 handleCloseDeleteModal();
             }
         };
-        
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
@@ -408,14 +408,12 @@ export const UserProfile = () => {
     }
 
     return (
-        <div className={styles.userInfoPage}>
-            {/* Keep the existing navbar */}
+        <div className={`${styles.userInfoPage} pt-[70px]`}>
             <NavBar />
 
             <div className={styles.container}>
-                {/* Sidebar - Updated to match HomePage */}
                 <aside className={styles.sidebar}>
-                    <ul>
+                    <ul className="space-y-4">
                         <li>
                             <Link to="/home" className={styles.sidebarLink}>
                                 Your Home
@@ -429,41 +427,39 @@ export const UserProfile = () => {
                     </ul>
                 </aside>
 
-                {/* Main content area */}
                 <main className={styles.mainContent}>
                     <div className={styles.profileCard}>
-                        {/* Profile Image Upload */}
-                        <div 
-                            className={`${styles.profileAvatar} ${isUploadingImage ? styles.uploading : ''}`}
+                        <div
+                            className={`${styles.profileAvatar} ${isUploadingImage ? styles.uploading : ''} mb-2`}
                             onClick={handleImageClick}
                             title="Click to change profile picture"
                         >
                             {profileImageUrl ? (
-                                <img 
-                                    src={profileImageUrl} 
-                                    alt="Profile" 
-                                    className={styles.avatarImage} 
+                                <img
+                                    src={profileImageUrl}
+                                    alt="Profile"
+                                    className={styles.avatarImage}
                                 />
                             ) : (
                                 user.userName ? user.userName.charAt(0).toUpperCase() : 'U'
                             )}
                             <div className={styles.avatarOverlay}>
-                                <span>{isUploadingImage ? 'Uploading...' : 'Change Photo'}</span>
+                                <span className="text-white text-xs font-medium px-2">{isUploadingImage ? 'Uploading...' : 'Change Photo'}</span>
                             </div>
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                onChange={handleImageChange} 
-                                accept="image/*" 
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleImageChange}
+                                accept="image/*"
                                 className={styles.fileInput}
-                                disabled={isUploadingImage} 
+                                disabled={isUploadingImage}
                             />
                             {isUploadingImage && <div className={styles.spinnerOverlay}><div className={styles.spinner}></div></div>}
                         </div>
 
                         {profileImageUrl && (
-                            <button 
-                                className={styles.removeImageButton} 
+                            <button
+                                className={`${styles.removeImageButton} mt-2 mb-6`}
                                 onClick={handleRemoveImage}
                                 title="Remove profile picture"
                                 disabled={isUploadingImage}
@@ -472,20 +468,18 @@ export const UserProfile = () => {
                             </button>
                         )}
 
-                        <h1 className={styles.welcomeTitle}>
+                        <h1 className={`${styles.welcomeTitle} text-4xl mb-2`}>
                             Welcome, {user.userName || 'User'}
                         </h1>
-                        <p className={styles.emailText}>{user.userEmail}</p>
+                        <p className={`${styles.emailText} text-lg text-gray-300 mb-10`}>{user.userEmail}</p>
 
-                        {/* Success and error messages */}
-                        {updateSuccess && <div className={styles.successMessage}>{updateSuccess}</div>}
-                        {updateError && <div className={styles.errorMessage}>{updateError}</div>}
+                        {updateSuccess && <div className={`${styles.successMessage} text-green-400 mb-4`}>{updateSuccess}</div>}
+                        {updateError && <div className={`${styles.errorMessage} text-red-400 mb-4`}>{updateError}</div>}
 
-                        {/* Edit Name Form */}
                         {isEditingName ? (
-                            <form onSubmit={handleSubmitNameChange} className={styles.editForm}>
-                                <div className={styles.formGroup}>
-                                    <label htmlFor="userName">New Name</label>
+                            <form onSubmit={handleSubmitNameChange} className={`${styles.editForm} mb-8`}>
+                                <div className={`${styles.formGroup} mb-6`}>
+                                    <label htmlFor="userName" className="text-gray-300 mb-2 block">New Name</label>
                                     <input
                                         type="text"
                                         id="userName"
@@ -497,7 +491,7 @@ export const UserProfile = () => {
                                         autoFocus
                                     />
                                 </div>
-                                <div className={styles.buttonGroup}>
+                                <div className={`${styles.buttonGroup} flex gap-4`}>
                                     <button type="submit" className={styles.saveButton}>
                                         Save
                                     </button>
@@ -511,29 +505,28 @@ export const UserProfile = () => {
                                 </div>
                             </form>
                         ) : (
-                            <div className={styles.inputBoxContainer}>
-                                <div className={styles.inputBoxLabel}>Username</div>
-                                <div 
+                            <div className={`${styles.inputBoxContainer} mb-6`}>
+                                <div className="text-gray-300 mb-2">Username</div>
+                                <div
                                     className={styles.inputBox}
                                     onClick={() => {
                                         setIsEditingName(true);
                                         setIsChangingPassword(false);
                                     }}
                                 >
-                                    <span>{user.userName}</span>
+                                    <span className="text-white">{user.userName}</span>
                                     <button className={styles.editIconButton}>
-                                        <span className={styles.editIcon}>✎</span>
+                                        <span className="text-lg">✎</span>
                                         Edit
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        {/* Change Password Form */}
                         {isChangingPassword ? (
-                            <form onSubmit={handleSubmitPasswordChange} className={styles.editForm}>
-                                <div className={styles.formGroup}>
-                                    <label htmlFor="currentPassword">Current Password</label>
+                            <form onSubmit={handleSubmitPasswordChange} className={`${styles.editForm} mb-8`}>
+                                <div className={`${styles.formGroup} mb-6`}>
+                                    <label htmlFor="currentPassword" className="text-gray-300 mb-2 block">Current Password</label>
                                     <div className={styles.passwordInputContainer}>
                                         <input
                                             type={showCurrentPassword ? "text" : "password"}
@@ -545,8 +538,8 @@ export const UserProfile = () => {
                                             className={styles.formInput}
                                             autoFocus
                                         />
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             className={styles.togglePasswordButton}
                                             onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                                             aria-label={showCurrentPassword ? "Hide password" : "Show password"}
@@ -585,8 +578,8 @@ export const UserProfile = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <div className={styles.formGroup}>
-                                    <label htmlFor="newPassword">New Password</label>
+                                <div className={`${styles.formGroup} mb-6`}>
+                                    <label htmlFor="newPassword" className="text-gray-300 mb-2 block">New Password</label>
                                     <div className={styles.passwordInputContainer}>
                                         <input
                                             type={showNewPassword ? "text" : "password"}
@@ -597,8 +590,8 @@ export const UserProfile = () => {
                                             required
                                             className={styles.formInput}
                                         />
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             className={styles.togglePasswordButton}
                                             onClick={() => setShowNewPassword(!showNewPassword)}
                                             aria-label={showNewPassword ? "Hide password" : "Show password"}
@@ -637,8 +630,8 @@ export const UserProfile = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <div className={styles.formGroup}>
-                                    <label htmlFor="confirmPassword">Confirm New Password</label>
+                                <div className={`${styles.formGroup} mb-6`}>
+                                    <label htmlFor="confirmPassword" className="text-gray-300 mb-2 block">Confirm New Password</label>
                                     <div className={styles.passwordInputContainer}>
                                         <input
                                             type={showConfirmPassword ? "text" : "password"}
@@ -649,8 +642,8 @@ export const UserProfile = () => {
                                             required
                                             className={styles.formInput}
                                         />
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             className={styles.togglePasswordButton}
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                             aria-label={showConfirmPassword ? "Hide password" : "Show password"}
@@ -689,39 +682,39 @@ export const UserProfile = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <div className={styles.passwordRequirements}>
-                                    <p>Password Requirements:</p>
-                                    <ul>
-                                        <li className={passwordValidation.length ? styles.validRequirement : styles.invalidRequirement}>
+                                <div className={`${styles.passwordRequirements} mb-6`}>
+                                    <p className="text-gray-300 mb-2">Password Requirements:</p>
+                                    <ul className="space-y-1">
+                                        <li className={`${passwordValidation.length ? styles.validRequirement : styles.invalidRequirement} ${passwordValidation.length ? 'text-green-500' : 'text-red-500'}`}>
                                             {passwordValidation.length ? "✓" : "○"} Be at least 8 characters long
                                         </li>
-                                        <li className={passwordValidation.upperCase ? styles.validRequirement : styles.invalidRequirement}>
+                                        <li className={`${passwordValidation.upperCase ? styles.validRequirement : styles.invalidRequirement} ${passwordValidation.upperCase ? 'text-green-500' : 'text-red-500'}`}>
                                             {passwordValidation.upperCase ? "✓" : "○"} Include at least one uppercase letter
                                         </li>
-                                        <li className={passwordValidation.lowerCase ? styles.validRequirement : styles.invalidRequirement}>
+                                        <li className={`${passwordValidation.lowerCase ? styles.validRequirement : styles.invalidRequirement} ${passwordValidation.lowerCase ? 'text-green-500' : 'text-red-500'}`}>
                                             {passwordValidation.lowerCase ? "✓" : "○"} Include at least one lowercase letter
                                         </li>
-                                        <li className={passwordValidation.number ? styles.validRequirement : styles.invalidRequirement}>
+                                        <li className={`${passwordValidation.number ? styles.validRequirement : styles.invalidRequirement} ${passwordValidation.number ? 'text-green-500' : 'text-red-500'}`}>
                                             {passwordValidation.number ? "✓" : "○"} Include at least one number
                                         </li>
-                                        <li className={passwordValidation.special ? styles.validRequirement : styles.invalidRequirement}>
+                                        <li className={`${passwordValidation.special ? styles.validRequirement : styles.invalidRequirement} ${passwordValidation.special ? 'text-green-500' : 'text-red-500'}`}>
                                             {passwordValidation.special ? "✓" : "○"} Include at least one special character (@$!%*?&)
                                         </li>
-                                        <li className={passwordValidation.match ? styles.validRequirement : styles.invalidRequirement}>
+                                        <li className={`${passwordValidation.match ? styles.validRequirement : styles.invalidRequirement} ${passwordValidation.match ? 'text-green-500' : 'text-red-500'}`}>
                                             {passwordValidation.match ? "✓" : "○"} Passwords match
                                         </li>
                                     </ul>
                                 </div>
-                                <div className={styles.buttonGroup}>
-                                    <button 
-                                        type="submit" 
+                                <div className={`${styles.buttonGroup} flex gap-4`}>
+                                    <button
+                                        type="submit"
                                         className={styles.saveButton}
-                                        disabled={!passwordValidation.length || 
-                                                !passwordValidation.upperCase || 
-                                                !passwordValidation.lowerCase || 
-                                                !passwordValidation.number || 
-                                                !passwordValidation.special || 
-                                                !passwordValidation.match}
+                                        disabled={!passwordValidation.length ||
+                                            !passwordValidation.upperCase ||
+                                            !passwordValidation.lowerCase ||
+                                            !passwordValidation.number ||
+                                            !passwordValidation.special ||
+                                            !passwordValidation.match}
                                     >
                                         Change Password
                                     </button>
@@ -735,27 +728,26 @@ export const UserProfile = () => {
                                 </div>
                             </form>
                         ) : (
-                            <div className={styles.inputBoxContainer}>
-                                <div className={styles.inputBoxLabel}>Password</div>
-                                <div 
+                            <div className={`${styles.inputBoxContainer} mb-6`}>
+                                <div className="text-gray-300 mb-2">Password</div>
+                                <div
                                     className={styles.inputBox}
                                     onClick={() => {
                                         setIsChangingPassword(true);
                                         setIsEditingName(false);
                                     }}
                                 >
-                                    <span>••••••••••</span>
+                                    <span className="text-white">••••••••••</span>
                                     <button className={styles.editIconButton}>
-                                        <span className={styles.editIcon}>✎</span>
+                                        <span className="text-lg">✎</span>
                                         Change
                                     </button>
                                 </div>
                             </div>
                         )}
 
-                        {/* Delete Account Button */}
                         <button
-                            className={styles.deleteAccountButton}
+                            className={`${styles.deleteAccountButton} mb-4`}
                             onClick={handleOpenDeleteModal}
                         >
                             Delete Account
@@ -768,25 +760,24 @@ export const UserProfile = () => {
                 </main>
             </div>
 
-            {/* Delete Account Modal */}
             {showDeleteModal && (
                 <div className={styles.modalOverlay}>
                     <div className={styles.modalContent} ref={modalContentRef}>
                         {deleteStep === 'confirmation' ? (
-                            <div className={styles.modalBody}>
-                                <h3 className={styles.deleteTitle}>Are you sure?</h3>
-                                <p className={styles.deleteWarning}>
+                            <div className={`${styles.modalBody} mb-8`}>
+                                <h3 className={`${styles.deleteTitle} text-2xl font-bold mb-4`}>Are you sure?</h3>
+                                <p className="text-gray-300 mb-6">
                                     Are you sure you want to delete your account? This action cannot be undone.
                                 </p>
-                                <div className={styles.buttonGroup}>
-                                    <button 
-                                        className={styles.deleteButton} 
+                                <div className={`${styles.buttonGroup} flex gap-4`}>
+                                    <button
+                                        className={styles.deleteButton}
                                         onClick={handleProceedToPassword}
                                     >
                                         Yes, delete my account
                                     </button>
-                                    <button 
-                                        className={styles.cancelButton} 
+                                    <button
+                                        className={styles.cancelButton}
                                         onClick={handleCloseDeleteModal}
                                     >
                                         No, keep my account
@@ -794,17 +785,17 @@ export const UserProfile = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className={styles.modalBody}>
-                                <h3 className={styles.deleteTitle}>Delete Account</h3>
-                                <p className={styles.deleteWarning}>
+                            <div className={`${styles.modalBody} mb-8`}>
+                                <h3 className={`${styles.deleteTitle} text-2xl font-bold mb-4`}>Delete Account</h3>
+                                <p className="text-gray-300 mb-6">
                                     Warning: This action cannot be undone. All your data will be permanently deleted.
                                 </p>
-                                
-                                {deleteError && <div className={styles.errorMessage}>{deleteError}</div>}
-                                
+
+                                {deleteError && <div className={`${styles.errorMessage} text-red-400 mb-4`}>{deleteError}</div>}
+
                                 <form onSubmit={handleDeleteAccount} className={styles.deleteForm}>
-                                    <div className={styles.formGroup}>
-                                        <label htmlFor="deletePassword">Enter your password to confirm</label>
+                                    <div className={`${styles.formGroup} mb-6`}>
+                                        <label htmlFor="deletePassword" className="text-gray-300 mb-2 block">Enter your password to confirm</label>
                                         <div className={styles.passwordInputContainer}>
                                             <input
                                                 type={showDeletePassword ? "text" : "password"}
@@ -815,8 +806,8 @@ export const UserProfile = () => {
                                                 className={styles.formInput}
                                                 autoFocus
                                             />
-                                            <button 
-                                                type="button" 
+                                            <button
+                                                type="button"
                                                 className={styles.togglePasswordButton}
                                                 onClick={() => setShowDeletePassword(!showDeletePassword)}
                                                 aria-label={showDeletePassword ? "Hide password" : "Show password"}
@@ -855,7 +846,7 @@ export const UserProfile = () => {
                                             </button>
                                         </div>
                                     </div>
-                                    <div className={styles.buttonGroup}>
+                                    <div className={`${styles.buttonGroup} flex gap-4`}>
                                         <button type="submit" className={styles.deleteButton}>
                                             Confirm Delete
                                         </button>
