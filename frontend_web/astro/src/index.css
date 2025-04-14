@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Global reset and base styles */
 * {
   box-sizing: border-box;
