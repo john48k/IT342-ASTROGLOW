@@ -100,7 +100,7 @@ export const AudioPlayerProvider = ({ children }) => {
     }
   }, [isAuthenticated, isPlaying, audioElement]);
 
-  const playMusic = async (musicId) => {
+  const playMusic = async (musicId, directAudioUrl = null) => {
     try {
       console.log(`Attempting to play music with ID: ${musicId}`);
       
@@ -129,18 +129,68 @@ export const AudioPlayerProvider = ({ children }) => {
         setIsPlaying(false);
       }
 
-      // First check if the music has a direct URL
-      const musicResponse = await fetch(`http://localhost:8080/api/music/getMusic/${musicId}?includeAudioData=false`);
-      if (!musicResponse.ok) {
-        throw new Error(`Music with ID ${musicId} not found`);
-      }
-
-      const musicData = await musicResponse.json();
-      setCurrentTrackData(musicData);
-      
-      // Check if audioUrl exists and use it directly
-      if (musicData.audioUrl) {
-        console.log("Using external URL for playback:", musicData.audioUrl);
+      // If a direct audio URL is provided (for Firebase files), use it directly
+      if (directAudioUrl) {
+        console.log("Using provided direct URL for playback:", directAudioUrl);
+        
+        // For Firebase files, add required CORS parameters if needed
+        let audioUrlToUse = directAudioUrl;
+        
+        // If it's a Firebase Storage URL, ensure it has the right parameters
+        if (audioUrlToUse.includes('firebasestorage.googleapis.com')) {
+          // Parse the URL to add or modify query parameters
+          try {
+            const urlObj = new URL(audioUrlToUse);
+            
+            // Ensure alt=media parameter is present
+            if (!urlObj.searchParams.has('alt')) {
+              urlObj.searchParams.set('alt', 'media');
+            }
+            
+            // Update the URL with the parameters
+            audioUrlToUse = urlObj.toString();
+            console.log("Adjusted Firebase URL:", audioUrlToUse);
+          } catch (urlError) {
+            console.error("Error parsing URL:", urlError);
+            // Continue with the original URL if there's an error
+          }
+        }
+        
+        // For Firebase files, create track data from the ID
+        const isFirebaseFile = musicId.startsWith('firebase-');
+        let trackData = null;
+        
+        if (isFirebaseFile) {
+          // Parse artist and title from the Firebase file ID
+          const fileName = musicId.replace('firebase-', '');
+          let artist = "Unknown Artist";
+          let title = fileName.replace(".mp3", "");
+          let genre = "Music";
+          
+          // Parse artist and title from filename if it follows the pattern
+          const parts = fileName.split(' - ');
+          if (parts.length >= 2) {
+            artist = parts[0];
+            title = parts[1].replace('.mp3', '');
+            
+            // Extract genre if present in brackets
+            const genreMatch = title.match(/\[(.*?)\]/);
+            if (genreMatch && genreMatch[1]) {
+              genre = genreMatch[1];
+              title = title.replace(/\[.*?\]/, '').trim();
+            }
+          }
+          
+          // Create synthetic track data for Firebase files
+          trackData = {
+            title: title,
+            artist: artist,
+            genre: genre,
+            audioUrl: audioUrlToUse
+          };
+          
+          setCurrentTrackData(trackData);
+        }
         
         // Create a new audio element to prevent conflicts with previous instances
         const audio = new Audio();
@@ -182,13 +232,129 @@ export const AudioPlayerProvider = ({ children }) => {
           audio.addEventListener('pause', () => {
             setIsPlaying(false);
           });
+          
+          // Handle errors
+          audio.addEventListener('error', (e) => {
+            console.error('Audio error event triggered:', e);
+            console.error('Audio element:', audio);
+            console.error('Audio source:', audio.src);
+            console.error('Error code:', audio.error ? audio.error.code : 'unknown');
+            console.error('Error message:', audio.error ? audio.error.message : 'unknown');
+            
+            // Log more detailed error information based on error code
+            if (audio.error) {
+              switch (audio.error.code) {
+                case MediaError.MEDIA_ERR_ABORTED:
+                  console.error('Playback aborted by the user');
+                  break;
+                case MediaError.MEDIA_ERR_NETWORK:
+                  console.error('Network error occurred during playback');
+                  break;
+                case MediaError.MEDIA_ERR_DECODE:
+                  console.error('Decoding error - corrupt or unsupported format');
+                  break;
+                case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                  console.error('Source format or MIME type not supported');
+                  break;
+                default:
+                  console.error('Unknown error');
+              }
+            }
+            
+            // Attempt recovery with a reload
+            try {
+              console.log('Attempting to reload the audio source...');
+              audio.load();
+            } catch (loadErr) {
+              console.error('Failed to reload audio:', loadErr);
+            }
+          });
         };
 
         // Set up events
         setupAudioEvents();
         
         // Now set the source and play
-        audio.src = musicData.audioUrl;
+        audio.src = audioUrlToUse;
+        
+        // Log audio source for debugging
+        console.log("Audio source set to:", audio.src);
+        
+        // Wait for metadata to load before playing
+        audio.addEventListener('loadedmetadata', () => {
+          console.log("Audio metadata loaded, duration:", audio.duration);
+          // Play the audio
+          audio.play().catch(err => {
+            console.error('Error playing audio from URL:', err);
+            alert('Error playing audio: ' + err.message);
+          });
+        });
+
+        // Set state
+        setAudioElement(audio);
+        setCurrentlyPlaying(musicId);
+        setIsPlaying(true);
+        return;
+      }
+
+      // First check if the music has a direct URL in the database
+      try {
+        const musicResponse = await fetch(`http://localhost:8080/api/music/getMusic/${musicId}?includeAudioData=false`);
+        if (musicResponse.ok) {
+          const musicData = await musicResponse.json();
+          setCurrentTrackData(musicData);
+          
+          // Check if audioUrl exists and use it directly
+          if (musicData.audioUrl) {
+            console.log("Using external URL from database for playback:", musicData.audioUrl);
+            
+            // Create a new audio element to prevent conflicts with previous instances
+            const audio = new Audio();
+            audio.preload = 'auto';
+            
+            // Set up audio events before setting the source to avoid race conditions
+            const setupAudioEvents = () => {
+              audio.onended = () => {
+                setCurrentlyPlaying(null);
+                setAudioProgress(0);
+                setIsPlaying(false);
+                if (progressIntervalRef.current) {
+                  clearInterval(progressIntervalRef.current);
+                  progressIntervalRef.current = null;
+                }
+              };
+
+              // Set up progress tracking
+              if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+              }
+
+              progressIntervalRef.current = setInterval(() => {
+                if (audio.duration) {
+                  const progress = (audio.currentTime / audio.duration) * 100;
+                  setAudioProgress(progress);
+                  setAudioTime({
+                    elapsed: formatTime(audio.currentTime),
+                    total: formatTime(audio.duration)
+                  });
+                }
+              }, 500);
+
+              // Force state update on play/pause to update UI
+              audio.addEventListener('play', () => {
+                setIsPlaying(true);
+              });
+
+              audio.addEventListener('pause', () => {
+                setIsPlaying(false);
+              });
+            };
+
+            // Set up events
+            setupAudioEvents();
+            
+            // Now set the source and play
+            audio.src = musicData.audioUrl;
         
         // Wait for metadata to load before playing
         audio.addEventListener('loadedmetadata', () => {
@@ -302,9 +468,22 @@ export const AudioPlayerProvider = ({ children }) => {
       setAudioElement(audio);
       setCurrentlyPlaying(musicId);
       setIsPlaying(true);
+        } else {
+          throw new Error(`Music with ID ${musicId} not found in database`);
+        }
+      } catch (error) {
+        console.error("Error fetching music data:", error);
+        throw error;
+      }
     } catch (error) {
-      console.error('Error playing music:', error);
-      alert('Error playing music: ' + error.message);
+      console.error("Error playing music:", error);
+      setIsPlaying(false);
+      setCurrentlyPlaying(null);
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      throw error;
     }
   };
 
@@ -626,21 +805,19 @@ export const AudioPlayerProvider = ({ children }) => {
     <AudioPlayerContext.Provider
       value={{
         currentlyPlaying,
-        audioElement,
+        isPlaying,
         audioProgress,
         audioTime,
-        isPlaying,
-        currentTrackData,
-        formatTime,
-        getImageUrl,
         playMusic,
         togglePlayPause,
+        seekAudio,
         playAlbumTrack,
         playNextSong,
         playPreviousSong,
         handleDoubleClick,
-        seekAudio,
-        stopPlayback
+        stopPlayback,
+        currentTrackData,
+        getImageUrl
       }}
     >
       {children}

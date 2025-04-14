@@ -106,6 +106,7 @@ export const HomePage = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMusic, setEditingMusic] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [firebaseMusicList, setFirebaseMusicList] = useState([]);
 
   // Add refs for tracking double clicks
   const lastClickTimeRef = useRef({});
@@ -114,6 +115,7 @@ export const HomePage = () => {
   // Fetch music list when component mounts
   useEffect(() => {
     fetchMusicList();
+    fetchFirebaseMusic();
   }, []);
 
   // Update the useEffect that fetches favorites
@@ -131,6 +133,20 @@ export const HomePage = () => {
       setMusicImageUrl(editingMusic.imageUrl || '');
     }
   }, [editingMusic]);
+
+  // Add useEffect for periodic refresh of Firebase music
+  useEffect(() => {
+    // Initial fetch
+    fetchFirebaseMusic();
+    
+    // Set up a periodic refresh of Firebase music every 30 seconds
+    const refreshInterval = setInterval(() => {
+      fetchFirebaseMusic();
+    }, 30000); // 30 seconds
+    
+    // Clean up the interval when component unmounts
+    return () => clearInterval(refreshInterval);
+  }, []); // Empty dependency array means this runs once on mount
 
   const fetchMusicList = async () => {
     try {
@@ -162,6 +178,104 @@ export const HomePage = () => {
       }
     } catch (error) {
       console.error('Error fetching music list:', error);
+    }
+  };
+
+  // Function to fetch music from Firebase storage
+  const fetchFirebaseMusic = async () => {
+    try {
+      console.log('Attempting to fetch Firebase music files...');
+      
+      // Use the imported Firebase storage directly
+      const { storage } = await import('../../firebase');
+      const { ref, listAll, getDownloadURL } = await import('firebase/storage');
+      
+      // Create reference to 'audios' folder in Firebase Storage
+      const listRef = ref(storage, 'audios');
+      
+      console.log('Listing files in Firebase storage...');
+      const listResult = await listAll(listRef);
+      console.log(`Found ${listResult.items.length} files in Firebase storage`);
+      
+      if (listResult.items.length === 0) {
+        console.log('No files found in Firebase storage');
+        setFirebaseMusicList([]);
+        return [];
+      }
+      
+      const musicFiles = await Promise.all(
+        listResult.items.map(async (itemRef) => {
+          try {
+            // Get the download URL for each file
+            console.log(`Getting download URL for ${itemRef.name}...`);
+            const url = await getDownloadURL(itemRef);
+            
+            // Get file name
+            const name = itemRef.name;
+            console.log(`Processing file: ${name}`);
+            
+            // Parse metadata from filename
+            let artist = "Unknown Artist";
+            let title = name.replace(".mp3", "");
+            let genre = "Music";
+            
+            // Parse artist and title from the filename
+            const parts = name.split(' - ');
+            if (parts.length >= 2) {
+              artist = parts[0];
+              title = parts[1].replace('.mp3', '');
+              
+              // Extract genre if present in brackets
+              const genreMatch = title.match(/\[(.*?)\]/);
+              if (genreMatch && genreMatch[1]) {
+                genre = genreMatch[1];
+                title = title.replace(/\[.*?\]/, '').trim();
+              }
+            }
+            
+            return {
+              id: `firebase-${name}`,
+              title: title,
+              artist: artist,
+              genre: genre,
+              audioUrl: url
+            };
+          } catch (itemError) {
+            console.error(`Error processing file ${itemRef.name}:`, itemError);
+            return null;
+          }
+        })
+      );
+      
+      // Filter out any null entries (from errors)
+      const validMusicFiles = musicFiles.filter(item => item !== null);
+      console.log(`Successfully processed ${validMusicFiles.length} music files`);
+      
+      setFirebaseMusicList(validMusicFiles);
+      return validMusicFiles;
+    } catch (error) {
+      console.error('Error fetching Firebase music:', error);
+      
+      // Fallback to hardcoded files if everything else fails
+      console.warn('Using fallback Firebase audio files.');
+      const fallbackMusic = [
+        {
+          id: 'firebase-aaron-smith',
+          title: 'Dancin (KRONO Remix)',
+          artist: 'Aaron Smith',
+          genre: 'Remix',
+          audioUrl: 'https://firebasestorage.googleapis.com/v0/b/astroglowfirebase-d2411.firebasestorage.app/o/audios%2FAaron%20Smith%20-%20Dancin%20(KRONO%20Remix)%20-%20Lyrics.mp3?alt=media&token=c4035a45-81ad-4989-8a2b-6ce47a418d4b'
+        },
+        {
+          id: 'firebase-smile-dk',
+          title: 'Butterfly (Lyrics)',
+          artist: 'Smile.Dk',
+          genre: 'KPOP',
+          audioUrl: 'https://firebasestorage.googleapis.com/v0/b/astroglowfirebase-d2411.firebasestorage.app/o/audios%2FSmile.Dk%20-%20Butterfly%20(Lyrics)%20Ay%20ay%20ayi%27m%20your%20little%20butterfly%20%5BTiktok%20song%5D.mp3?alt=media&token=c4035a45-81ad-4989-8a2b-6ce47a418d4b'
+        }
+      ];
+      setFirebaseMusicList(fallbackMusic);
+      return fallbackMusic;
     }
   };
 
@@ -432,29 +546,62 @@ export const HomePage = () => {
   // Handle click on music card play button - properly toggle play/pause
   const handleMusicPlayClick = (e, musicId) => {
     e.stopPropagation();
-
-    // Prevent the card click handler from also firing
-    e.preventDefault();
-
-    if (currentlyPlaying === musicId) {
-      // If already playing this track, toggle play/pause
-      togglePlayPause(musicId);
+    
+    // Check if this is a Firebase music item - handle both with and without .mp3 extension
+    const firebaseItem = firebaseMusicList.find(item => {
+      // Direct ID match
+      if (item.id === musicId) return true;
+      // ID match without .mp3 extension
+      if (item.id.replace('.mp3', '') === musicId) return true; 
+      // ID match with .mp3 extension added
+      if (item.id === musicId + '.mp3') return true;
+      return false;
+    });
+    
+    if (firebaseItem) {
+      console.log('Playing Firebase audio file:', firebaseItem.title, firebaseItem.audioUrl);
+      if (currentlyPlaying === musicId) {
+        togglePlayPause(musicId);
+      } else {
+        playMusic(musicId, firebaseItem.audioUrl);
+      }
     } else {
-      // If not playing this track, start playing it
-      playMusic(musicId);
+      if (currentlyPlaying === musicId) {
+        togglePlayPause(musicId);
+      } else {
+        playMusic(musicId);
+      }
     }
   };
 
   // Handle click on music card - play music or pause if already playing
   const handleMusicCardClick = (e, musicId) => {
     e.stopPropagation();
-
-    if (currentlyPlaying === musicId) {
-      // If this is the current track, toggle play/pause
-      togglePlayPause(musicId);
+    
+    // Check if this is a Firebase music item - handle both with and without .mp3 extension
+    const firebaseItem = firebaseMusicList.find(item => {
+      // Direct ID match
+      if (item.id === musicId) return true;
+      // ID match without .mp3 extension
+      if (item.id.replace('.mp3', '') === musicId) return true; 
+      // ID match with .mp3 extension added
+      if (item.id === musicId + '.mp3') return true;
+      return false;
+    });
+    
+    if (firebaseItem) {
+      console.log('Playing Firebase audio file from card click:', firebaseItem.title, firebaseItem.audioUrl);
+      if (currentlyPlaying === musicId) {
+        togglePlayPause(musicId);
+      } else {
+        playMusic(musicId, firebaseItem.audioUrl);
+      }
     } else {
-      // If not the current track, start playing it
-      playMusic(musicId);
+      if (currentlyPlaying === musicId) {
+        togglePlayPause(musicId);
+      } else {
+        playMusic(musicId);
+      }
     }
   };
 
@@ -592,6 +739,67 @@ export const HomePage = () => {
     }
   };
 
+  // Handle file uploaded through Firebase
+  const handleFirebaseFileUploaded = async (fileName, fileUrl) => {
+    console.log('Home: File uploaded to Firebase:', fileName, fileUrl);
+    
+    // Create a new music object for the uploaded file
+    let artist = "Unknown Artist";
+    let title = fileName.replace(".mp3", "");
+    let genre = "Music";
+    
+    // Parse artist and title if filename follows format
+    const parts = fileName.split(' - ');
+    if (parts.length >= 2) {
+      artist = parts[0];
+      title = parts[1].replace('.mp3', '');
+      
+      // If there's genre info in brackets like [Genre], extract it
+      const genreMatch = title.match(/\[(.*?)\]/);
+      if (genreMatch && genreMatch[1]) {
+        genre = genreMatch[1];
+        title = title.replace(/\[.*?\]/, '').trim();
+      }
+    }
+    
+    // Create the new music object
+    const newMusic = {
+      id: `firebase-${fileName}`,
+      title,
+      artist,
+      genre,
+      audioUrl: fileUrl
+    };
+    
+    console.log('Adding new music to list:', newMusic);
+    
+    // Immediately add to UI without waiting for refresh
+    setFirebaseMusicList(prev => {
+      // Check if this file already exists (replace if it does)
+      const exists = prev.some(item => item.id === newMusic.id);
+      if (exists) {
+        return prev.map(item => item.id === newMusic.id ? newMusic : item);
+      } else {
+        return [...prev, newMusic];
+      }
+    });
+    
+    // Also refresh the entire list to ensure we have everything
+    setTimeout(() => {
+      fetchFirebaseMusic().then(() => {
+        console.log('Firebase music list refreshed after upload');
+      });
+    }, 1000);
+    
+    // Scroll to the uploaded music section to show the new file
+    setTimeout(() => {
+      const uploadedMusicSection = document.querySelector(`.${styles.uploadedMusicSection}`);
+      if (uploadedMusicSection) {
+        uploadedMusicSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 500);
+  };
+
   return (
     <div className={styles.homePage}>
       <NavBar />
@@ -600,17 +808,57 @@ export const HomePage = () => {
         <main className={styles.mainContent}>
           <div className={styles.headerSection}>
             <h1 className={styles.pageTitle}>Welcome, {userName}!</h1>
-            <AudioUploader />
-            <button onClick={handleUploadClick} className={styles.uploadButton}>
-              Upload Music
-            </button>
+            <AudioUploader onFileUploaded={handleFirebaseFileUploaded} />
           </div>
 
           {/* Uploaded Music Section */}
-          {musicList.length > 0 && (
+          {(musicList.length > 0 || firebaseMusicList.length > 0) && (
             <section className={styles.uploadedMusicSection}>
               <h2 className={styles.sectionTitle}>Your Uploaded Music</h2>
               <div className={styles.musicGrid}>
+                {/* Dynamic Firebase Music Cards */}
+                {firebaseMusicList.map((music) => {
+                  const isCurrentlyPlaying = currentlyPlaying === music.id;
+                  const isFavorited = isFavorite(music.id);
+                  
+                  return (
+                    <div key={music.id}
+                      className={`${styles.musicCard} ${isCurrentlyPlaying ?
+                        (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
+                      onClick={(e) => handleMusicCardClick(e, music.id)}
+                    >
+                      <div className={styles.musicImageContainer}>
+                        <div className={styles.musicPlaceholder}>
+                          <span>{music.artist ? music.artist.charAt(0).toUpperCase() : '♪'}</span>
+                        </div>
+                        <div className={styles.musicOverlay}></div>
+                        <button
+                          className={styles.musicPlayButton}
+                          onClick={(e) => handleMusicPlayClick(e, music.id)}
+                        >
+                          {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
+                        </button>
+                        <button
+                          className={`${styles.favoriteButton} ${isFavorited ? styles.favorited : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(music.id);
+                          }}
+                          title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                        >
+                          {isFavorited ? '★' : '☆'}
+                        </button>
+                      </div>
+                      <div className={styles.musicInfo}>
+                        <h3 className={styles.musicTitle}>{music.title}</h3>
+                        <p className={styles.musicArtist}>{music.artist}</p>
+                        <p className={styles.musicGenre}>{music.genre}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* Database Music Cards */}
                 {musicList.map((music) => {
                   // Process the image URL with improved handler
                   const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
