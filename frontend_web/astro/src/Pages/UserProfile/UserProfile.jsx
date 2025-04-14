@@ -408,7 +408,7 @@ export const UserProfile = () => {
     }
 
     return (
-        <div className={`${styles.userInfoPage} pt-[70px]`}>
+        <div className={styles.userInfoPage}>
             <NavBar />
 
             <div className={styles.container}>
@@ -427,7 +427,7 @@ export const UserProfile = () => {
                     </ul>
                 </aside>
 
-                <main className={styles.mainContent}>
+                <main className={`${styles.mainContent} mt-32`}>
                     <div className={styles.profileCard}>
                         <div
                             className={`${styles.profileAvatar} ${isUploadingImage ? styles.uploading : ''} mb-2`}

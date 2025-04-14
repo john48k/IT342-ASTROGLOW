@@ -15,8 +15,8 @@ const AboutPage = () => {
                     </p>
                 </div>
             </div>
-            <div className="flex flex-col items-center gap-[30px] py-16 px-4 mt-32">
-                <div className={`${styles.creatorContainer} hover:scale-104 transition-transform duration-300 mb-8`}>
+            <div className="flex flex-col items-center gap-[30px] py-16 px-4 mt-48">
+                <div className={`${styles.creatorContainer} hover:scale-102 transition-transform duration-400 mb-8`}>
                     <img
                         src="cg-pfp.jpg"
                         alt="Cg Fernandez"
@@ -28,7 +28,7 @@ const AboutPage = () => {
                     </div>
                 </div>
 
-                <div className={`${styles.creatorContainer} hover:scale-104 transition-transform duration-300 mb-8`}>
+                <div className={`${styles.creatorContainer} hover:scale-102 transition-transform duration-400 mb-8`}>
                     <img
                         src="john-pfp.png"
                         alt="John Gabriel Cañal"
@@ -40,7 +40,7 @@ const AboutPage = () => {
                     </div>
                 </div>
 
-                <div className={`${styles.creatorContainer} hover:scale-104 transition-transform duration-300 mb-8`}>
+                <div className={`${styles.creatorContainer} hover:scale-102 transition-transform duration-300 mb-8`}>
                     <img
                         src="allen-pfp.jpg"
                         alt="Allen"
