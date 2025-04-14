@@ -52,11 +52,11 @@ const AudioUploader = () => {
             />
             <label htmlFor="audio-upload" style={{
                 display: 'inline-block',
-                padding: '10px 12px',
+                padding: '6px 19px',
                 background: 'linear-gradient(to right, #8b5cf6, #ec4899)',
                 color: 'white',
                 cursor: 'pointer',
-                borderRadius: '16fpx',
+                borderRadius: '12px',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }} className="hover:scale-103">
                 Upload Music
