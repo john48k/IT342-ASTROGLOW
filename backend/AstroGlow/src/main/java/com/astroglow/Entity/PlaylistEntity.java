@@ -19,7 +19,7 @@ public class PlaylistEntity {
 
     @JsonBackReference(value = "music-playlist")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "music_id", referencedColumnName = "musicId", nullable = false)
+    @JoinColumn(name = "music_id", referencedColumnName = "musicId")
     private MusicEntity music;
 
     public PlaylistEntity() {

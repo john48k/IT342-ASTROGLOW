@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useRef, useState, useEffect } from 'react';
+import { useUser } from './UserContext';
 
 const AudioPlayerContext = createContext(null);
 
@@ -10,27 +11,7 @@ export const AudioPlayerProvider = ({ children }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrackData, setCurrentTrackData] = useState(null);
   const progressIntervalRef = useRef(null);
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-      if (audioElement) {
-        try {
-          if (audioElement.pause && typeof audioElement.pause === 'function') {
-            audioElement.pause();
-          }
-          if (audioElement.src) {
-            audioElement.src = '';
-          }
-        } catch (err) {
-          console.error('Error cleaning up audio element:', err);
-        }
-      }
-    };
-  }, []);
+  const { isAuthenticated } = useUser();
 
   // Format time function
   const formatTime = (seconds) => {
@@ -54,41 +35,70 @@ export const AudioPlayerProvider = ({ children }) => {
     return false;
   };
 
+  // Helper for image URLs
   const getImageUrl = (url) => {
     if (!url) return null;
     
     // If it's already a data URI, return it as is
-    if (isDataUri(url)) {
-      console.log("Using data URI for image");
-      return url;
+    if (isDataUri(url)) return url;
+    
+    // If it's a relative URL, prepend the API base URL
+    if (url.startsWith('/')) {
+      return `http://localhost:8080${url}`;
     }
     
-    // Handle potential malformed URLs
-    try {
-      // Basic validation for http/https URLs
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        return url;
-      }
-      
-      // If URL doesn't have protocol, try to add https://
-      if (!url.includes('://') && !url.startsWith('data:')) {
-        console.log("Adding https:// to URL:", url);
-        return 'https://' + url;
-      }
-      
-      // For file paths that may have been saved
-      if (url.startsWith('/')) {
-        console.log("Using relative path for image:", url);
-        return url;
-      }
-      
-      console.warn("Invalid image URL format:", url);
-      return '/placeholder.jpg'; // Return default placeholder instead of null
-    } catch (error) {
-      console.error("Error parsing image URL:", error);
-      return '/placeholder.jpg';
-    }
+    // Otherwise, return the URL as is
+    return url;
   };
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      if (audioElement) {
+        try {
+          if (audioElement.pause && typeof audioElement.pause === 'function') {
+            audioElement.pause();
+          }
+          if (audioElement.src) {
+            audioElement.src = '';
+          }
+        } catch (err) {
+          console.error('Error cleaning up audio element:', err);
+        }
+      }
+    };
+  }, []);
+
+  // Stop playback when user logs out
+  useEffect(() => {
+    if (!isAuthenticated && isPlaying) {
+      if (audioElement) {
+        try {
+          if (audioElement.pause && typeof audioElement.pause === 'function') {
+            audioElement.pause();
+          }
+          if (audioElement.src) {
+            audioElement.src = '';
+          }
+        } catch (err) {
+          console.error('Error stopping audio on logout:', err);
+        }
+        // Reset state
+        setCurrentlyPlaying(null);
+        setAudioProgress(0);
+        setAudioElement(null);
+        setIsPlaying(false);
+        setCurrentTrackData(null);
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
+      }
+    }
+  }, [isAuthenticated, isPlaying, audioElement]);
 
   const playMusic = async (musicId) => {
     try {
