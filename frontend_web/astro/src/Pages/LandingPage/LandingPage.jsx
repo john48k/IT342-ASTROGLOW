@@ -8,7 +8,9 @@ const LandingPage = () => {
         <div className="landing-page">
             <Navbar />
             <div className="landing-content">
-                <h1 className='astro-title-text'>"AstroGlow – Music That Lights Up Your Universe."</h1>
+                <h1 className="text-white astro-title-text" style={{ fontSize: '50px' }}>
+                    "AstroGlow – Music That Lights Up Your Universe."
+                </h1>
             </div>
         </div>
     );

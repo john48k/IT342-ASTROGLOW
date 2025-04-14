@@ -37,10 +37,10 @@ const OAuth2Redirect = () => {
 
         // Generate a simple session token (in a real app, this would be a JWT from the server)
         const simpleToken = btoa(userInfo.userEmail + ':' + new Date().getTime());
-        
+
         // Login the user
         login(userInfo, simpleToken);
-        
+
         // Check if we have a redirect location from the protected route
         const from = location.state?.from || '/home';
         navigate(from);
@@ -55,10 +55,10 @@ const OAuth2Redirect = () => {
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
         background: 'linear-gradient(135deg, #21295c, #1c1c3c)'
       }}>

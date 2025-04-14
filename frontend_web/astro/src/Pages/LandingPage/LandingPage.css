@@ -30,13 +30,18 @@
     z-index: 2;
 }
 
-.astro-title-text{
+/* .astro-title-text{
     font-size: 50px;
     color: white;
     margin-top: -160px;
   font-family: inherit;
   font-weight: 500;
+} */
+
+
+
+.astro-title-text{
+    margin-top: -160px;
+  font-family: inherit;
+  font-weight: 500;
 }
-
-
-

@@ -14,7 +14,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useUser();
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -75,13 +75,13 @@ const LoginPage = () => {
 
       // Call login with the user data and session ID
       login(userData, sessionId);
-      
+
       // Check if we have a redirect location from the protected route
       const from = location.state?.from || "/home";
       navigate(from);
     } catch (error) {
       console.error("Login error:", error);
-      
+
       // Provide more specific error messages based on the error type
       if (error.name === 'AbortError') {
         setError("Request timed out. Please check if the server is running.");
@@ -90,7 +90,7 @@ const LoginPage = () => {
       } else {
         setError(error.message || "An error occurred during login");
       }
-    
+
       setLoading(false);
     }
   };
@@ -111,7 +111,7 @@ const LoginPage = () => {
         method: "GET",
         signal: AbortSignal.timeout(5000) // 5 second timeout
       });
-      
+
       if (response.ok) {
         setError("Server is running but login failed. Check your credentials.");
       } else {
@@ -153,9 +153,9 @@ const LoginPage = () => {
                   onChange={handleChange}
                   required
                 />
-                <button 
-                  type="button" 
-                  className={styles.passwordToggle} 
+                <button
+                  type="button"
+                  className={styles.passwordToggle}
                   onClick={togglePasswordVisibility}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
@@ -206,7 +206,7 @@ const LoginPage = () => {
               <div className={styles.errorContainer}>
                 <div className={styles.errorMessage}>{error}</div>
                 {error.includes("Cannot connect") && (
-                  <button 
+                  <button
                     className={styles.checkServerButton}
                     onClick={checkBackendStatus}
                   >
