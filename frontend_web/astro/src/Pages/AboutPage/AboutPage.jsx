@@ -15,6 +15,8 @@ const AboutPage = () => {
                     </p>
                 </div>
             </div>
+            <AudioUploader />
+
             <div className="flex flex-col items-center gap-[30px] py-16 px-4 mt-48">
                 <div className={`${styles.creatorContainer} hover:scale-102 transition-transform duration-400 mb-8`}>
                     <img
@@ -52,7 +54,6 @@ const AboutPage = () => {
                     </div>
                 </div>
             </div>
-            <AudioUploader />
         </div>
     );
 };

@@ -9,18 +9,20 @@ const AudioUploader = () => {
     const [downloadURL, setDownloadURL] = useState("");
 
     const handleFileChange = (e) => {
-        setAudioFile(e.target.files[0]);
+        const file = e.target.files[0];
+        setAudioFile(file);
+        if (file) {
+            handleUpload(file);
+        }
     };
 
-    const handleUpload = () => {
-        console.log("Uploading file:", audioFile); // Debugging line
-        if (!audioFile) {
+    const handleUpload = (file) => {
+        if (!file) {
             alert("Please select a file first.");
             return;
         }
-        console.log("Uploading file 2:", audioFile); // Debugging line
-        const storageRef = ref(storage, `audios/${audioFile.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, audioFile);
+        const storageRef = ref(storage, `audios/${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, file);
 
         uploadTask.on(
             "state_changed",
@@ -41,8 +43,24 @@ const AudioUploader = () => {
 
     return (
         <div>
-            <input type="file" accept="audio/*" onChange={handleFileChange} />
-            <button onClick={handleUpload}>Upload Audio</button>
+            <input
+                type="file"
+                accept="audio/*"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+                id="audio-upload"
+            />
+            <label htmlFor="audio-upload" style={{
+                display: 'inline-block',
+                padding: '10px 12px',
+                background: 'linear-gradient(to right, #8b5cf6, #ec4899)',
+                color: 'white',
+                cursor: 'pointer',
+                borderRadius: '16fpx',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }} className="hover:scale-103">
+                Upload Music
+            </label>
             {uploadProgress > 0 && <p>Uploading: {uploadProgress.toFixed(0)}%</p>}
             {downloadURL && (
                 <div>
