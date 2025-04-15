@@ -2,6 +2,7 @@ package edu.cit.astroglow
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.LinearEasing
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,11 +37,16 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -53,15 +60,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import edu.cit.astroglow.R
-import edu.cit.astroglow.ui.theme.AstroglowTheme
-import androidx.compose.foundation.BorderStroke
+import edu.cit.astroglow.data.api.RetrofitClient
+import edu.cit.astroglow.data.model.LoginRequest
+import edu.cit.astroglow.data.repository.AstroGlowRepository
 import edu.cit.astroglow.interFontFamily
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import edu.cit.astroglow.ui.theme.AstroglowTheme
+import kotlinx.coroutines.launch
+import retrofit2.Response
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -130,6 +139,11 @@ class LoginActivity : ComponentActivity() {
                             var email by remember { mutableStateOf("") }
                             var password by remember { mutableStateOf("") }
                             var passwordVisible by remember { mutableStateOf(false) }
+                            var isLoading by remember { mutableStateOf(false) }
+                            
+                            val context = LocalContext.current
+                            val scope = rememberCoroutineScope()
+                            val repository = remember { AstroGlowRepository(RetrofitClient.api) }
 
                             Column(
                                 horizontalAlignment = Alignment.Start,
@@ -186,18 +200,82 @@ class LoginActivity : ComponentActivity() {
 
                             Button(
                                 onClick = { 
-                                    // Navigate to Home Activity after login
-                                    val intent = Intent(this@LoginActivity, HomeActivity::class.java)
-                                    startActivity(intent)
+                                    if (email.isEmpty() || password.isEmpty()) {
+                                        Toast.makeText(context, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+                                        return@Button
+                                    }
+                                    
+                                    isLoading = true
+                                    scope.launch {
+                                        try {
+                                            val loginRequest = LoginRequest(
+                                                userEmail = email,
+                                                userPassword = password,
+                                                rememberMe = true
+                                            )
+                                            val response = repository.login(loginRequest)
+                                            
+                                            if (response.isSuccessful) {
+                                                val user = response.body()
+                                                if (user != null) {
+                                                    // Store the user information
+                                                    context.getSharedPreferences("auth", android.content.Context.MODE_PRIVATE)
+                                                        .edit()
+                                                        .putLong("user_id", user.id ?: -1)
+                                                        .putString("user_email", user.userEmail)
+                                                        .putString("user_name", user.userName)
+                                                        .apply()
+                                                    
+                                                    Toast.makeText(context, "Login successful", Toast.LENGTH_SHORT).show()
+                                                    val intent = Intent(context, HomeActivity::class.java)
+                                                    context.startActivity(intent)
+                                                }
+                                            } else {
+                                                val errorBody = response.errorBody()?.string()
+                                                val errorMessage = try {
+                                                    // Try to parse JSON error message
+                                                    val messageStart = errorBody?.indexOf("\"message\":\"")
+                                                    val messageEnd = errorBody?.indexOf("\"}", messageStart ?: 0)
+                                                    if (messageStart != null && messageEnd != null && messageStart > 0) {
+                                                        errorBody.substring(messageStart + 11, messageEnd)
+                                                    } else {
+                                                        when (response.code()) {
+                                                            401 -> "Invalid email or password"
+                                                            else -> errorBody ?: "Login failed"
+                                                        }
+                                                    }
+                                                } catch (e: Exception) {
+                                                    "Login failed: ${response.message()}"
+                                                }
+                                                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                                            }
+                                        } catch (e: Exception) {
+                                            val errorMessage = when {
+                                                e.message?.contains("timeout") == true -> 
+                                                    "Request timed out. Please check if the server is running."
+                                                e.message?.contains("Failed to connect") == true -> 
+                                                    "Cannot connect to the server. Please ensure the backend is running."
+                                                else -> "Error: ${e.message}"
+                                            }
+                                            Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
+                                        } finally {
+                                            isLoading = false
+                                        }
+                                    }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0050D0)),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(start= 16.dp, top = 32.dp, bottom = 8.dp, end = 16.dp)
-                                    .height(56.dp)
+                                    .height(56.dp),
+                                enabled = !isLoading
                             ) {
-                                Text(text = "Log In", color = Color.White, fontFamily = interFontFamily)
+                                if (isLoading) {
+                                    CircularProgressIndicator(color = Color.White)
+                                } else {
+                                    Text(text = "Log In", color = Color.White, fontFamily = interFontFamily)
+                                }
                             }
 
                             // Add divider with "OR" text

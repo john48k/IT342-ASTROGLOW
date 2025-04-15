@@ -50,13 +50,27 @@ import edu.cit.astroglow.interFontFamily
 import edu.cit.astroglow.interLightFontFamily
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import android.content.Context
 
 class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             AstroglowTheme {
-                HomeScreen(userName = "Cg") // This would come from user data
+                // Get user data from SharedPreferences
+                val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
+                val userName = sharedPreferences.getString("user_name", "") ?: ""
+                val userEmail = sharedPreferences.getString("user_email", "") ?: ""
+                val userId = sharedPreferences.getLong("user_id", -1)
+
+                if (userId == -1L) {
+                    // If no user data, redirect to login
+                    val intent = Intent(this, LoginActivity::class.java)
+                    startActivity(intent)
+                    finish()
+                } else {
+                    HomeScreen(userName = userName)
+                }
             }
         }
     }
@@ -184,12 +198,18 @@ fun HomeScreen(userName: String) {
 
 @Composable
 fun ProfileTab() {
+    val context = LocalContext.current
+    val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+    val userEmail = sharedPreferences.getString("user_email", "") ?: ""
+    val userName = sharedPreferences.getString("user_name", "") ?: ""
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.Start
+            .padding(horizontal = 24.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
             text = "Profile",
@@ -197,97 +217,156 @@ fun ProfileTab() {
             color = Color.White,
             fontSize = 46.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
+            modifier = Modifier.padding(bottom = 8.dp)
         )
+
+        // Profile Picture
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp),
-            contentAlignment = Alignment.Center // Center the profile icon
+                .padding(vertical = 24.dp),
+            contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
-                    .size(150.dp) // Larger profile icon
-                    .clip(RoundedCornerShape(75.dp))
-                    .background(Color.LightGray),
+                    .size(120.dp)
+                    .clip(RoundedCornerShape(60.dp))
+                    .background(Color(0xFF6A1B9A)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Profile Picture",
-                    tint = Color.White,
-                    modifier = Modifier.size(140.dp)
+                Text(
+                    text = userName.take(1).uppercase(),
+                    color = Color.White,
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = interFontFamily
                 )
             }
         }
-        
-        // Profile Details with design
-        ProfileDetailItem(icon = R.drawable.ic_google, label = "Google Account", value = "fcg8963@gmail.com")
-        ProfileDetailItem(icon = R.drawable.ic_github, label = "GitHub Account", value = "Cg-Del")
-        ProfileDetailItem(icon = null, label = "Name", value = "Cg M. Fernandez")
-        ProfileDetailItem(icon = null, label = "Email", value = "cg.fernandez@cit.edu")
-        ProfileDetailItem(icon = null, label = "Password", value = "************")
+
+        // Profile Information Section
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Email Account Section
+            ProfileDetailItem(
+                icon = Icons.Default.Person,
+                label = "Email Account",
+                value = userEmail
+            )
+
+            // Name Section
+            ProfileDetailItem(
+                icon = null,
+                label = "Username",
+                value = userName
+            )
+
+            // Email Section
+            ProfileDetailItem(
+                icon = null,
+                label = "Email",
+                value = userEmail
+            )
+
+            // Password Section
+            ProfileDetailItem(
+                icon = null,
+                label = "Password",
+                value = "************"
+            )
+        }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Edit Button
+        // Sign Out Button
         Button(
-            onClick = { /* Edit Profile */ },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
-            shape = RoundedCornerShape(8.dp),
+            onClick = { 
+                context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+                    .edit()
+                    .clear()
+                    .apply()
+                
+                val intent = Intent(context, LoginActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                context.startActivity(intent)
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF9C27B0)
+            ),
+            shape = RoundedCornerShape(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 16.dp)
+                .height(56.dp)
         ) {
-            Text("Edit Profile", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text(
+                text = "Sign Out",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                fontFamily = interFontFamily
+            )
         }
     }
 }
 
 @Composable
-fun ProfileDetailItem(icon: Int?, label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+fun ProfileDetailItem(
+    icon: ImageVector?,
+    label: String,
+    value: String
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        if (icon != null) {
-            Icon(
-                painter = painterResource(id = icon),
-                contentDescription = label,
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        Text(
-            text = label,
-            fontFamily = interLightFontFamily,
-            color = Color.White,
-            fontSize = 16.sp
-        )
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(60.dp) // Increased gradient height
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(Color(0xFF6A1B9A), Color(0xFF283593)) // Darker gradient colors
+        // Label Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
                 )
-            ),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = value,
-            fontFamily = interLightFontFamily,
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.padding(start = 16.dp)
-        )
+            }
+            Text(
+                text = label,
+                fontFamily = interLightFontFamily,
+                color = Color.White,
+                fontSize = 16.sp
+            )
+        }
+
+        // Value Box
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFF6A1B9A),
+                            Color(0xFF283593)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = value,
+                fontFamily = interLightFontFamily,
+                color = Color.White,
+                fontSize = 16.sp,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
     }
 }
 
@@ -301,31 +380,60 @@ fun HomeTabWithSearch(userName: String) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.Start
     ) {
-        Text(
-            text = "Welcome, $userName",
-            fontFamily = interFontFamily,
-            color = Color.White,
-            fontSize = 46.sp,
-            fontWeight = FontWeight.Bold
-        )
+        // Welcome Section with adjusted sizes
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Welcome,",
+                fontFamily = interFontFamily,
+                color = Color.White,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Normal
+            )
+            
+            Text(
+                text = userName,
+                fontFamily = interFontFamily,
+                color = Color.White,
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 4.dp)
+            )
 
-        Text(
-            text = "Listen to our music for free and browse through our library to see our latest creation.",
-            fontFamily = interLightFontFamily,
-            color = Color.White,
-            fontSize = 18.sp,
-            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
-        )
+            Text(
+                text = "Listen to our music for free and browse through our library to see our latest creation.",
+                fontFamily = interLightFontFamily,
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
+                modifier = Modifier.padding(top = 12.dp)
+            )
+        }
 
-        // Search bar now in home tab with navigation
+        // Search bar with adjusted spacing
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("Enter a song", color = Color.Gray) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.Gray) },
+            placeholder = { 
+                Text(
+                    "Enter a song",
+                    color = Color.Gray,
+                    fontFamily = interLightFontFamily
+                )
+            },
+            leadingIcon = { 
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color.Gray
+                )
+            },
             trailingIcon = {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_arrow_forward),
@@ -341,14 +449,15 @@ fun HomeTabWithSearch(userName: String) {
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp)
+                .padding(bottom = 32.dp)
+                .height(56.dp)
                 .clickable {
                     val intent = Intent(context, SearchActivity::class.java).apply {
                         putExtra("search_query", searchQuery)
                     }
                     context.startActivity(intent)
                 },
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color.White,
                 unfocusedContainerColor = Color.White,
@@ -356,6 +465,10 @@ fun HomeTabWithSearch(userName: String) {
                 unfocusedBorderColor = Color.Transparent,
                 focusedTextColor = Color.DarkGray,
                 unfocusedTextColor = Color.DarkGray
+            ),
+            textStyle = androidx.compose.ui.text.TextStyle(
+                fontFamily = interFontFamily,
+                fontSize = 16.sp
             ),
             singleLine = true
         )

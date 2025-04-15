@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.cit.astroglow.interFontFamily
+import edu.cit.astroglow.interLightFontFamily
 
 /**
  * Shared bottom navigation bar used across the app
@@ -103,7 +104,7 @@ fun NavBarItem(icon: ImageVector, label: String, isSelected: Boolean, onClick: (
         Text(
             text = label,
             color = if (isSelected) Color(0xFF0050D0) else Color.White,
-            fontFamily = interFontFamily,
+            fontFamily = interLightFontFamily,
             fontSize = 12.sp,
             textAlign = TextAlign.Center
         )
