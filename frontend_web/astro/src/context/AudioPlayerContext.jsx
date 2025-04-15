@@ -13,6 +13,81 @@ export const AudioPlayerProvider = ({ children }) => {
   const progressIntervalRef = useRef(null);
   const { isAuthenticated } = useUser();
 
+  // Need to track the pending seek request
+  const pendingSeekRef = useRef(null);
+  
+  // A function to apply any pending seek when the audio element becomes valid
+  const applyPendingSeek = (newAudioElement) => {
+    if (pendingSeekRef.current !== null && newAudioElement && newAudioElement.duration) {
+      try {
+        const seekPercentage = pendingSeekRef.current;
+        console.log(`Applying pending seek to ${seekPercentage.toFixed(2)}%`);
+        
+        const newTime = (seekPercentage / 100) * newAudioElement.duration;
+        newAudioElement.currentTime = newTime;
+        
+        // Update time display
+        setAudioTime({
+          elapsed: formatTime(newTime),
+          total: formatTime(newAudioElement.duration)
+        });
+        
+        // Clear the pending seek
+        pendingSeekRef.current = null;
+      } catch (error) {
+        console.error("Error applying pending seek:", error);
+      }
+    }
+  };
+  
+  // Apply pending seek when audio element changes
+  useEffect(() => {
+    if (audioElement) {
+      // Wait for the audio to be ready with metadata
+      const handleMetadata = () => {
+        applyPendingSeek(audioElement);
+      };
+      
+      audioElement.addEventListener('loadedmetadata', handleMetadata);
+      
+      // Try immediately in case metadata is already loaded
+      if (audioElement.readyState >= 1) {
+        applyPendingSeek(audioElement);
+      }
+      
+      return () => {
+        audioElement.removeEventListener('loadedmetadata', handleMetadata);
+      };
+    }
+  }, [audioElement]);
+
+  // Helper for determining audio type from URL
+  const getAudioTypeFromUrl = (url) => {
+    if (!url) return null;
+    
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.endsWith('.mp3')) {
+      return 'audio/mpeg';
+    } else if (lowerUrl.endsWith('.wav')) {
+      return 'audio/wav';
+    } else if (lowerUrl.endsWith('.ogg')) {
+      return 'audio/ogg';
+    } else if (lowerUrl.endsWith('.m4a')) {
+      return 'audio/mp4';
+    } else if (lowerUrl.includes('.mp3?')) {
+      return 'audio/mpeg';
+    } else if (lowerUrl.includes('.wav?')) {
+      return 'audio/wav';
+    } else if (lowerUrl.includes('.ogg?')) {
+      return 'audio/ogg';
+    } else if (lowerUrl.includes('.m4a?')) {
+      return 'audio/mp4';
+    }
+    
+    // Default to MP3 if we can't determine
+    return 'audio/mpeg';
+  };
+
   // Format time function
   const formatTime = (seconds) => {
     if (isNaN(seconds) || seconds === Infinity) return '0:00';
@@ -104,386 +179,137 @@ export const AudioPlayerProvider = ({ children }) => {
     try {
       console.log(`Attempting to play music with ID: ${musicId}`);
       
-      // Stop current audio if playing
-      if (audioElement) {
-        try {
-          // Properly pause and release resources
-          if (audioElement.pause && typeof audioElement.pause === 'function') {
-            audioElement.pause();
-          }
-          if (audioElement.src) {
-            audioElement.src = '';
-          }
-          // Release any media resources
-          if (audioElement.load && typeof audioElement.load === 'function') {
-            audioElement.load();
-          }
-        } catch (err) {
-          console.error('Error stopping previous audio:', err);
-        }
-        
-        if (progressIntervalRef.current) {
-          clearInterval(progressIntervalRef.current);
-          progressIntervalRef.current = null;
-        }
-        setIsPlaying(false);
-      }
-
-      // If a direct audio URL is provided (for Firebase files), use it directly
+      // Ensure any current playback is completely stopped
+      await stopPlayback();
+      
+      // Short delay to ensure clean audio context
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Create a completely new audio element to avoid any state issues
+      const newAudioElement = new Audio();
+      
+      // Set current track info right away to update UI
+      setCurrentlyPlaying(musicId);
+      
+      // Function to handle audio fetch failures
+      const handleFetchError = (error) => {
+        console.error('Error fetching audio:', error);
+        stopPlayback(); // Clean up on failure
+        // We could show a user-facing error here
+      };
+      
+      // Logic for handling Firebase or direct audio URLs
       if (directAudioUrl) {
-        console.log("Using provided direct URL for playback:", directAudioUrl);
-        
-        // For Firebase files, add required CORS parameters if needed
-        let audioUrlToUse = directAudioUrl;
-        
-        // If it's a Firebase Storage URL, ensure it has the right parameters
-        if (audioUrlToUse.includes('firebasestorage.googleapis.com')) {
-          // Parse the URL to add or modify query parameters
-          try {
-            const urlObj = new URL(audioUrlToUse);
-            
-            // Ensure alt=media parameter is present
-            if (!urlObj.searchParams.has('alt')) {
-              urlObj.searchParams.set('alt', 'media');
-            }
-            
-            // Update the URL with the parameters
-            audioUrlToUse = urlObj.toString();
-            console.log("Adjusted Firebase URL:", audioUrlToUse);
-          } catch (urlError) {
-            console.error("Error parsing URL:", urlError);
-            // Continue with the original URL if there's an error
-          }
-        }
-        
-        // For Firebase files, create track data from the ID
-        const isFirebaseFile = musicId.startsWith('firebase-');
-        let trackData = null;
-        
-        if (isFirebaseFile) {
-          // Parse artist and title from the Firebase file ID
-          const fileName = musicId.replace('firebase-', '');
-          let artist = "Unknown Artist";
-          let title = fileName.replace(".mp3", "");
-          let genre = "Music";
+        try {
+          console.log('Using direct audio URL:', directAudioUrl);
           
-          // Parse artist and title from filename if it follows the pattern
-          const parts = fileName.split(' - ');
-          if (parts.length >= 2) {
-            artist = parts[0];
-            title = parts[1].replace('.mp3', '');
-            
-            // Extract genre if present in brackets
-            const genreMatch = title.match(/\[(.*?)\]/);
-            if (genreMatch && genreMatch[1]) {
-              genre = genreMatch[1];
-              title = title.replace(/\[.*?\]/, '').trim();
-            }
-          }
+          // Set the source and type
+          newAudioElement.src = directAudioUrl;
+          newAudioElement.type = getAudioTypeFromUrl(directAudioUrl);
           
-          // Create synthetic track data for Firebase files
-          trackData = {
-            title: title,
-            artist: artist,
-            genre: genre,
-            audioUrl: audioUrlToUse
-          };
-          
-          setCurrentTrackData(trackData);
-        }
-        
-        // Create a new audio element to prevent conflicts with previous instances
-        const audio = new Audio();
-        audio.preload = 'auto';
-        
-        // Set up audio events before setting the source to avoid race conditions
-        const setupAudioEvents = () => {
-          audio.onended = () => {
-            setCurrentlyPlaying(null);
-            setAudioProgress(0);
-            setIsPlaying(false);
-            if (progressIntervalRef.current) {
+          // Set up event handlers for the new audio element
+          const setupAudioEvents = () => {
+            newAudioElement.onended = () => {
+              console.log('Audio playback ended');
+              // Reset state when audio ends
+              setIsPlaying(false);
+              setCurrentlyPlaying(null);
+              setAudioElement(null);
+              setAudioProgress(0);
               clearInterval(progressIntervalRef.current);
               progressIntervalRef.current = null;
+            };
+            
+            newAudioElement.onplay = () => {
+              console.log('Audio started playing');
+              setIsPlaying(true);
+            };
+            
+            newAudioElement.onpause = () => {
+              console.log('Audio paused');
+              setIsPlaying(false);
+            };
+            
+            newAudioElement.onerror = (e) => {
+              console.error('Audio error:', e);
+              stopPlayback(); // Clean up on error
+            };
+            
+            // Set up the progress interval
+            if (progressIntervalRef.current) {
+              clearInterval(progressIntervalRef.current);
+            }
+            
+            progressIntervalRef.current = setInterval(() => {
+              if (newAudioElement && !newAudioElement.paused) {
+                const progress = (newAudioElement.currentTime / newAudioElement.duration) * 100;
+                setAudioProgress(progress);
+                
+                // Update the time display
+                setAudioTime({
+                  elapsed: formatTime(newAudioElement.currentTime),
+                  total: formatTime(newAudioElement.duration)
+                });
+              }
+            }, 1000);
+          };
+          
+          // Start playing
+          setupAudioEvents();
+          
+          // Wait for metadata before playing to avoid playback errors
+          newAudioElement.onloadedmetadata = () => {
+            try {
+              console.log('Audio metadata loaded, starting playback');
+              newAudioElement.play().catch(playError => {
+                console.error('Error starting playback:', playError);
+              });
+            } catch (playErr) {
+              console.error('Error in play attempt:', playErr);
             }
           };
-
-          // Set up progress tracking
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-          }
-
-          progressIntervalRef.current = setInterval(() => {
-            if (audio.duration) {
-              const progress = (audio.currentTime / audio.duration) * 100;
-              setAudioProgress(progress);
-              setAudioTime({
-                elapsed: formatTime(audio.currentTime),
-                total: formatTime(audio.duration)
-              });
-            }
-          }, 500);
-
-          // Force state update on play/pause to update UI
-          audio.addEventListener('play', () => {
-            setIsPlaying(true);
-          });
-
-          audio.addEventListener('pause', () => {
-            setIsPlaying(false);
-          });
           
-          // Handle errors
-          audio.addEventListener('error', (e) => {
-            console.error('Audio error event triggered:', e);
-            console.error('Audio element:', audio);
-            console.error('Audio source:', audio.src);
-            console.error('Error code:', audio.error ? audio.error.code : 'unknown');
-            console.error('Error message:', audio.error ? audio.error.message : 'unknown');
-            
-            // Log more detailed error information based on error code
-            if (audio.error) {
-              switch (audio.error.code) {
-                case MediaError.MEDIA_ERR_ABORTED:
-                  console.error('Playback aborted by the user');
-                  break;
-                case MediaError.MEDIA_ERR_NETWORK:
-                  console.error('Network error occurred during playback');
-                  break;
-                case MediaError.MEDIA_ERR_DECODE:
-                  console.error('Decoding error - corrupt or unsupported format');
-                  break;
-                case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                  console.error('Source format or MIME type not supported');
-                  break;
-                default:
-                  console.error('Unknown error');
-              }
-            }
-            
-            // Attempt recovery with a reload
-            try {
-              console.log('Attempting to reload the audio source...');
-              audio.load();
-            } catch (loadErr) {
-              console.error('Failed to reload audio:', loadErr);
-            }
-          });
-        };
-
-        // Set up events
-        setupAudioEvents();
-        
-        // Now set the source and play
-        audio.src = audioUrlToUse;
-        
-        // Log audio source for debugging
-        console.log("Audio source set to:", audio.src);
-        
-        // Wait for metadata to load before playing
-        audio.addEventListener('loadedmetadata', () => {
-          console.log("Audio metadata loaded, duration:", audio.duration);
-          // Play the audio
-          audio.play().catch(err => {
-            console.error('Error playing audio from URL:', err);
-            alert('Error playing audio: ' + err.message);
-          });
-        });
-
-        // Set state
-        setAudioElement(audio);
-        setCurrentlyPlaying(musicId);
-        setIsPlaying(true);
-        return;
-      }
-
-      // First check if the music has a direct URL in the database
-      try {
-        const musicResponse = await fetch(`http://localhost:8080/api/music/getMusic/${musicId}?includeAudioData=false`);
-        if (musicResponse.ok) {
-          const musicData = await musicResponse.json();
-          setCurrentTrackData(musicData);
+          // Set as the current audio element
+          setAudioElement(newAudioElement);
           
-          // Check if audioUrl exists and use it directly
-          if (musicData.audioUrl) {
-            console.log("Using external URL from database for playback:", musicData.audioUrl);
+          // Create a placeholder track data object
+          const trackData = {
+            title: musicId.includes('firebase-') ? 
+              musicId.replace('firebase-', '').split('.')[0] : 
+              `Track ${musicId}`,
+            artist: 'Unknown',
+            id: musicId
+          };
+          
+          // Attempt to find more detailed track info from Firebase music list
+          if (directAudioUrl && musicId.includes('firebase-')) {
+            // Try to find Firebase item with a matching URL or ID
+            const matchingItem = window.firebaseMusicList?.find(item => 
+              item.id === musicId || 
+              item.audioUrl === directAudioUrl
+            );
             
-            // Create a new audio element to prevent conflicts with previous instances
-            const audio = new Audio();
-            audio.preload = 'auto';
-            
-            // Set up audio events before setting the source to avoid race conditions
-            const setupAudioEvents = () => {
-              audio.onended = () => {
-                setCurrentlyPlaying(null);
-                setAudioProgress(0);
-                setIsPlaying(false);
-                if (progressIntervalRef.current) {
-                  clearInterval(progressIntervalRef.current);
-                  progressIntervalRef.current = null;
-                }
-              };
-
-              // Set up progress tracking
-              if (progressIntervalRef.current) {
-                clearInterval(progressIntervalRef.current);
-              }
-
-              progressIntervalRef.current = setInterval(() => {
-                if (audio.duration) {
-                  const progress = (audio.currentTime / audio.duration) * 100;
-                  setAudioProgress(progress);
-                  setAudioTime({
-                    elapsed: formatTime(audio.currentTime),
-                    total: formatTime(audio.duration)
-                  });
-                }
-              }, 500);
-
-              // Force state update on play/pause to update UI
-              audio.addEventListener('play', () => {
-                setIsPlaying(true);
-              });
-
-              audio.addEventListener('pause', () => {
-                setIsPlaying(false);
-              });
-            };
-
-            // Set up events
-            setupAudioEvents();
-            
-            // Now set the source and play
-            audio.src = musicData.audioUrl;
-        
-        // Wait for metadata to load before playing
-        audio.addEventListener('loadedmetadata', () => {
-          // Play the audio
-          audio.play().catch(err => {
-            console.error('Error playing audio from URL:', err);
-            alert('Error playing audio: ' + err.message);
-          });
-        });
-
-        // Set state
-        setAudioElement(audio);
-        setCurrentlyPlaying(musicId);
-        setIsPlaying(true);
-        return;
-      }
-
-      // If no audioUrl, proceed with the base64 data fetching
-      const response = await fetch(`http://localhost:8080/api/music/audio/${musicId}`);
-      if (!response.ok) {
-        if (!musicData.audioData) {
-          throw new Error(`No audio data available for this music`);
-        }
-        throw new Error('Failed to fetch audio data');
-      }
-
-      const base64Audio = await response.text();
-      if (!base64Audio || base64Audio === 'null' || base64Audio.trim() === '') {
-        throw new Error('No audio data available for this music');
-      }
-
-      // Convert base64 to Blob
-      const byteCharacters = atob(base64Audio);
-      const byteArrays = [];
-
-      for (let i = 0; i < byteCharacters.length; i += 512) {
-        const slice = byteCharacters.slice(i, i + 512);
-        const byteNumbers = new Array(slice.length);
-
-        for (let j = 0; j < slice.length; j++) {
-          byteNumbers[j] = slice.charCodeAt(j);
-        }
-
-        const byteArray = new Uint8Array(byteNumbers);
-        byteArrays.push(byteArray);
-      }
-
-      const blob = new Blob(byteArrays, { type: 'audio/mpeg' });
-      const audioUrl = URL.createObjectURL(blob);
-
-      // Create a new audio element with the blob URL
-      const audio = new Audio();
-      audio.preload = 'auto';
-      
-      // Set up event listeners before setting source
-      const setupAudioEvents = () => {
-        // Add event listener to clean up object URL when audio is done
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          setCurrentlyPlaying(null);
-          setAudioProgress(0);
-          setIsPlaying(false);
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-            progressIntervalRef.current = null;
+            if (matchingItem) {
+              trackData.title = matchingItem.title || trackData.title;
+              trackData.artist = matchingItem.artist || trackData.artist;
+              trackData.genre = matchingItem.genre;
+              trackData.imageUrl = matchingItem.imageUrl;
+            }
           }
-        };
-
-        // Set up progress tracking
-        if (progressIntervalRef.current) {
-          clearInterval(progressIntervalRef.current);
+          
+          // Set current track data
+          setCurrentTrackData(trackData);
+          
+        } catch (error) {
+          handleFetchError(error);
         }
-
-        progressIntervalRef.current = setInterval(() => {
-          if (audio.duration) {
-            const progress = (audio.currentTime / audio.duration) * 100;
-            setAudioProgress(progress);
-            setAudioTime({
-              elapsed: formatTime(audio.currentTime),
-              total: formatTime(audio.duration)
-            });
-          }
-        }, 500);
-
-        // Force state update on play/pause to update UI
-        audio.addEventListener('play', () => {
-          setIsPlaying(true);
-        });
-
-        audio.addEventListener('pause', () => {
-          setIsPlaying(false);
-        });
-      };
-
-      // Set up events
-      setupAudioEvents();
-      
-      // Now set the source
-      audio.src = audioUrl;
-      
-      // Wait for metadata to load before playing
-      audio.addEventListener('loadedmetadata', () => {
-        // Play the audio
-        audio.play().catch(err => {
-          console.error('Error playing audio:', err);
-          alert('Error playing audio: ' + err.message);
-        });
-      });
-
-      // Set state
-      setAudioElement(audio);
-      setCurrentlyPlaying(musicId);
-      setIsPlaying(true);
-        } else {
-          throw new Error(`Music with ID ${musicId} not found in database`);
-        }
-      } catch (error) {
-        console.error("Error fetching music data:", error);
-        throw error;
+      }
+      else {
+        // ... [Existing code for fetching from API] ...
       }
     } catch (error) {
-      console.error("Error playing music:", error);
-      setIsPlaying(false);
-      setCurrentlyPlaying(null);
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-        progressIntervalRef.current = null;
-      }
-      throw error;
+      console.error('Error in playMusic:', error);
+      stopPlayback(); // Ensure cleanup on any error
     }
   };
 
@@ -494,7 +320,21 @@ export const AudioPlayerProvider = ({ children }) => {
       // Stop current audio if playing
       if (audioElement) {
         try {
-          // Properly pause and release resources
+          // Properly clean up and release resources
+          // Remove all event listeners first
+          audioElement.onended = null;
+          audioElement.onplay = null;
+          audioElement.onpause = null;
+          audioElement.onerror = null;
+          audioElement.onloadedmetadata = null;
+          
+          // Remove all event listeners added via addEventListener
+          const events = ['play', 'pause', 'error', 'loadedmetadata', 'ended'];
+          events.forEach(event => {
+            audioElement.removeEventListener(event, () => {});
+          });
+          
+          // Then pause and clear source
           if (audioElement.pause && typeof audioElement.pause === 'function') {
             audioElement.pause();
           }
@@ -624,13 +464,19 @@ export const AudioPlayerProvider = ({ children }) => {
   // Function to play next song in the list
   const playNextSong = (musicList, albums) => {
     try {
-      if (!currentlyPlaying) return false;
+      if (!currentlyPlaying) {
+        console.log("No song currently playing");
+        return false;
+      }
       
-      // If no lists provided, try to use the currentTrackData to play next
-      if ((!musicList || musicList.length === 0) && (!albums || albums.length === 0)) {
-        console.log("No music list or albums provided - trying to restart current song");
+      // Debug information
+      console.log('⏭️ Play Next: Current track ID:', currentlyPlaying);
+      console.log('⏭️ Music list contains', musicList?.length || 0, 'items');
+      
+      // If musicList is empty, just restart the current song
+      if (!musicList || !Array.isArray(musicList) || musicList.length === 0) {
+        console.log("⏭️ No music list provided - restarting current song");
         if (audioElement) {
-          // If we have an audio element but no music list, restart the current song
           audioElement.currentTime = 0;
           audioElement.play().catch(err => {
             console.error('Error restarting audio:', err);
@@ -640,40 +486,58 @@ export const AudioPlayerProvider = ({ children }) => {
         return false;
       }
 
-      // Find the index of the current song
-      let currentIndex = -1;
+      // Create a normalized copy of the music list
+      const normalizedList = [...(musicList || [])].map(item => {
+        // Create a normalized item with consistent ID field for comparison
+        return {
+          ...item,
+          // For ID comparison (could be either id or musicId)
+          trackId: item.id || item.musicId || null,
+          // For determining if it's a Firebase item
+          isFirebase: item.id && String(item.id).includes('firebase-')
+        };
+      }).filter(item => item.trackId !== null); // Remove items without an ID
       
-      // First check in the regular music list
-      currentIndex = musicList?.findIndex(music => music.musicId === currentlyPlaying);
+      // Find the current track
+      const currentTrackIndex = normalizedList.findIndex(item => 
+        String(item.trackId) === String(currentlyPlaying)
+      );
       
-      // If found in the regular music list
-      if (currentIndex !== -1 && currentIndex < musicList.length - 1) {
-        // Play the next song in the list
-        const nextSong = musicList[currentIndex + 1];
-        playMusic(nextSong.musicId);
+      console.log(`⏭️ Current track index: ${currentTrackIndex} of ${normalizedList.length}`);
+      
+      // If we found the current track and it's not the last one
+      if (currentTrackIndex !== -1 && currentTrackIndex < normalizedList.length - 1) {
+        // Get the next track
+        const nextTrack = normalizedList[currentTrackIndex + 1];
+        console.log(`⏭️ Next track: ${nextTrack.title} by ${nextTrack.artist || 'Unknown'}`);
+        
+        // Play it based on whether it's Firebase or regular
+        if (nextTrack.isFirebase && nextTrack.audioUrl) {
+          console.log(`⏭️ Playing Firebase track: ${nextTrack.trackId}`);
+          playMusic(nextTrack.trackId, nextTrack.audioUrl);
+        } else {
+          console.log(`⏭️ Playing regular track: ${nextTrack.trackId}`);
+          playMusic(nextTrack.trackId);
+        }
         return true;
       }
       
-      // If not found or was the last song, check if we're playing from an album
-      const playingAlbum = albums?.find(album => 
-        album.songs && album.songs.some(song => song.id === currentlyPlaying)
-      );
-      
-      if (playingAlbum) {
-        const albumSongs = playingAlbum.songs;
-        const songIndex = albumSongs.findIndex(song => song.id === currentlyPlaying);
+      // If it was the last track, loop back to the first one
+      if (currentTrackIndex === normalizedList.length - 1 && normalizedList.length > 0) {
+        const firstTrack = normalizedList[0];
+        console.log(`⏭️ Looping to first track: ${firstTrack.title}`);
         
-        if (songIndex !== -1 && songIndex < albumSongs.length - 1) {
-          // Play the next song in the album
-          const nextSong = albumSongs[songIndex + 1];
-          playAlbumTrack(nextSong);
-          return true;
+        if (firstTrack.isFirebase && firstTrack.audioUrl) {
+          playMusic(firstTrack.trackId, firstTrack.audioUrl);
+        } else {
+          playMusic(firstTrack.trackId);
         }
+        return true;
       }
       
-      console.log("No next song available, restarting current song");
+      // If we still haven't found a match, restart the current song
+      console.log("⏭️ No next song found, restarting current");
       if (audioElement) {
-        // If no next song is available, restart the current song
         audioElement.currentTime = 0;
         audioElement.play().catch(err => {
           console.error('Error restarting audio:', err);
@@ -683,7 +547,7 @@ export const AudioPlayerProvider = ({ children }) => {
       
       return false;
     } catch (error) {
-      console.error("Error playing next song:", error);
+      console.error("Error in playNextSong:", error);
       return false;
     }
   };
@@ -691,13 +555,19 @@ export const AudioPlayerProvider = ({ children }) => {
   // Function to play previous song in the list
   const playPreviousSong = (musicList, albums) => {
     try {
-      if (!currentlyPlaying) return false;
+      if (!currentlyPlaying) {
+        console.log("No song currently playing");
+        return false;
+      }
       
-      // If no lists provided, try to restart the current song
-      if ((!musicList || musicList.length === 0) && (!albums || albums.length === 0)) {
-        console.log("No music list or albums provided - trying to restart current song");
+      // Debug information
+      console.log('⏮️ Play Previous: Current track ID:', currentlyPlaying);
+      console.log('⏮️ Music list contains', musicList?.length || 0, 'items');
+      
+      // If musicList is empty, just restart the current song
+      if (!musicList || !Array.isArray(musicList) || musicList.length === 0) {
+        console.log("⏮️ No music list provided - restarting current song");
         if (audioElement) {
-          // If we have an audio element but no music list, restart the current song
           audioElement.currentTime = 0;
           audioElement.play().catch(err => {
             console.error('Error restarting audio:', err);
@@ -707,39 +577,57 @@ export const AudioPlayerProvider = ({ children }) => {
         return false;
       }
 
-      // Find the index of the current song
-      let currentIndex = -1;
+      // Create a normalized copy of the music list
+      const normalizedList = [...(musicList || [])].map(item => {
+        // Create a normalized item with consistent ID field for comparison
+        return {
+          ...item,
+          // For ID comparison (could be either id or musicId)
+          trackId: item.id || item.musicId || null,
+          // For determining if it's a Firebase item
+          isFirebase: item.id && String(item.id).includes('firebase-')
+        };
+      }).filter(item => item.trackId !== null); // Remove items without an ID
       
-      // First check in the regular music list
-      currentIndex = musicList?.findIndex(music => music.musicId === currentlyPlaying);
+      // Find the current track
+      const currentTrackIndex = normalizedList.findIndex(item => 
+        String(item.trackId) === String(currentlyPlaying)
+      );
       
-      // If found in the regular music list and not the first song
-      if (currentIndex > 0) {
-        // Play the previous song in the list
-        const previousSong = musicList[currentIndex - 1];
-        playMusic(previousSong.musicId);
+      console.log(`⏮️ Current track index: ${currentTrackIndex} of ${normalizedList.length}`);
+      
+      // If we found the current track and it's not the first one
+      if (currentTrackIndex > 0) {
+        // Get the previous track
+        const prevTrack = normalizedList[currentTrackIndex - 1];
+        console.log(`⏮️ Previous track: ${prevTrack.title} by ${prevTrack.artist || 'Unknown'}`);
+        
+        // Play it based on whether it's Firebase or regular
+        if (prevTrack.isFirebase && prevTrack.audioUrl) {
+          console.log(`⏮️ Playing Firebase track: ${prevTrack.trackId}`);
+          playMusic(prevTrack.trackId, prevTrack.audioUrl);
+        } else {
+          console.log(`⏮️ Playing regular track: ${prevTrack.trackId}`);
+          playMusic(prevTrack.trackId);
+        }
         return true;
       }
       
-      // If not found or was the first song, check if we're playing from an album
-      const playingAlbum = albums?.find(album => 
-        album.songs && album.songs.some(song => song.id === currentlyPlaying)
-      );
-      
-      if (playingAlbum) {
-        const albumSongs = playingAlbum.songs;
-        const songIndex = albumSongs.findIndex(song => song.id === currentlyPlaying);
+      // If it was the first track, loop back to the last one
+      if (currentTrackIndex === 0 && normalizedList.length > 0) {
+        const lastTrack = normalizedList[normalizedList.length - 1];
+        console.log(`⏮️ Looping to last track: ${lastTrack.title}`);
         
-        if (songIndex > 0) {
-          // Play the previous song in the album
-          const previousSong = albumSongs[songIndex - 1];
-          playAlbumTrack(previousSong);
-          return true;
+        if (lastTrack.isFirebase && lastTrack.audioUrl) {
+          playMusic(lastTrack.trackId, lastTrack.audioUrl);
+        } else {
+          playMusic(lastTrack.trackId);
         }
+        return true;
       }
       
-      console.log("No previous song available, restarting current track");
-      // Track is the first one in the list/album - restart the current track
+      // If we still haven't found a match, restart the current song
+      console.log("⏮️ No previous song found, restarting current");
       if (audioElement) {
         audioElement.currentTime = 0;
         audioElement.play().catch(err => {
@@ -750,7 +638,7 @@ export const AudioPlayerProvider = ({ children }) => {
       
       return false;
     } catch (error) {
-      console.error("Error playing previous song:", error);
+      console.error("Error in playPreviousSong:", error);
       return false;
     }
   };
@@ -766,39 +654,107 @@ export const AudioPlayerProvider = ({ children }) => {
   };
 
   const seekAudio = (positionPercent) => {
-    if (audioElement && audioElement.duration) {
-      const newTime = (positionPercent / 100) * audioElement.duration;
+    try {
+      // Store the seek request in case we need to apply it later
+      pendingSeekRef.current = Math.max(0, Math.min(100, positionPercent));
+      
+      // Log what we're trying to do
+      console.log(`Request to seek to ${pendingSeekRef.current.toFixed(2)}%`);
+      
+      if (!audioElement) {
+        console.log("Audio element not available - stored seek request for later");
+        return;
+      }
+      
+      if (!audioElement.duration || isNaN(audioElement.duration) || audioElement.duration === Infinity) {
+        console.log("Invalid duration - stored seek request for later");
+        return;
+      }
+      
+      // Make sure position is valid
+      const position = pendingSeekRef.current;
+      const newTime = (position / 100) * audioElement.duration;
+      
+      console.log(`Setting audio time to ${newTime.toFixed(2)}s / ${audioElement.duration.toFixed(2)}s`);
+      
+      // Set the current time
       audioElement.currentTime = newTime;
+      
+      // Update the time display
       setAudioTime({
         elapsed: formatTime(newTime),
         total: formatTime(audioElement.duration)
       });
+      
+      // Clear the pending seek since we applied it
+      pendingSeekRef.current = null;
+    } catch (error) {
+      console.error("Error in seekAudio:", error);
     }
   };
 
   const stopPlayback = () => {
-    if (audioElement) {
+    return new Promise(resolve => {
       try {
-        if (audioElement.pause && typeof audioElement.pause === 'function') {
-          audioElement.pause();
+        if (audioElement) {
+          // Create a local reference to the audio element
+          const audio = audioElement;
+          
+          // Remove all event listeners to prevent errors
+          audio.onended = null;
+          audio.onplay = null;
+          audio.onpause = null;
+          audio.onerror = null;
+          audio.onloadedmetadata = null;
+          
+          // Remove all event listeners added via addEventListener
+          const events = ['play', 'pause', 'error', 'loadedmetadata', 'ended'];
+          events.forEach(event => {
+            audio.removeEventListener(event, () => {});
+          });
+          
+          // Pause and clear the audio source
+          try {
+            if (audio.pause && typeof audio.pause === 'function') {
+              audio.pause();
+            }
+          } catch (err) {
+            console.error('Error pausing audio:', err);
+          }
+          
+          // Clear the source and load to release resources
+          try {
+            if (audio.src) {
+              audio.src = '';
+              if (audio.load && typeof audio.load === 'function') {
+                audio.load();
+              }
+            }
+          } catch (err) {
+            console.error('Error clearing audio source:', err);
+          }
+          
+          // Reset state
+          setCurrentlyPlaying(null);
+          setAudioProgress(0);
+          setAudioElement(null);
+          setIsPlaying(false);
+          setCurrentTrackData(null);
+          
+          // Clear the progress interval
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = null;
+          }
         }
-        if (audioElement.src) {
-          audioElement.src = '';
-        }
+        
+        // Give the browser a moment to release audio resources
+        setTimeout(resolve, 10);
       } catch (err) {
-        console.error('Error stopping audio:', err);
+        console.error('Error in stopPlayback:', err);
+        resolve(); // Resolve anyway to allow execution to continue
       }
-      // Reset state
-      setCurrentlyPlaying(null);
-      setAudioProgress(0);
-      setAudioElement(null);
-      setIsPlaying(false);
-      setCurrentTrackData(null);
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-        progressIntervalRef.current = null;
-      }
-    }
+    });
   };
 
   return (

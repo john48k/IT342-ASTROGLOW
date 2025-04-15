@@ -110,9 +110,28 @@ export const HomePage = () => {
   const [firebaseMusicList, setFirebaseMusicList] = useState([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-  // Add refs for tracking double clicks
+  // Add refs for tracking double clicks and click prevention
   const lastClickTimeRef = useRef({});
   const doubleClickThreshold = 300; // milliseconds
+  const isProcessingClickRef = useRef(false); // Track if we're currently processing a click
+  const lockoutTimerRef = useRef(null); // For click lockout
+
+  // Strict function to prevent any music playback during lockout period
+  const lockPlayback = (duration = 500) => {
+    // Set processing flag to prevent any clicks
+    isProcessingClickRef.current = true;
+    
+    // Clear any existing timer
+    if (lockoutTimerRef.current) {
+      clearTimeout(lockoutTimerRef.current);
+    }
+    
+    // Set a new timer
+    lockoutTimerRef.current = setTimeout(() => {
+      isProcessingClickRef.current = false;
+      lockoutTimerRef.current = null;
+    }, duration);
+  };
 
   // Fetch music list when component mounts
   useEffect(() => {
@@ -138,7 +157,22 @@ export const HomePage = () => {
 
   // Add useEffect for periodic refresh of Firebase music
   useEffect(() => {
-    // Initial fetch
+    // Try to load Firebase music from localStorage first
+    try {
+      const savedFirebaseMusic = localStorage.getItem('firebase-music-list');
+      if (savedFirebaseMusic) {
+        const parsedList = JSON.parse(savedFirebaseMusic);
+        console.log(`Loaded ${parsedList.length} Firebase music items from localStorage`);
+        setFirebaseMusicList(parsedList);
+        
+        // Make Firebase music list globally available for debugging
+        window.firebaseMusicList = parsedList;
+      }
+    } catch (error) {
+      console.error('Error loading Firebase music from localStorage:', error);
+    }
+    
+    // Initial fetch from Firebase storage
     fetchFirebaseMusic();
 
     // Set up a periodic refresh of Firebase music every 30 seconds
@@ -149,6 +183,17 @@ export const HomePage = () => {
     // Clean up the interval when component unmounts
     return () => clearInterval(refreshInterval);
   }, []); // Empty dependency array means this runs once on mount
+
+  // Combine Firebase and regular music items when either list changes
+  useEffect(() => {
+    // Make Firebase music list globally available for debugging
+    // This is useful for the next/previous buttons in the audio player
+    window.firebaseMusicList = firebaseMusicList;
+
+    // Create a combined list for display, sorting, etc. (optional)
+    // const allMusic = [...musicList, ...firebaseMusicList];
+    // console.log(`Combined music list has ${allMusic.length} items`);
+  }, [firebaseMusicList, musicList]);
 
   const fetchMusicList = async () => {
     try {
@@ -201,7 +246,7 @@ export const HomePage = () => {
 
       if (listResult.items.length === 0) {
         console.log('No files found in Firebase storage');
-        setFirebaseMusicList([]);
+        // Don't clear the list if empty, may have edited items in localStorage
         return [];
       }
 
@@ -253,12 +298,55 @@ export const HomePage = () => {
       const validMusicFiles = musicFiles.filter(item => item !== null);
       console.log(`Successfully processed ${validMusicFiles.length} music files`);
 
-      setFirebaseMusicList(validMusicFiles);
-      return validMusicFiles;
+      // Get existing edited music from localStorage
+      let existingEditedMusic = [];
+      try {
+        const savedMusicData = localStorage.getItem('firebase-music-list');
+        if (savedMusicData) {
+          existingEditedMusic = JSON.parse(savedMusicData);
+        }
+      } catch (error) {
+        console.error('Error reading edited music from localStorage:', error);
+      }
+
+      // Merge fresh Firebase data with localStorage edits
+      const mergedMusicList = validMusicFiles.map(newItem => {
+        // Find if this item has been edited in localStorage
+        const editedItem = existingEditedMusic.find(item => item.id === newItem.id);
+        if (editedItem) {
+          // Keep the audioUrl from the new Firebase data but use edited metadata
+          return {
+            ...editedItem,
+            audioUrl: newItem.audioUrl // Always keep the latest URL
+          };
+        }
+        return newItem;
+      });
+
+      // Set the merged list in state
+      setFirebaseMusicList(mergedMusicList);
+      
+      // Also update localStorage with the merged list
+      localStorage.setItem('firebase-music-list', JSON.stringify(mergedMusicList));
+      
+      return mergedMusicList;
     } catch (error) {
       console.error('Error fetching Firebase music:', error);
 
-      // Fallback to hardcoded files if everything else fails
+      // If fetching fails, try to get data from localStorage
+      try {
+        const savedMusicData = localStorage.getItem('firebase-music-list');
+        if (savedMusicData) {
+          const parsedData = JSON.parse(savedMusicData);
+          console.warn('Using Firebase music data from localStorage as fallback.', parsedData.length, 'items found');
+          setFirebaseMusicList(parsedData);
+          return parsedData;
+        }
+      } catch (localStorageError) {
+        console.error('Error reading from localStorage:', localStorageError);
+      }
+
+      // Otherwise use hardcoded fallback
       console.warn('Using fallback Firebase audio files.');
       const fallbackMusic = [
         {
@@ -533,77 +621,75 @@ export const HomePage = () => {
     return sorted.slice(0, Math.min(6, sorted.length));
   };
 
-  // Handle play button click for featured section
-  const handleFeaturedPlayClick = (e, musicId) => {
-    e.stopPropagation();
-    playMusic(musicId);
-  };
-
-  // Handle play button click for discoveries section
-  const handleDiscoveryPlayClick = (e, musicId) => {
-    e.stopPropagation();
-    playMusic(musicId);
-  };
-
-  // Handle click on music card play button - properly toggle play/pause
-  const handleMusicPlayClick = (e, musicId) => {
-    e.stopPropagation();
-
-    // Check if this is a Firebase music item - handle both with and without .mp3 extension
-    const firebaseItem = firebaseMusicList.find(item => {
-      // Direct ID match
-      if (item.id === musicId) return true;
-      // ID match without .mp3 extension
-      if (item.id.replace('.mp3', '') === musicId) return true;
-      // ID match with .mp3 extension added
-      if (item.id === musicId + '.mp3') return true;
-      return false;
-    });
-
-    if (firebaseItem) {
-      console.log('Playing Firebase audio file:', firebaseItem.title, firebaseItem.audioUrl);
-      if (currentlyPlaying === musicId) {
-        togglePlayPause(musicId);
-      } else {
-        playMusic(musicId, firebaseItem.audioUrl);
-      }
-    } else {
-      if (currentlyPlaying === musicId) {
-        togglePlayPause(musicId);
-      } else {
-        playMusic(musicId);
-      }
-    }
-  };
-
   // Handle click on music card - play music or pause if already playing
   const handleMusicCardClick = (e, musicId) => {
-    e.stopPropagation();
+    // If event exists, stop propagation
+    if (e) e.stopPropagation();
+    
+    // Hard lockout - prevent any clicks during processing
+    if (isProcessingClickRef.current) {
+      console.log('Ignoring click during lockout period');
+      return;
+    }
+    
+    // Immediately lock to prevent multiple rapid clicks
+    lockPlayback(500);
+    
+    // Check for double-clicks
+    const now = Date.now();
+    const lastClickTime = lastClickTimeRef.current[musicId] || 0;
+    lastClickTimeRef.current[musicId] = now;
+    
+    // If this is a double-click, ignore the second click
+    if (now - lastClickTime < doubleClickThreshold) {
+      console.log('Double-click detected, ignoring second click');
+      return;
+    }
 
-    // Check if this is a Firebase music item - handle both with and without .mp3 extension
-    const firebaseItem = firebaseMusicList.find(item => {
-      // Direct ID match
-      if (item.id === musicId) return true;
-      // ID match without .mp3 extension
-      if (item.id.replace('.mp3', '') === musicId) return true;
-      // ID match with .mp3 extension added
-      if (item.id === musicId + '.mp3') return true;
-      return false;
-    });
-
-    if (firebaseItem) {
-      console.log('Playing Firebase audio file from card click:', firebaseItem.title, firebaseItem.audioUrl);
-      if (currentlyPlaying === musicId) {
-        togglePlayPause(musicId);
-      } else {
-        playMusic(musicId, firebaseItem.audioUrl);
+    // If the clicked card is already playing, toggle play/pause
+    if (currentlyPlaying === musicId) {
+      togglePlayPause(musicId);
+      return;
+    }
+    
+    try {
+      // If any other song is playing, completely stop it first
+      if (currentlyPlaying) {
+        console.log('Stopping current playback before playing new song');
+        stopPlayback();
       }
-    } else {
-      if (currentlyPlaying === musicId) {
-        togglePlayPause(musicId);
-      } else {
-        playMusic(musicId);
-      }
+      
+      // Ensure we've completely stopped before playing new song
+      setTimeout(() => {
+        try {
+          // Find the Firebase item if it exists
+          const firebaseItem = firebaseMusicList.find(item => {
+            // Direct ID match
+            if (item.id === musicId) return true;
+            // ID match without .mp3 extension
+            if (item.id.replace('.mp3', '') === musicId) return true;
+            // ID match with .mp3 extension added
+            if (item.id === musicId + '.mp3') return true;
+            return false;
+          });
+          
+          if (firebaseItem) {
+            console.log('Playing Firebase audio file:', firebaseItem.title);
+            playMusic(musicId, firebaseItem.audioUrl);
+          } else {
+            console.log('Playing regular music file, ID:', musicId);
+            playMusic(musicId);
+          }
+        } catch (err) {
+          console.error('Error playing music:', err);
+          // Reset lock if there was an error
+          isProcessingClickRef.current = false;
+        }
+      }, 100);
+    } catch (err) {
+      console.error('Error in music card click handler:', err);
+      // Reset lock if there was an error
+      isProcessingClickRef.current = false;
     }
   };
 
@@ -642,7 +728,17 @@ export const HomePage = () => {
   const handleEditClick = (music, event) => {
     event.stopPropagation(); // Prevent triggering card click
 
-    setEditingMusic(music);
+    // Store the ID type to distinguish between Firebase and database items
+    const isFirebaseItem = music.id && !music.musicId;
+    
+    setEditingMusic({
+      ...music,
+      // Store both ID types for proper handling
+      musicId: music.musicId || null,
+      id: music.id || null,
+      isFirebaseItem: isFirebaseItem
+    });
+    
     setUseImageUrl(true);
     setShowEditModal(true);
   };
@@ -668,6 +764,56 @@ export const HomePage = () => {
 
     setIsEditing(true);
     try {
+      // Check if we're editing a Firebase item
+      if (editingMusic.isFirebaseItem || (editingMusic.id && editingMusic.id.startsWith('firebase-'))) {
+        // For Firebase items, we just update the local state
+        console.log("Updating Firebase music item:", editingMusic.id);
+        
+        // Create updated Firebase item
+        const updatedItem = {
+          id: editingMusic.id,
+          title: musicTitle,
+          artist: musicArtist,
+          genre: musicGenre || 'Unknown',
+          audioUrl: editingMusic.audioUrl // Preserve the original audio URL
+        };
+        
+        // Add image URL if available
+        if (musicImageUrl) {
+          updatedItem.imageUrl = musicImageUrl;
+        } else if (editingMusic.imageUrl) {
+          updatedItem.imageUrl = editingMusic.imageUrl;
+        }
+        
+        // Update the Firebase music list in state
+        setFirebaseMusicList(prevList => {
+          const newList = prevList.map(item => {
+            if (item.id === editingMusic.id) {
+              return updatedItem;
+            }
+            return item;
+          });
+          
+          // Store the updated list in localStorage for persistence across refreshes
+          try {
+            localStorage.setItem('firebase-music-list', JSON.stringify(newList));
+            console.log('Firebase music list saved to localStorage');
+          } catch (err) {
+            console.error('Failed to save Firebase music list to localStorage:', err);
+          }
+          
+          return newList;
+        });
+        
+        // Show notification message in console
+        console.log('Firebase music updated successfully!');
+        
+        // Close modal
+        handleCloseEditModal();
+        return;
+      }
+      
+      // For database items, proceed with API call
       // Create a music object with the updated information
       const musicUpdate = {
         musicId: editingMusic.musicId,
@@ -682,6 +828,11 @@ export const HomePage = () => {
       } else if (editingMusic.imageUrl) {
         // Keep existing image if no new one is provided
         musicUpdate.imageUrl = editingMusic.imageUrl;
+      }
+
+      // Ensure the musicId is valid before making the API call
+      if (!editingMusic.musicId || isNaN(editingMusic.musicId)) {
+        throw new Error('Invalid music ID for database update');
       }
 
       const response = await fetch(`http://localhost:8080/api/music/putMusic/${editingMusic.musicId}`, {
@@ -701,8 +852,8 @@ export const HomePage = () => {
       // Get the response data
       const result = await response.json();
 
-      // Show success message
-      alert('Music updated successfully!');
+      // Log success message instead of alert
+      console.log('Music updated successfully!');
 
       // Update music list with edited data
       setMusicList(prevList => prevList.map(item => {
@@ -750,31 +901,62 @@ export const HomePage = () => {
   const handleUploadComplete = (uploadData) => {
     console.log('HomePage: Upload Complete Data:', uploadData);
 
-    // Here, you'll likely want to refresh your music lists (both Firebase and potentially DB)
-    // Option 1: If the modal saves to your DB, refresh the DB list
-    fetchMusicList();
-
-    // Option 2: Add the new Firebase item directly to the UI (similar to previous approach)
+    // Create a properly formatted Firebase item from the uploaded data
     const newFirebaseMusic = {
       id: `firebase-${uploadData.audioFileName || Date.now()}`,
       title: uploadData.title,
       artist: uploadData.artist,
-      genre: uploadData.genre,
+      genre: uploadData.genre || 'Music',
       audioUrl: uploadData.audioUrl,
       imageUrl: uploadData.imageUrl // Use the image from the modal
     };
+    
+    console.log('Adding new Firebase music item to list:', newFirebaseMusic);
 
+    // Update the Firebase music list with the new item
     setFirebaseMusicList(prev => {
+      // Check if this item already exists (in case of duplicate filename)
       const exists = prev.some(item => item.id === newFirebaseMusic.id);
+      
+      let updatedList;
       if (exists) {
-        return prev.map(item => item.id === newFirebaseMusic.id ? newFirebaseMusic : item);
+        // Replace the existing item
+        updatedList = prev.map(item => 
+          item.id === newFirebaseMusic.id ? newFirebaseMusic : item
+        );
       } else {
-        return [...prev, newFirebaseMusic];
+        // Add as a new item
+        updatedList = [...prev, newFirebaseMusic];
       }
+      
+      // Save the updated list to localStorage for persistence
+      try {
+        localStorage.setItem('firebase-music-list', JSON.stringify(updatedList));
+        console.log('Updated Firebase music list saved to localStorage');
+      } catch (err) {
+        console.error('Failed to save Firebase music list to localStorage:', err);
+      }
+      
+      return updatedList;
     });
 
-    // Potentially also refresh the full Firebase list from storage after a delay
+    // Optionally refresh the music list from DB if the modal might have saved there too
+    fetchMusicList();
+    
+    // Also fetch from Firebase storage after a delay to sync with remote storage
     setTimeout(() => fetchFirebaseMusic(), 1500);
+  };
+
+  // Handle play button click for featured section
+  const handleFeaturedPlayClick = (e, musicId) => {
+    // Use the same handler as music cards for consistency
+    handleMusicCardClick(e, musicId);
+  };
+
+  // Handle play button click for discoveries section 
+  const handleDiscoveryPlayClick = (e, musicId) => {
+    // Use the same handler as music cards for consistency
+    handleMusicCardClick(e, musicId);
   };
 
   return (
@@ -802,6 +984,11 @@ export const HomePage = () => {
                   // Use getSafeImageUrl for Firebase images too
                   const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
 
+                  // Format title and artist for display
+                  const displayTitle = music.title || 'Unknown Title';
+                  const displayArtist = music.artist || 'Unknown Artist';
+                  const displayGenre = music.genre || 'Music';
+
                   return (
                     <div key={music.id}
                       className={`${styles.musicCard} ${isCurrentlyPlaying ?
@@ -813,7 +1000,7 @@ export const HomePage = () => {
                         {imageUrl ? (
                           <img
                             src={imageUrl}
-                            alt={music.title}
+                            alt={displayTitle}
                             className={styles.musicImage} // Use the same class as DB images
                             onError={(e) => {
                               e.target.onerror = null;
@@ -826,13 +1013,13 @@ export const HomePage = () => {
                           />
                         ) : (
                           <div className={styles.musicPlaceholder}>
-                            <span>{music.artist ? music.artist.charAt(0).toUpperCase() : '♪'}</span>
+                            <span>{displayArtist ? displayArtist.charAt(0).toUpperCase() : '♪'}</span>
                           </div>
                         )}
                         <div className={styles.musicOverlay}></div>
                         <button
                           className={styles.musicPlayButton}
-                          onClick={(e) => handleMusicPlayClick(e, music.id)}
+                          onClick={(e) => handleMusicCardClick(e, music.id)}
                         >
                           {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
                         </button>
@@ -864,9 +1051,9 @@ export const HomePage = () => {
                         </div>
                       </div>
                       <div className={styles.musicInfo}>
-                        <h3 className={styles.musicTitle}>{music.title}</h3>
-                        <p className={styles.musicArtist}>{music.artist}</p>
-                        <p className={styles.musicGenre}>{music.genre}</p>
+                        <h3 className={styles.musicTitle} title={displayTitle}>{displayTitle}</h3>
+                        <p className={styles.musicArtist} title={displayArtist}>{displayArtist}</p>
+                        <p className={styles.musicGenre}>{displayGenre}</p>
                       </div>
                     </div>
                   );
@@ -911,7 +1098,7 @@ export const HomePage = () => {
                         <button
                           className={styles.musicPlayButton}
                           onClick={(e) => {
-                            handleMusicPlayClick(e, music.musicId);
+                            handleMusicCardClick(e, music.musicId);
                           }}
                         >
                           {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
@@ -988,7 +1175,7 @@ export const HomePage = () => {
                   <div
                     key={music.musicId}
                     className={styles.playlistCard}
-                    onClick={() => playMusic(music.musicId)}
+                    onClick={() => handleFeaturedPlayClick(null, music.musicId)}
                   >
                     <div className={styles.playlistImageContainer}>
                       {imageUrl ? (

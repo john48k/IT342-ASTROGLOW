@@ -39,23 +39,65 @@ const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
     setAudioFileUrl(url);
     setAudioFileName(fileName);
 
-    // Auto-parse initial metadata from filename
+    // Improved parsing of metadata from filename
     let initialArtist = "";
     let initialTitle = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
     let initialGenre = "";
 
-    const parts = fileName.split(' - ');
-    if (parts.length >= 2) {
-      initialArtist = parts[0].trim();
-      initialTitle = parts[1].replace(/\.[^/.]+$/, "").trim(); // Remove extension from title part
+    // First check for the common pattern "Artist - Title" format
+    const artistSongPattern = fileName.split(' - ');
+    if (artistSongPattern.length >= 2) {
+      initialArtist = artistSongPattern[0].trim();
+      
+      // Extract the rest as the title (handling cases with multiple hyphens)
+      initialTitle = artistSongPattern.slice(1).join(' - ').replace(/\.[^/.]+$/, "").trim();
 
-      // Extract genre from title if present in brackets
-      const genreMatch = initialTitle.match(/\[(.*?)\]/);
-      if (genreMatch && genreMatch[1]) {
-        initialGenre = genreMatch[1].trim();
-        initialTitle = initialTitle.replace(/\[.*?\]/, '').trim();
-      }
+      // Extract special song types or descriptions
+      const extractTitleParts = (title) => {
+        // Match patterns like (Lyrics), [Official Music Video], etc.
+        const lyricsMatch = title.match(/\(Lyrics\)|\[Lyrics\]/i);
+        const officialMatch = title.match(/\[(Official|4K|Music Video|Remaster).*?\]/i);
+        const tiktokMatch = title.match(/\[?Tiktok.*?\]?/i);
+        
+        // Extract the core title without these annotations
+        let cleanTitle = title;
+        if (lyricsMatch) {
+          cleanTitle = cleanTitle.replace(lyricsMatch[0], '').trim();
+          // Add "(Lyrics)" back to the title in a consistent format
+          cleanTitle = `${cleanTitle} (Lyrics)`.trim();
+        }
+        
+        // Check for TikTok song
+        if (tiktokMatch) {
+          initialGenre = "TikTok song";
+          cleanTitle = cleanTitle.replace(tiktokMatch[0], '').trim();
+        }
+        
+        // Check if there's a genre in brackets
+        const genreMatch = cleanTitle.match(/\[(.*?)\]/);
+        if (genreMatch && genreMatch[1]) {
+          initialGenre = genreMatch[1].trim();
+          cleanTitle = cleanTitle.replace(genreMatch[0], '').trim();
+        }
+        
+        return cleanTitle;
+      };
+      
+      initialTitle = extractTitleParts(initialTitle);
     }
+
+    // Handle special cases like song lyrics with typical phrases in the title
+    if (initialTitle.toLowerCase().includes("ay ay ayi'm your little butterfly")) {
+      initialTitle = "Butterfly (Lyrics) Ay ay ayi'm your little butterfly";
+      initialGenre = "TikTok song";
+    }
+
+    console.log("Parsed metadata:", { 
+      artist: initialArtist, 
+      title: initialTitle, 
+      genre: initialGenre 
+    });
+    
     setTitle(initialTitle);
     setArtist(initialArtist);
     setGenre(initialGenre);
@@ -81,10 +123,21 @@ const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
     setError('');
 
     try {
+      // Process title and artist - make sure long titles are preserved properly
+      const cleanTitle = title.trim();
+      const cleanArtist = artist.trim();
+      
+      // Format genre properly - default to 'Music' if empty
+      const finalGenre = genre || 'Music';
+      
+      // Make sure to add TikTok genre if title contains specific TikTok phrases but genre is unspecified
+      const finalFormattedGenre = (!genre && title.toLowerCase().includes("tiktok song")) ? 
+        "TikTok song" : finalGenre;
+      
       const uploadData = {
-        title,
-        artist,
-        genre: genre || 'Music', // Default genre if empty
+        title: cleanTitle,
+        artist: cleanArtist,
+        genre: finalFormattedGenre,
         audioUrl: audioFileUrl,
         imageUrl: imageUrl, // Can be null if no image provided
         audioFileName: audioFileName // Keep original filename if needed
@@ -144,14 +197,23 @@ const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.fieldGroup}>
             <label htmlFor="title">Title</label>
-            <input
-              type="text"
+            <textarea
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
+              rows={2}
+              style={{ 
+                width: '100%', 
+                resize: 'vertical', 
+                padding: '8px',
+                borderRadius: '8px',
+                background: 'rgba(0,0,0,0.1)',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}
             />
           </div>
+          
           <div className={styles.fieldGroup}>
             <label htmlFor="artist">Artist</label>
             <input
@@ -160,15 +222,31 @@ const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
               value={artist}
               onChange={(e) => setArtist(e.target.value)}
               required
+              style={{ 
+                width: '100%', 
+                padding: '8px',
+                borderRadius: '8px',
+                background: 'rgba(0,0,0,0.1)',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}
             />
           </div>
+          
           <div className={styles.fieldGroup}>
-            <label htmlFor="genre" className="bg-gradient-to-r from-black to-[#653895] text-white px-3 py-1 rounded-md inline-block mb-2">Genre</label>
+            <label htmlFor="genre">Genre</label>
             <select
               id="genre"
               value={genre}
               onChange={(e) => setGenre(e.target.value)}
               required
+              style={{ 
+                width: '100%', 
+                padding: '8px',
+                borderRadius: '8px',
+                background: 'rgba(0,0,0,0.1)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: '#fff'
+              }}
             >
               <option value="">Select a genre</option>
               <option value="Rap">Rap</option>
@@ -178,6 +256,10 @@ const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
               <option value="Rock">Rock</option>
               <option value="Indie">Indie</option>
               <option value="EDM">EDM</option>
+              <option value="TikTok song">TikTok song</option>
+              <option value="Remix">Remix</option>
+              <option value="Lyrics">Lyrics</option>
+              <option value="Electronic">Electronic</option>
             </select>
           </div>
 

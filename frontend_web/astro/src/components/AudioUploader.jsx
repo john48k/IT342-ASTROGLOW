@@ -40,8 +40,12 @@ const AudioUploader = ({ onFileUploaded }) => {
             contentType: file.type || 'audio/mpeg'
         };
         
+        // Make sure to preserve the full original filename
+        const originalFileName = file.name;
+        console.log('Uploading file with original name:', originalFileName);
+        
         // Reference to storage location
-        const storageRef = ref(storage, `audios/${file.name}`);
+        const storageRef = ref(storage, `audios/${originalFileName}`);
         
         // Create upload task with metadata
         const uploadTask = uploadBytesResumable(storageRef, file, metadata);
@@ -65,12 +69,12 @@ const AudioUploader = ({ onFileUploaded }) => {
                     
                     // Notify parent component that a file was uploaded
                     if (onFileUploaded) {
-                        // Pass both the file name and the download URL
-                        onFileUploaded(file.name, url);
+                        // Pass the exact original filename and the download URL
+                        onFileUploaded(originalFileName, url);
                         
-                        // Log for debugging
+                        // Enhanced logging for debugging
                         console.log('AudioUploader: File uploaded successfully!');
-                        console.log('AudioUploader: File name:', file.name);
+                        console.log('AudioUploader: File name:', originalFileName);
                         console.log('AudioUploader: URL:', url);
                         console.log('AudioUploader: Content type:', metadata.contentType);
                     }
