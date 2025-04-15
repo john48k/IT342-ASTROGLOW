@@ -15,7 +15,7 @@ const AboutPage = () => {
                     </p>
                 </div>
             </div>
-            <AudioUploader />
+            <br />
 
             <div className="flex flex-col items-center gap-[30px] py-16 px-4 mt-48">
                 <div className={`${styles.creatorContainer} hover:scale-102 transition-transform duration-400 mb-8`}>
@@ -52,7 +52,10 @@ const AboutPage = () => {
                         <h1 className="text-3xl font-bold text-white mb-2">Allen Luis Mangoroban</h1>
                         <p className="text-xl text-gray-300">Backend Developer</p>
                     </div>
+
                 </div>
+                <br />
+
             </div>
         </div>
     );
