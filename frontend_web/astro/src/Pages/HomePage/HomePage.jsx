@@ -140,12 +140,12 @@ export const HomePage = () => {
   useEffect(() => {
     // Initial fetch
     fetchFirebaseMusic();
-    
+
     // Set up a periodic refresh of Firebase music every 30 seconds
     const refreshInterval = setInterval(() => {
       fetchFirebaseMusic();
     }, 30000); // 30 seconds
-    
+
     // Clean up the interval when component unmounts
     return () => clearInterval(refreshInterval);
   }, []); // Empty dependency array means this runs once on mount
@@ -187,46 +187,46 @@ export const HomePage = () => {
   const fetchFirebaseMusic = async () => {
     try {
       console.log('Attempting to fetch Firebase music files...');
-      
+
       // Use the imported Firebase storage directly
       const { storage } = await import('../../firebase');
       const { ref, listAll, getDownloadURL } = await import('firebase/storage');
-      
+
       // Create reference to 'audios' folder in Firebase Storage
       const listRef = ref(storage, 'audios');
-      
+
       console.log('Listing files in Firebase storage...');
       const listResult = await listAll(listRef);
       console.log(`Found ${listResult.items.length} files in Firebase storage`);
-      
+
       if (listResult.items.length === 0) {
         console.log('No files found in Firebase storage');
         setFirebaseMusicList([]);
         return [];
       }
-      
+
       const musicFiles = await Promise.all(
         listResult.items.map(async (itemRef) => {
           try {
             // Get the download URL for each file
             console.log(`Getting download URL for ${itemRef.name}...`);
             const url = await getDownloadURL(itemRef);
-            
+
             // Get file name
             const name = itemRef.name;
             console.log(`Processing file: ${name}`);
-            
+
             // Parse metadata from filename
             let artist = "Unknown Artist";
             let title = name.replace(".mp3", "");
             let genre = "Music";
-            
+
             // Parse artist and title from the filename
             const parts = name.split(' - ');
             if (parts.length >= 2) {
               artist = parts[0];
               title = parts[1].replace('.mp3', '');
-              
+
               // Extract genre if present in brackets
               const genreMatch = title.match(/\[(.*?)\]/);
               if (genreMatch && genreMatch[1]) {
@@ -234,7 +234,7 @@ export const HomePage = () => {
                 title = title.replace(/\[.*?\]/, '').trim();
               }
             }
-            
+
             return {
               id: `firebase-${name}`,
               title: title,
@@ -248,16 +248,16 @@ export const HomePage = () => {
           }
         })
       );
-      
+
       // Filter out any null entries (from errors)
       const validMusicFiles = musicFiles.filter(item => item !== null);
       console.log(`Successfully processed ${validMusicFiles.length} music files`);
-      
+
       setFirebaseMusicList(validMusicFiles);
       return validMusicFiles;
     } catch (error) {
       console.error('Error fetching Firebase music:', error);
-      
+
       // Fallback to hardcoded files if everything else fails
       console.warn('Using fallback Firebase audio files.');
       const fallbackMusic = [
@@ -548,18 +548,18 @@ export const HomePage = () => {
   // Handle click on music card play button - properly toggle play/pause
   const handleMusicPlayClick = (e, musicId) => {
     e.stopPropagation();
-    
+
     // Check if this is a Firebase music item - handle both with and without .mp3 extension
     const firebaseItem = firebaseMusicList.find(item => {
       // Direct ID match
       if (item.id === musicId) return true;
       // ID match without .mp3 extension
-      if (item.id.replace('.mp3', '') === musicId) return true; 
+      if (item.id.replace('.mp3', '') === musicId) return true;
       // ID match with .mp3 extension added
       if (item.id === musicId + '.mp3') return true;
       return false;
     });
-    
+
     if (firebaseItem) {
       console.log('Playing Firebase audio file:', firebaseItem.title, firebaseItem.audioUrl);
       if (currentlyPlaying === musicId) {
@@ -579,18 +579,18 @@ export const HomePage = () => {
   // Handle click on music card - play music or pause if already playing
   const handleMusicCardClick = (e, musicId) => {
     e.stopPropagation();
-    
+
     // Check if this is a Firebase music item - handle both with and without .mp3 extension
     const firebaseItem = firebaseMusicList.find(item => {
       // Direct ID match
       if (item.id === musicId) return true;
       // ID match without .mp3 extension
-      if (item.id.replace('.mp3', '') === musicId) return true; 
+      if (item.id.replace('.mp3', '') === musicId) return true;
       // ID match with .mp3 extension added
       if (item.id === musicId + '.mp3') return true;
       return false;
     });
-    
+
     if (firebaseItem) {
       console.log('Playing Firebase audio file from card click:', firebaseItem.title, firebaseItem.audioUrl);
       if (currentlyPlaying === musicId) {
@@ -701,11 +701,6 @@ export const HomePage = () => {
       // Get the response data
       const result = await response.json();
 
-      // Store the updated image URL in localStorage for persistence
-      if (musicImageUrl) {
-        localStorage.setItem(`music-image-${editingMusic.musicId}`, musicImageUrl);
-      }
-
       // Show success message
       alert('Music updated successfully!');
 
@@ -754,28 +749,28 @@ export const HomePage = () => {
   // Function to handle the final upload data from the modal
   const handleUploadComplete = (uploadData) => {
     console.log('HomePage: Upload Complete Data:', uploadData);
-    
+
     // Here, you'll likely want to refresh your music lists (both Firebase and potentially DB)
     // Option 1: If the modal saves to your DB, refresh the DB list
-    fetchMusicList(); 
-    
+    fetchMusicList();
+
     // Option 2: Add the new Firebase item directly to the UI (similar to previous approach)
     const newFirebaseMusic = {
-        id: `firebase-${uploadData.audioFileName || Date.now()}`,
-        title: uploadData.title,
-        artist: uploadData.artist,
-        genre: uploadData.genre,
-        audioUrl: uploadData.audioUrl,
-        imageUrl: uploadData.imageUrl // Use the image from the modal
+      id: `firebase-${uploadData.audioFileName || Date.now()}`,
+      title: uploadData.title,
+      artist: uploadData.artist,
+      genre: uploadData.genre,
+      audioUrl: uploadData.audioUrl,
+      imageUrl: uploadData.imageUrl // Use the image from the modal
     };
-    
+
     setFirebaseMusicList(prev => {
-        const exists = prev.some(item => item.id === newFirebaseMusic.id);
-        if (exists) {
-          return prev.map(item => item.id === newFirebaseMusic.id ? newFirebaseMusic : item);
-        } else {
-          return [...prev, newFirebaseMusic];
-        }
+      const exists = prev.some(item => item.id === newFirebaseMusic.id);
+      if (exists) {
+        return prev.map(item => item.id === newFirebaseMusic.id ? newFirebaseMusic : item);
+      } else {
+        return [...prev, newFirebaseMusic];
+      }
     });
 
     // Potentially also refresh the full Firebase list from storage after a delay
@@ -806,7 +801,7 @@ export const HomePage = () => {
                   const isFavorited = isFavorite(music.id);
                   // Use getSafeImageUrl for Firebase images too
                   const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
-                  
+
                   return (
                     <div key={music.id}
                       className={`${styles.musicCard} ${isCurrentlyPlaying ?
@@ -851,6 +846,22 @@ export const HomePage = () => {
                         >
                           {isFavorited ? '★' : '☆'}
                         </button>
+                        <div className={styles.musicCardControls}>
+                          <button
+                            className={styles.musicCardControlButton}
+                            onClick={(e) => handleEditClick(music, e)}
+                            title="Edit song"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            className={styles.musicCardControlButton}
+                            onClick={(e) => handleDeleteMusic(music.id, e)}
+                            title="Delete song"
+                          >
+                            🗑
+                          </button>
+                        </div>
                       </div>
                       <div className={styles.musicInfo}>
                         <h3 className={styles.musicTitle}>{music.title}</h3>
@@ -860,7 +871,7 @@ export const HomePage = () => {
                     </div>
                   );
                 })}
-                
+
                 {/* Database Music Cards */}
                 {musicList.map((music) => {
                   // Process the image URL with improved handler
@@ -915,6 +926,22 @@ export const HomePage = () => {
                         >
                           {isFavorited ? '★' : '☆'}
                         </button>
+                        <div className={styles.musicCardControls}>
+                          <button
+                            className={styles.musicCardControlButton}
+                            onClick={(e) => handleEditClick(music, e)}
+                            title="Edit song"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            className={styles.musicCardControlButton}
+                            onClick={(e) => handleDeleteMusic(music.musicId, e)}
+                            title="Delete song"
+                          >
+                            🗑
+                          </button>
+                        </div>
                       </div>
                       <div className={styles.musicInfo}>
                         <h3 className={styles.musicTitle}>{music.title}</h3>
@@ -1040,9 +1067,9 @@ export const HomePage = () => {
       </div>
 
       {/* Add the UploadModal component */}
-      <UploadModal 
-        isOpen={isUploadModalOpen} 
-        onClose={closeUploadModal} 
+      <UploadModal
+        isOpen={isUploadModalOpen}
+        onClose={closeUploadModal}
         onUploadComplete={handleUploadComplete}
       />
 
@@ -1074,35 +1101,53 @@ export const HomePage = () => {
               />
             </div>
             <div className={styles.formField}>
-              <label>Genre (optional)</label>
-              <input
-                type="text"
+              <label>Genre</label>
+              <select
                 value={musicGenre}
                 onChange={(e) => setMusicGenre(e.target.value)}
-                placeholder="Enter genre"
                 className={styles.textInput}
-              />
+                required
+              >
+                <option value="">Select a genre</option>
+                <option value="Rap">Rap</option>
+                <option value="Pop">Pop</option>
+                <option value="K-pop">K-pop</option>
+                <option value="Hip Hop">Hip Hop</option>
+                <option value="Rock">Rock</option>
+                <option value="Indie">Indie</option>
+                <option value="EDM">EDM</option>
+              </select>
             </div>
 
             <div className={styles.formField}>
               <label>Cover Image</label>
 
-              <div className={styles.uploadOptions}>
-                <label className={styles.optionLabel}>
+              <div className="flex gap-5 mb-4 p-2.5 bg-black/20 rounded-lg" style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
+                <label
+                  className="flex items-center gap-2 cursor-pointer p-2 rounded-md transition-colors text-white"
+                  style={{ background: 'linear-gradient(160deg, #000000 0%, #653895 100%)' }}
+                >
                   <input
                     type="radio"
                     name="imageUploadType"
                     checked={useImageUrl}
                     onChange={() => setUseImageUrl(true)}
+                    className="text-purple-600"
                   />
                   Use Image URL
                 </label>
-                <label className={styles.optionLabel}>
+                <label
+                  className="flex items-center gap-2 cursor-pointer p-2 rounded-md transition-colors text-white"
+                  style={{ background: 'linear-gradient(160deg, #000000 0%, #653895 100%)' }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'linear-gradient(160deg, #000000 0%, #7a45b0 100%)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'linear-gradient(160deg, #000000 0%, #653895 100%)'}
+                >
                   <input
                     type="radio"
                     name="imageUploadType"
                     checked={!useImageUrl}
                     onChange={() => setUseImageUrl(false)}
+                    className="text-purple-600"
                   />
                   Upload Image File
                 </label>

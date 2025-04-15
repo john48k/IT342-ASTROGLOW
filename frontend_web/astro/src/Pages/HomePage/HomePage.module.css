@@ -1099,10 +1099,12 @@ body {
     padding: 8px 12px;
     border-radius: 6px;
     transition: background-color 0.2s;
+    background: linear-gradient(160deg, #000000 0%, #653895 100%);
+    color: white;
   }
   
   .optionLabel:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(160deg, #000000 0%, #7a45b0 100%);
   }
   
   .fileInfo {
