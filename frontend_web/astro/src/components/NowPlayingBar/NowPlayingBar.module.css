@@ -1,3 +1,4 @@
+
 .nowPlayingBar {
   position: fixed;
   bottom: 0;
@@ -234,12 +235,15 @@
   height: 8px;
   background-color: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
+  overflow: hidden;
+  margin: 0 10px;
+  cursor: pointer;
   transition: background-color 0.2s;
   left: 0;
   right: 0;
 }
 
-.progressBar:hover .progressTrack {
+.progressBar:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 

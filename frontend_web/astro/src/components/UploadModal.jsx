@@ -145,27 +145,35 @@ const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
 
       console.log('Submitting Upload Data:', uploadData);
 
-      // --- IMPORTANT --- 
-      // HERE YOU WOULD CALL YOUR BACKEND API TO SAVE THIS DATA
-      // For example:
-      // const response = await fetch('/api/music/upload', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(uploadData),
-      // });
-      // if (!response.ok) {
-      //   throw new Error('Failed to save music data');
-      // }
-      // const savedMusic = await response.json();
-      // console.log('Music saved:', savedMusic);
-      // -----------------
+      // Save to database
+      const dbResponse = await fetch('http://localhost:8080/api/music/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          artist,
+          genre: genre || 'Music',
+          audioUrl: audioFileUrl,
+          imageUrl: imageUrl,
+          userId: 1 // TODO: Get actual user ID from context
+        }),
+      });
 
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!dbResponse.ok) {
+        throw new Error('Failed to save music to database');
+      }
+
+      const savedMusic = await dbResponse.json();
+      console.log('Music saved to database:', savedMusic);
 
       // Notify parent component (e.g., HomePage) about the successful upload
       if (onUploadComplete) {
-        onUploadComplete(uploadData); // Pass the complete data back
+        onUploadComplete({
+          ...uploadData,
+          musicId: savedMusic.musicId // Include the database music ID
+        });
       }
 
       handleClose(); // Close modal on success

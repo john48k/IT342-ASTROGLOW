@@ -32,7 +32,7 @@ export const FavoritesPage = () => {
     getImageUrl
   } = useAudioPlayer();
   
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite, favorites } = useFavorites();
   const { openPlaylistModal } = usePlaylist();
   
   const [favoriteMusic, setFavoriteMusic] = useState([]);
@@ -43,6 +43,11 @@ export const FavoritesPage = () => {
   // Function to fetch image URL for a music item
   const fetchImageUrl = async (musicId) => {
     try {
+      // Skip image fetch for Firebase music
+      if (typeof musicId === 'string' && musicId.startsWith('firebase-')) {
+        return null;
+      }
+
       const response = await fetch(
         `http://localhost:8080/api/music/getMusic/${musicId}?includeAudioData=false`,
         {
@@ -139,12 +144,26 @@ export const FavoritesPage = () => {
         throw new Error(`Failed to parse JSON: ${parseError.message}`);
       }
       
-      console.log(`Fetched ${musicData.length} favorite music items for user ID: ${user.userId}`);
-      setFavoriteMusic(Array.isArray(musicData) ? musicData : []);
+      // Combine database favorites with Firebase favorites
+      const databaseFavorites = Array.isArray(musicData) ? musicData : [];
+      const firebaseFavorites = favorites.filter(fav => 
+        typeof fav.music?.filename === 'string' && 
+        fav.music.filename.startsWith('firebase-')
+      ).map(fav => ({
+        musicId: fav.music.filename,
+        title: fav.music.filename.replace('firebase-', '').replace('.mp3', ''),
+        artist: 'Unknown Artist',
+        genre: 'Firebase Music',
+        audioUrl: `https://firebasestorage.googleapis.com/v0/b/astroglowfirebase-d2411.appspot.com/o/audios%2F${encodeURIComponent(fav.music.filename.replace('firebase-', ''))}?alt=media`
+      }));
+
+      const allFavorites = [...databaseFavorites, ...firebaseFavorites];
+      console.log(`Fetched ${allFavorites.length} favorite music items (${databaseFavorites.length} database, ${firebaseFavorites.length} Firebase)`);
+      setFavoriteMusic(allFavorites);
       
-      // Fetch image URLs separately
-      if (Array.isArray(musicData) && musicData.length > 0) {
-        fetchAllImageUrls(musicData);
+      // Fetch image URLs separately for database music only
+      if (databaseFavorites.length > 0) {
+        fetchAllImageUrls(databaseFavorites);
       }
       
       setIsLoading(false);
