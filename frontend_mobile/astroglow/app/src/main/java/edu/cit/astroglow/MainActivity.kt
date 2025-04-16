@@ -203,6 +203,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
                                 .padding(16.dp)
+                                .padding(bottom = 32.dp)
                                 .clip(CircleShape)
                                 .background(Color.White)
                         ) {

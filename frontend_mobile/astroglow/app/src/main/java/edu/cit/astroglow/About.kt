@@ -108,7 +108,7 @@ class AboutActivity : ComponentActivity() {
                                 contentDescription = "About Image",
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(24.dp))
+                                    .clip(RoundedCornerShape(32.dp))
                                     .graphicsLayer(
                                         scaleX = scale,
                                         scaleY = scale

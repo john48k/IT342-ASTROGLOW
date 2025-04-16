@@ -51,25 +51,302 @@ import edu.cit.astroglow.interLightFontFamily
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import android.content.Context
+import android.net.Uri
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import org.json.JSONObject
+import android.provider.MediaStore
+import android.widget.Toast
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
+import coil.compose.rememberImagePainter
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.net.SocketTimeoutException
+import java.util.concurrent.TimeUnit
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.lint.kotlin.metadata.Visibility
 
 class HomeActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        showSignOutDialog()
+    }
+
+    private fun showSignOutDialog() {
         setContent {
             AstroglowTheme {
                 // Get user data from SharedPreferences
                 val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
                 val userName = sharedPreferences.getString("user_name", "") ?: ""
-                val userEmail = sharedPreferences.getString("user_email", "") ?: ""
-                val userId = sharedPreferences.getLong("user_id", -1)
+                var profileImage by remember { mutableStateOf<Uri?>(null) }
+                var showDialog by remember { mutableStateOf(true) }
 
-                if (userId == -1L) {
-                    // If no user data, redirect to login
-                    val intent = Intent(this, LoginActivity::class.java)
-                    startActivity(intent)
-                    finish()
-                } else {
-                    HomeScreen(userName = userName)
+                // Show the HomeScreen
+                HomeScreen(
+                    userName = userName,
+                    initialProfileImage = profileImage
+                )
+
+                // Show the dialog
+                if (showDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDialog = false },
+                        title = {
+                            Text(
+                                text = "Sign Out",
+                                fontFamily = interFontFamily,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = "Are you sure you want to sign out?",
+                                fontFamily = interFontFamily,
+                                fontSize = 16.sp
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    // Clear shared preferences
+                                    sharedPreferences.edit().clear().apply()
+                                    
+                                    // Redirect to login
+                                    val intent = Intent(this@HomeActivity, LoginActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    startActivity(intent)
+                                    finish()
+                                },
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = Color(0xFF9C27B0)
+                                )
+                            ) {
+                                Text(
+                                    "Sign Out",
+                                    fontFamily = interFontFamily,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { showDialog = false },
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = Color.Gray
+                                )
+                            ) {
+                                Text(
+                                    "Cancel",
+                                    fontFamily = interFontFamily
+                                )
+                            }
+                        },
+                        containerColor = Color(0xFF1E1E1E),
+                        titleContentColor = Color.White,
+                        textContentColor = Color.White
+                    )
+                }
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Check if user is already logged in
+        val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
+        val userId = sharedPreferences.getLong("user_id", -1)
+        
+        if (userId == -1L) {
+            // Only redirect to login if there's no valid user ID
+            val intent = Intent(this, LoginActivity::class.java)
+            startActivity(intent)
+            finish()
+            return
+        }
+        
+        setContent {
+            AstroglowTheme {
+                // Get user data from SharedPreferences
+                val userName = sharedPreferences.getString("user_name", "") ?: ""
+                val userEmail = sharedPreferences.getString("user_email", "") ?: ""
+
+                // Fetch profile picture immediately
+                var profileImage by remember { mutableStateOf<Uri?>(null) }
+                
+                LaunchedEffect(userId) {
+                    if (userId != -1L) {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
+                                val request = Request.Builder()
+                                    .url(url)
+                                    .get()
+                                    .build()
+                                
+                                val response = client.newCall(request).execute()
+                                
+                                if (response.isSuccessful) {
+                                    val responseBody = response.body?.string()
+                                    val jsonObject = JSONObject(responseBody)
+                                    val status = jsonObject.getString("status")
+                                    
+                                    if (status == "success") {
+                                        val profilePicture = jsonObject.optString("profilePicture", "")
+                                        
+                                        if (profilePicture.isNotEmpty()) {
+                                            try {
+                                                val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
+                                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                                
+                                                if (bitmap != null) {
+                                                    val cachePath = File(cacheDir, "images")
+                                                    cachePath.mkdirs()
+                                                    val file = File(cachePath, "profile_$userId.jpg")
+                                                    
+                                                    if (file.exists()) {
+                                                        file.delete()
+                                                    }
+                                                    
+                                                    file.createNewFile()
+                                                    val outputStream = FileOutputStream(file)
+                                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                                    outputStream.close()
+                                                    
+                                                    withContext(Dispatchers.Main) {
+                                                        profileImage = Uri.fromFile(file)
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                e.printStackTrace()
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+                }
+
+                HomeScreen(
+                    userName = userName,
+                    initialProfileImage = profileImage
+                )
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 1 && resultCode == RESULT_OK) {
+            data?.data?.let { uri ->
+                // Convert image to base64
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val inputStream = contentResolver.openInputStream(uri)
+                        val bytes = inputStream?.readBytes()
+                        inputStream?.close()
+                        
+                        if (bytes != null) {
+                            val base64Image = Base64.encodeToString(bytes, Base64.DEFAULT)
+                            
+                            // Get user ID from SharedPreferences
+                            val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
+                            val userId = sharedPreferences.getLong("user_id", -1)
+                            
+                            if (userId != -1L) {
+                                // Update profile picture
+                                val url = "${Constants.BASE_URL}/api/user/update-profile-picture/$userId"
+                                
+                                val requestBody = JSONObject().apply {
+                                    put("profilePicture", base64Image)
+                                }.toString()
+                                
+                                val request = Request.Builder()
+                                    .url(url)
+                                    .put(requestBody.toRequestBody("application/json".toMediaType()))
+                                    .build()
+                                
+                                try {
+                                    val response = client.newCall(request).execute()
+                                    
+                                    if (response.isSuccessful) {
+                                        // Update UI on main thread
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                this@HomeActivity,
+                                                "Profile picture updated successfully",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    } else {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                this@HomeActivity,
+                                                "Failed to update profile picture: ${response.message}",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                } catch (e: SocketTimeoutException) {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(
+                                            this@HomeActivity,
+                                            "Connection timeout. Please check if the backend server is running.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                } catch (e: IOException) {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(
+                                            this@HomeActivity,
+                                            "Cannot connect to the server. Please ensure the backend is running.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@HomeActivity,
+                                "Error updating profile picture: ${e.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
                 }
             }
         }
@@ -78,10 +355,95 @@ class HomeActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(userName: String) {
-    var selectedTab by remember { mutableStateOf(0) } // 0 = Home, 1 = Favorites, 2 = Playlist, 3 = Settings
+fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
+    var selectedTab by remember { mutableStateOf(0) }
     var showHomeTab by remember { mutableStateOf(true) }
     var showProfileTab by remember { mutableStateOf(false) }
+    var profileImage by remember { mutableStateOf(initialProfileImage) }
+    var currentUserName by remember { mutableStateOf(userName) }
+    val context = LocalContext.current
+    val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+    val userId = sharedPreferences.getLong("user_id", -1)
+
+    // Fetch profile picture when component is created
+    LaunchedEffect(userId) {
+        if (userId != -1L) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
+                    android.util.Log.d("HomeScreen", "Fetching profile picture from: $url")
+                    
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(30, TimeUnit.SECONDS)
+                        .readTimeout(30, TimeUnit.SECONDS)
+                        .writeTimeout(30, TimeUnit.SECONDS)
+                        .build()
+                    
+                    val request = Request.Builder()
+                        .url(url)
+                        .get()
+                        .build()
+                    
+                    val response = client.newCall(request).execute()
+                    android.util.Log.d("HomeScreen", "Response code: ${response.code}")
+                    
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        val jsonObject = JSONObject(responseBody)
+                        val status = jsonObject.getString("status")
+                        
+                        if (status == "success") {
+                            val profilePicture = jsonObject.optString("profilePicture", "")
+                            
+                            if (profilePicture.isNotEmpty()) {
+                                try {
+                                    val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
+                                    val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                    
+                                    if (bitmap != null) {
+                                        val cachePath = File(context.cacheDir, "images")
+                                        cachePath.mkdirs()
+                                        val file = File(cachePath, "profile_$userId.jpg")
+                                        
+                                        if (file.exists()) {
+                                            file.delete()
+                                        }
+                                        
+                                        file.createNewFile()
+                                        val outputStream = FileOutputStream(file)
+                                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                        outputStream.close()
+                                        
+                                        withContext(Dispatchers.Main) {
+                                            profileImage = Uri.fromFile(file)
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(
+                                            context,
+                                            "Error processing profile picture: ${e.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            context,
+                            "Error loading profile picture: ${e.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        }
+    }
     
     // Animation for gradient colors
     val infiniteTransition = rememberInfiniteTransition()
@@ -110,13 +472,12 @@ fun HomeScreen(userName: String) {
         topBar = {
             SmallTopAppBar(
                 title = { 
-                    // Add AstroGlow text here
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clickable { 
                             showHomeTab = true
                             showProfileTab = false
-                            selectedTab = 0 // Reset to Home tab
+                            selectedTab = 0
                         }
                     ) {
                         Icon(
@@ -135,21 +496,37 @@ fun HomeScreen(userName: String) {
                         )
                     }
                 },
-                navigationIcon = { 
-                    // Empty now that logo is in title
-                },
+                navigationIcon = { },
                 actions = {
-                    // Account icon on the right - now navigates to Profile
-                    IconButton(onClick = { 
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF6A1B9A))
+                            .clickable { 
                         showHomeTab = false
                         showProfileTab = true
-                    }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.account_icon),
-                            contentDescription = "Account",
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(32.dp)
-                        )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (profileImage != null) {
+                            Image(
+                                painter = rememberImagePainter(profileImage),
+                                contentDescription = "Profile Picture",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(16.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = currentUserName.take(1).uppercase(),
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = interFontFamily
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.smallTopAppBarColors(
@@ -182,13 +559,20 @@ fun HomeScreen(userName: String) {
                 )
         ) {
             when {
-                showProfileTab -> ProfileTab() // Show Profile when profile icon clicked
+                showProfileTab -> ProfileTab(
+                    onProfileImageChanged = { newImage ->
+                        profileImage = newImage
+                    },
+                    onUsernameChanged = { newUsername ->
+                        currentUserName = newUsername
+                    }
+                )
                 else -> {
                     when (selectedTab) {
-                        0 -> HomeTabWithSearch(userName) // Home
-                        1 -> FavoritesTab()             // Favorites
-                        2 -> PlaylistTab()              // Playlist
-                        3 -> SettingsTab()              // Settings
+                        0 -> HomeTabWithSearch(currentUserName)
+                        1 -> FavoritesTab()
+                        2 -> PlaylistTab()
+                        3 -> SettingsTab()
                     }
                 }
             }
@@ -197,11 +581,187 @@ fun HomeScreen(userName: String) {
 }
 
 @Composable
-fun ProfileTab() {
+fun ProfileTab(
+    onProfileImageChanged: (Uri?) -> Unit,
+    onUsernameChanged: (String) -> Unit
+) {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
     val userEmail = sharedPreferences.getString("user_email", "") ?: ""
-    val userName = sharedPreferences.getString("user_name", "") ?: ""
+    var userName by remember { mutableStateOf(sharedPreferences.getString("user_name", "") ?: "") }
+    val userId = sharedPreferences.getLong("user_id", -1)
+    
+    var showImagePicker by remember { mutableStateOf(false) }
+    var profileImage by remember { mutableStateOf<Uri?>(null) }
+    var isEditingUsername by remember { mutableStateOf(false) }
+    var isEditingEmail by remember { mutableStateOf(false) }
+    
+    // Fetch profile picture when component is created
+    LaunchedEffect(userId) {
+        if (userId != -1L) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
+                    android.util.Log.d("ProfileTab", "Fetching profile picture from: $url")
+                    android.util.Log.d("ProfileTab", "User ID: $userId")
+                    
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(30, TimeUnit.SECONDS)
+                        .readTimeout(30, TimeUnit.SECONDS)
+                        .writeTimeout(30, TimeUnit.SECONDS)
+                        .build()
+                    
+                    val request = Request.Builder()
+                        .url(url)
+                        .get()
+                        .build()
+                    
+                    val response = client.newCall(request).execute()
+                    android.util.Log.d("ProfileTab", "Response code: ${response.code}")
+                    android.util.Log.d("ProfileTab", "Response message: ${response.message}")
+                    
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        android.util.Log.d("ProfileTab", "Response body: $responseBody")
+                        
+                        val jsonObject = JSONObject(responseBody)
+                        val status = jsonObject.getString("status")
+                        android.util.Log.d("ProfileTab", "Status: $status")
+                        
+                        if (status == "success") {
+                            val profilePicture = jsonObject.optString("profilePicture", "")
+                            android.util.Log.d("ProfileTab", "Profile picture length: ${profilePicture.length}")
+                            android.util.Log.d("ProfileTab", "Profile picture first 50 chars: ${profilePicture.take(50)}")
+                            
+                            if (profilePicture.isNotEmpty()) {
+                                try {
+                                    // Convert base64 to bitmap
+                                    val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
+                                    android.util.Log.d("ProfileTab", "Image bytes length: ${imageBytes.size}")
+                                    
+                                    val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                    android.util.Log.d("ProfileTab", "Bitmap created: ${bitmap != null}")
+                                    
+                                    if (bitmap != null) {
+                                        // Save bitmap to cache and get URI
+                                        val cachePath = File(context.cacheDir, "images")
+                                        cachePath.mkdirs()
+                                        val file = File(cachePath, "profile_$userId.jpg")
+                                        
+                                        // Delete existing file if it exists
+                                        if (file.exists()) {
+                                            file.delete()
+                                        }
+                                        
+                                        file.createNewFile()
+                                        val outputStream = FileOutputStream(file)
+                                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                        outputStream.close()
+                                        
+                                        withContext(Dispatchers.Main) {
+                                            val newUri = Uri.fromFile(file)
+                                            profileImage = newUri
+                                            onProfileImageChanged(newUri)
+                                            android.util.Log.d("ProfileTab", "Profile image URI set: $newUri")
+                                            android.util.Log.d("ProfileTab", "File exists: ${file.exists()}")
+                                            android.util.Log.d("ProfileTab", "File size: ${file.length()}")
+                                        }
+                                    } else {
+                                        android.util.Log.e("ProfileTab", "Failed to decode bitmap from base64")
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                context,
+                                                "Failed to decode profile picture",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    android.util.Log.e("ProfileTab", "Error processing profile picture: ${e.message}")
+                                    e.printStackTrace()
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(
+                                            context,
+                                            "Error processing profile picture: ${e.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            } else {
+                                android.util.Log.d("ProfileTab", "No profile picture found in response")
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        "No profile picture found",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        } else {
+                            val message = jsonObject.optString("message", "Failed to load profile picture")
+                            android.util.Log.e("ProfileTab", "Error status: $message")
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    context,
+                                    message,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } else {
+                        android.util.Log.e("ProfileTab", "Unsuccessful response: ${response.code}")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                context,
+                                "Failed to load profile picture: ${response.code}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("ProfileTab", "Error loading profile picture: ${e.message}")
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            context,
+                            "Error loading profile picture: ${e.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        }
+    }
+
+    // Image Picker Dialog
+    if (showImagePicker) {
+        AlertDialog(
+            onDismissRequest = { showImagePicker = false },
+            title = { Text("Select Profile Picture", fontFamily = interFontFamily) },
+            text = {
+                Column {
+                    Button(
+                        onClick = {
+                            // Launch image picker
+                            val intent = Intent(Intent.ACTION_PICK).apply {
+                                type = "image/*"
+                            }
+                            (context as ComponentActivity).startActivityForResult(intent, 1)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0))
+                    ) {
+                        Text("Choose from Gallery", fontFamily = interFontFamily)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showImagePicker = false }) {
+                    Text("Cancel", fontFamily = interFontFamily)
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -220,7 +780,7 @@ fun ProfileTab() {
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
-        // Profile Picture
+        // Profile Picture with edit functionality
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -231,9 +791,21 @@ fun ProfileTab() {
                 modifier = Modifier
                     .size(120.dp)
                     .clip(RoundedCornerShape(60.dp))
-                    .background(Color(0xFF6A1B9A)),
+                    .background(Color(0xFF6A1B9A))
+                    .clickable { showImagePicker = true },
                 contentAlignment = Alignment.Center
             ) {
+                if (profileImage != null) {
+                    Image(
+                        painter = rememberImagePainter(profileImage),
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(60.dp))
+                            .background(Color(0xFF6A1B9A)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
                 Text(
                     text = userName.take(1).uppercase(),
                     color = Color.White,
@@ -241,6 +813,23 @@ fun ProfileTab() {
                     fontWeight = FontWeight.Bold,
                     fontFamily = interFontFamily
                 )
+                }
+                
+                // Edit icon overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                        .padding(8.dp),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Profile Picture",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
 
@@ -250,32 +839,385 @@ fun ProfileTab() {
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Email Account Section
-            ProfileDetailItem(
-                icon = Icons.Default.Person,
-                label = "Email Account",
-                value = userEmail
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Email",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                if (isEditingEmail) {
+                    OutlinedTextField(
+                        value = userEmail,
+                        onValueChange = { /* Email is not editable */ },
+                        label = { Text("Email", fontFamily = interFontFamily) },
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF1E1E1E),
+                            unfocusedContainerColor = Color(0xFF1E1E1E),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedLabelColor = Color.White,
+                            unfocusedLabelColor = Color.White,
+                            focusedPlaceholderColor = Color.Gray,
+                            unfocusedPlaceholderColor = Color.Gray
+                        ),
+                        enabled = false
+                    )
+                } else {
+                    Text(
+                        text = userEmail,
+                        fontFamily = interLightFontFamily,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
 
             // Name Section
-            ProfileDetailItem(
-                icon = null,
-                label = "Username",
-                value = userName
-            )
-
-            // Email Section
-            ProfileDetailItem(
-                icon = null,
-                label = "Email",
-                value = userEmail
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isEditingUsername) {
+                    OutlinedTextField(
+                        value = userName,
+                        onValueChange = { userName = it },
+                        label = { Text("Username", fontFamily = interFontFamily) },
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF1E1E1E),
+                            unfocusedContainerColor = Color(0xFF1E1E1E),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedLabelColor = Color.White,
+                            unfocusedLabelColor = Color.White,
+                            focusedPlaceholderColor = Color.Gray,
+                            unfocusedPlaceholderColor = Color.Gray
+                        ),
+                        trailingIcon = {
+                            IconButton(
+                                onClick = {
+                                    // Save username
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        try {
+                                            val url = "${Constants.BASE_URL}/api/user/putUser?id=$userId"
+                                            val client = OkHttpClient.Builder()
+                                                .connectTimeout(30, TimeUnit.SECONDS)
+                                                .readTimeout(30, TimeUnit.SECONDS)
+                                                .writeTimeout(30, TimeUnit.SECONDS)
+                                                .build()
+                                            
+                                            val requestBody = JSONObject().apply {
+                                                put("userName", userName)
+                                                put("userEmail", userEmail)
+                                            }.toString()
+                                            
+                                            val request = Request.Builder()
+                                                .url(url)
+                                                .put(requestBody.toRequestBody("application/json".toMediaType()))
+                                                .build()
+                                            
+                                            val response = client.newCall(request).execute()
+                                            
+                                            if (response.isSuccessful) {
+                                                // Update local storage
+                                                sharedPreferences.edit().putString("user_name", userName).apply()
+                                                withContext(Dispatchers.Main) {
+                                                    isEditingUsername = false
+                                                    onUsernameChanged(userName)
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Username updated successfully",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "Error updating username: ${e.message}",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Save",
+                                    tint = Color(0xFF9C27B0)
+                                )
+                            }
+                        }
+                    )
+                } else {
+                    Text(
+                        text = userName,
+                        fontFamily = interLightFontFamily,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = { isEditingUsername = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Username",
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
 
             // Password Section
-            ProfileDetailItem(
-                icon = null,
-                label = "Password",
-                value = "************"
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                var showPasswordFields by remember { mutableStateOf(false) }
+                var oldPassword by remember { mutableStateOf("") }
+                var newPassword by remember { mutableStateOf("") }
+                var confirmPassword by remember { mutableStateOf("") }
+                var passwordError by remember { mutableStateOf<String?>(null) }
+                var showOldPassword by remember { mutableStateOf(false) }
+                var showNewPassword by remember { mutableStateOf(false) }
+                var showConfirmPassword by remember { mutableStateOf(false) }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "************",
+                        fontFamily = interLightFontFamily,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = { showPasswordFields = !showPasswordFields }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Change Password",
+                            tint = Color.White
+                        )
+                    }
+                }
+
+                if (showPasswordFields) {
+                    OutlinedTextField(
+                        value = oldPassword,
+                        onValueChange = { 
+                            oldPassword = it
+                            passwordError = null
+                        },
+                        label = { Text("Current Password", fontFamily = interFontFamily) },
+                        placeholder = { Text("Enter your current password", color = Color.Gray) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF1E1E1E),
+                            unfocusedContainerColor = Color(0xFF1E1E1E),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedLabelColor = Color.White,
+                            unfocusedLabelColor = Color.White,
+                            focusedPlaceholderColor = Color.Gray,
+                            unfocusedPlaceholderColor = Color.Gray
+                        ),
+                        visualTransformation = if (showOldPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Next
+                        ),
+                        trailingIcon = {
+                            IconButton(
+                                onClick = { showOldPassword = !showOldPassword }
+                            ) {
+                                Icon(
+                                    imageVector = if (showOldPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = if (showOldPassword) "Hide password" else "Show password",
+                                    tint = Color.White
+                                )
+                            }
+                        },
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = { 
+                            newPassword = it
+                            passwordError = null
+                        },
+                        label = { Text("New Password", fontFamily = interFontFamily) },
+                        placeholder = { Text("Enter your new password", color = Color.Gray) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF1E1E1E),
+                            unfocusedContainerColor = Color(0xFF1E1E1E),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedLabelColor = Color.White,
+                            unfocusedLabelColor = Color.White,
+                            focusedPlaceholderColor = Color.Gray,
+                            unfocusedPlaceholderColor = Color.Gray
+                        ),
+                        visualTransformation = if (showNewPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Next
+                        ),
+                        trailingIcon = {
+                            IconButton(
+                                onClick = { showNewPassword = !showNewPassword }
+                            ) {
+                                Icon(
+                                    imageVector = if (showNewPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = if (showNewPassword) "Hide password" else "Show password",
+                                    tint = Color.White
+                                )
+                            }
+                        },
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { 
+                            confirmPassword = it
+                            passwordError = null
+                        },
+                        label = { Text("Confirm Password", fontFamily = interFontFamily) },
+                        placeholder = { Text("Confirm your new password", color = Color.Gray) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF1E1E1E),
+                            unfocusedContainerColor = Color(0xFF1E1E1E),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedLabelColor = Color.White,
+                            unfocusedLabelColor = Color.White,
+                            focusedPlaceholderColor = Color.Gray,
+                            unfocusedPlaceholderColor = Color.Gray
+                        ),
+                        visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done
+                        ),
+                        trailingIcon = {
+                            IconButton(
+                                onClick = { showConfirmPassword = !showConfirmPassword }
+                            ) {
+                                Icon(
+                                    imageVector = if (showConfirmPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = if (showConfirmPassword) "Hide password" else "Show password",
+                                    tint = Color.White
+                                )
+                            }
+                        },
+                        singleLine = true
+                    )
+
+                    if (passwordError != null) {
+                        Text(
+                            text = passwordError!!,
+                            color = Color.Red,
+                            fontFamily = interFontFamily,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            if (oldPassword.isEmpty() || newPassword.isEmpty() || confirmPassword.isEmpty()) {
+                                passwordError = "All fields are required"
+                                return@Button
+                            }
+                            if (newPassword != confirmPassword) {
+                                passwordError = "New passwords do not match"
+                                return@Button
+                            }
+                            if (newPassword.length < 6) {
+                                passwordError = "Password must be at least 6 characters"
+                                return@Button
+                            }
+
+                            // Call the change password API
+                            CoroutineScope(Dispatchers.IO).launch {
+                                try {
+                                    val url = "${Constants.BASE_URL}/api/user/changePassword/$userId"
+                                    val client = OkHttpClient.Builder()
+                                        .connectTimeout(30, TimeUnit.SECONDS)
+                                        .readTimeout(30, TimeUnit.SECONDS)
+                                        .writeTimeout(30, TimeUnit.SECONDS)
+                                        .build()
+                                    
+                                    val requestBody = JSONObject().apply {
+                                        put("currentPassword", oldPassword)
+                                        put("newPassword", newPassword)
+                                    }.toString()
+                                    
+                                    val request = Request.Builder()
+                                        .url(url)
+                                        .post(requestBody.toRequestBody("application/json".toMediaType()))
+                                        .build()
+                                    
+                                    val response = client.newCall(request).execute()
+                                    val responseBody = response.body?.string()
+                                    val jsonResponse = JSONObject(responseBody ?: "{}")
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        if (response.isSuccessful) {
+                                            // Clear fields and show success message
+                                            oldPassword = ""
+                                            newPassword = ""
+                                            confirmPassword = ""
+                                            showPasswordFields = false
+                                            Toast.makeText(
+                                                context,
+                                                jsonResponse.optString("message", "Password changed successfully"),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        } else {
+                                            passwordError = jsonResponse.optString("message", "Failed to change password")
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    withContext(Dispatchers.Main) {
+                                        passwordError = "Error: ${e.message}"
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF9C27B0)
+                        )
+                    ) {
+                        Text(
+                            text = "Change Password",
+                            fontFamily = interFontFamily,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -512,7 +1454,7 @@ fun HomeTabWithSearch(userName: String) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
-                .padding(vertical = 12.dp)
+                .padding(vertical = 8.dp)
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(
@@ -523,45 +1465,49 @@ fun HomeTabWithSearch(userName: String) {
                     shape = RoundedCornerShape(20.dp)
                 )
         ) {
-            // Title and arrow at the top
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Recommendations",
-                    fontFamily = interFontFamily,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Icon(
-                    imageVector = Icons.Default.ArrowForward,
-                    contentDescription = "See more",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, top = 48.dp, bottom = 16.dp, end = 0.dp),
+                    .padding(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(3) {
-                    // Item with subtle shadow
-                    Box(
-                        modifier = Modifier
-                            .width(160.dp)
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White)
-                    )
+                items(3) { index ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(160.dp)
+                                .height(140.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(160.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            Color(0xFF9C27B0).copy(alpha = 0.6f),
+                                            Color(0xFF0050D0).copy(alpha = 0.6f)
+                                        )
+                                    )
+                                )
+                                .padding(vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Song ${index + 1}",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontFamily = interFontFamily,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.width(160.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -603,7 +1549,7 @@ fun HomeTabWithSearch(userName: String) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
-                .padding(vertical = 12.dp)
+                .padding(vertical = 8.dp)
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(
@@ -614,53 +1560,49 @@ fun HomeTabWithSearch(userName: String) {
                     shape = RoundedCornerShape(20.dp)
                 )
         ) {
-            // Title and badge at the top
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Favorites",
-                    fontFamily = interFontFamily,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                // Badge with number
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .background(Color.White, RoundedCornerShape(14.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "4",
-                        color = Color(0xFF0050D0),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, top = 48.dp, bottom = 16.dp, end = 0.dp),
+                    .padding(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(3) {
-                    // Item with subtle shadow
-                    Box(
-                        modifier = Modifier
-                            .width(160.dp)
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White)
-                    )
+                items(3) { index ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(160.dp)
+                                .height(140.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(160.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            Color(0xFF0050D0).copy(alpha = 0.6f),
+                                            Color(0xFFE81EDE).copy(alpha = 0.6f)
+                                        )
+                                    )
+                                )
+                                .padding(vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Favorite ${index + 1}",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontFamily = interFontFamily,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.width(160.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -868,21 +1810,6 @@ fun SettingsTab() {
                 context.startActivity(intent)
             }
         )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Optional: Sign Out button (can be kept or removed based on final design)
-        Button(
-            onClick = { /* Sign out */ },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)), // Purple from gradient
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp)
-                .height(50.dp)
-        ) {
-            Text("Sign Out", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-        }
     }
 }
 
