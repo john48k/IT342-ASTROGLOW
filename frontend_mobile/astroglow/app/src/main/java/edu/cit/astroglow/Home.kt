@@ -361,6 +361,7 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
     var showProfileTab by remember { mutableStateOf(false) }
     var profileImage by remember { mutableStateOf(initialProfileImage) }
     var currentUserName by remember { mutableStateOf(userName) }
+    var isDarkMode by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
     val userId = sharedPreferences.getLong("user_id", -1)
@@ -530,7 +531,7 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                     }
                 },
                 colors = TopAppBarDefaults.smallTopAppBarColors(
-                    containerColor = Color.Black
+                    containerColor = if (isDarkMode) Color.Black else Color(0xFF1E1E1E)
                 )
             )
         },
@@ -549,14 +550,21 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
     ) { paddingValues ->
         // The main content based on selected tab or special screens
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(firstColor, secondColor)
+            modifier = if (isDarkMode) {
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(Color.Black)
+            } else {
+                Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(firstColor, secondColor)
+                        )
                     )
-                )
+            }
         ) {
             when {
                 showProfileTab -> ProfileTab(
@@ -572,7 +580,14 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                         0 -> HomeTabWithSearch(currentUserName)
                         1 -> FavoritesTab()
                         2 -> PlaylistTab()
-                        3 -> SettingsTab()
+                        3 -> SettingsTab(
+                            isDarkMode = isDarkMode,
+                            onDarkModeChange = { newDarkMode ->
+                                isDarkMode = newDarkMode
+                                // Save preference to SharedPreferences
+                                sharedPreferences.edit().putBoolean("dark_mode", newDarkMode).apply()
+                            }
+                        )
                     }
                 }
             }
@@ -1769,7 +1784,10 @@ fun PlaylistTab() {
 }
 
 @Composable
-fun SettingsTab() {
+fun SettingsTab(
+    isDarkMode: Boolean,
+    onDarkModeChange: (Boolean) -> Unit
+) {
     val context = LocalContext.current
     
     Column(
@@ -1787,6 +1805,77 @@ fun SettingsTab() {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 24.dp)
         )
+
+        // Dark Mode Settings Item
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFF8E24AA), Color(622790))
+                    )
+                )
+                .clickable { onDarkModeChange(!isDarkMode) },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left side: Icon Box with gradient
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(100.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF42A5F5), Color(0xFF8E24AA))
+                        ),
+                        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isDarkMode) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                    contentDescription = "Dark Mode",
+                    tint = Color.White,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+            
+            // Right side: Text Box with gradient
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(1f)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF8E24AA), Color(0xFF42A5F5))
+                        ),
+                        shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                    )
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Column {
+                    Text(
+                        text = "DARK MODE",
+                        color = Color.White,
+                        fontFamily = interFontFamily,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Text(
+                        text = if (isDarkMode) "Dark mode is enabled" else "Dark mode is disabled",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontFamily = interLightFontFamily,
+                        fontSize = 14.sp,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Settings Items
         SettingsListItem(
@@ -1843,7 +1932,7 @@ fun SettingsListItem(
                 .width(100.dp)
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF42A5F5), Color(0xFF8E24AA)) // Reversed gradient
+                        colors = listOf(Color(0xFF42A5F5), Color(0xFF8E24AA))
                     ),
                     shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
                 ),
