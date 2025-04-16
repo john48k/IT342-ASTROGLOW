@@ -24,6 +24,9 @@ public class UserEntity {
     @Column(name = "user_email", length = 255, nullable = false, unique = true)
     private String userEmail;
     
+    @Column(name = "oauth_id", length = 255, unique = true)
+    private String oauthId;
+    
     @Lob
     @Column(name = "profile_picture", columnDefinition = "LONGTEXT")
     private String profilePicture;
@@ -52,11 +55,12 @@ public class UserEntity {
     public UserEntity() {
     }
 
-    public UserEntity(int userId, String userName, String userPassword, String userEmail, String profilePicture, AuthenticationEntity authentication, List<MusicEntity> music, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
+    public UserEntity(int userId, String userName, String userPassword, String userEmail, String oauthId, String profilePicture, AuthenticationEntity authentication, List<MusicEntity> music, List<PlaylistEntity> playlists, List<OfflineLibraryEntity> offlineLibraries, List<FavoritesEntity> favorites) {
         this.userId = userId;
         this.userName = userName;
         this.userPassword = userPassword;
         this.userEmail = userEmail;
+        this.oauthId = oauthId;
         this.profilePicture = profilePicture;
         this.authentication = authentication;
         this.music = music;
@@ -97,6 +101,14 @@ public class UserEntity {
         this.userEmail = userEmail;
     }
     
+    public String getOauthId() {
+        return oauthId;
+    }
+
+    public void setOauthId(String oauthId) {
+        this.oauthId = oauthId;
+    }
+
     public String getProfilePicture() {
         return profilePicture;
     }

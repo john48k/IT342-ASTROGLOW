@@ -77,6 +77,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 UserEntity newUser = new UserEntity();
                 newUser.setUserEmail(email);
                 
+                // Store the OAuth ID
+                String oauthId = (String) attributes.get("sub");
+                newUser.setOauthId(oauthId);
+                
                 // Use name from OAuth or generate one based on email
                 if (name != null && !name.isEmpty()) {
                     newUser.setUserName(name);
@@ -94,6 +98,13 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 logger.info("Creating new user from OAuth2 login: {}", email);
                 userRepository.save(newUser);
             } else {
+                // Update existing user's OAuth ID if it's not set
+                if (existingUser.getOauthId() == null) {
+                    String oauthId = (String) attributes.get("sub");
+                    existingUser.setOauthId(oauthId);
+                    userRepository.save(existingUser);
+                    logger.info("Updated OAuth ID for existing user: {}", email);
+                }
                 logger.info("Existing user logged in via OAuth2: {}", email);
             }
         } else {
