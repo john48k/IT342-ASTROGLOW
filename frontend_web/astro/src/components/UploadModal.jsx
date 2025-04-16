@@ -145,20 +145,21 @@ const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
 
       console.log('Submitting Upload Data:', uploadData);
 
+      // Create FormData object
+      const formData = new FormData();
+      formData.append('title', cleanTitle);
+      formData.append('artist', cleanArtist);
+      formData.append('genre', finalFormattedGenre);
+      formData.append('audioUrl', audioFileUrl);
+      if (imageUrl) {
+        formData.append('imageUrl', imageUrl);
+      }
+      formData.append('userId', '1'); // TODO: Get actual user ID from context
+
       // Save to database
       const dbResponse = await fetch('http://localhost:8080/api/music/upload', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          artist,
-          genre: genre || 'Music',
-          audioUrl: audioFileUrl,
-          imageUrl: imageUrl,
-          userId: 1 // TODO: Get actual user ID from context
-        }),
+        body: formData
       });
 
       if (!dbResponse.ok) {
