@@ -303,9 +303,103 @@ export const AudioPlayerProvider = ({ children }) => {
         } catch (error) {
           handleFetchError(error);
         }
-      }
-      else {
-        // ... [Existing code for fetching from API] ...
+      } else {
+        // Fetch music details first to get the audio URL
+        try {
+          const response = await fetch(`http://localhost:8080/api/music/getMusic/${musicId}?includeAudioData=true`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch music details: ${response.status}`);
+          }
+          
+          const musicData = await response.json();
+          console.log('Fetched music data:', musicData);
+          
+          // Check if we have an audio URL
+          if (musicData.audioUrl) {
+            console.log('Using audio URL from music data:', musicData.audioUrl);
+            newAudioElement.src = musicData.audioUrl;
+          } else if (musicData.audioData) {
+            // If we have base64 audio data, create a data URL
+            console.log('Using base64 audio data');
+            newAudioElement.src = `data:audio/mpeg;base64,${musicData.audioData}`;
+          } else {
+            throw new Error('No audio data available for this track');
+          }
+          
+          // Set up event handlers
+          const setupAudioEvents = () => {
+            newAudioElement.onended = () => {
+              console.log('Audio playback ended');
+              setIsPlaying(false);
+              setCurrentlyPlaying(null);
+              setAudioElement(null);
+              setAudioProgress(0);
+              clearInterval(progressIntervalRef.current);
+              progressIntervalRef.current = null;
+            };
+            
+            newAudioElement.onplay = () => {
+              console.log('Audio started playing');
+              setIsPlaying(true);
+            };
+            
+            newAudioElement.onpause = () => {
+              console.log('Audio paused');
+              setIsPlaying(false);
+            };
+            
+            newAudioElement.onerror = (e) => {
+              console.error('Audio error:', e);
+              stopPlayback();
+            };
+            
+            // Set up progress tracking
+            if (progressIntervalRef.current) {
+              clearInterval(progressIntervalRef.current);
+            }
+            
+            progressIntervalRef.current = setInterval(() => {
+              if (newAudioElement && !newAudioElement.paused) {
+                const progress = (newAudioElement.currentTime / newAudioElement.duration) * 100;
+                setAudioProgress(progress);
+                setAudioTime({
+                  elapsed: formatTime(newAudioElement.currentTime),
+                  total: formatTime(newAudioElement.duration)
+                });
+              }
+            }, 1000);
+          };
+          
+          // Set up events
+          setupAudioEvents();
+          
+          // Wait for metadata before playing
+          newAudioElement.onloadedmetadata = () => {
+            try {
+              console.log('Audio metadata loaded, starting playback');
+              newAudioElement.play().catch(playError => {
+                console.error('Error starting playback:', playError);
+              });
+            } catch (playErr) {
+              console.error('Error in play attempt:', playErr);
+            }
+          };
+          
+          // Set as current audio element
+          setAudioElement(newAudioElement);
+          
+          // Set current track data
+          setCurrentTrackData({
+            title: musicData.title,
+            artist: musicData.artist,
+            genre: musicData.genre,
+            imageUrl: musicData.imageUrl,
+            id: musicId
+          });
+          
+        } catch (error) {
+          handleFetchError(error);
+        }
       }
     } catch (error) {
       console.error('Error in playMusic:', error);

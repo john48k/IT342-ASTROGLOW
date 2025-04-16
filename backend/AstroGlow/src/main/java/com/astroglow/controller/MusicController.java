@@ -8,6 +8,7 @@ import java.net.URL;
 import java.net.MalformedURLException;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -476,6 +477,60 @@ public class MusicController {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Failed to add music: " + e.getMessage());
+        }
+    }
+
+    // Upload music with URL
+    @PostMapping("/uploadWithUrl")
+    public ResponseEntity<MusicEntity> uploadMusicWithUrl(@RequestBody Map<String, Object> requestBody) {
+        try {
+            String title = (String) requestBody.get("title");
+            String artist = (String) requestBody.get("artist");
+            String genre = (String) requestBody.get("genre");
+            String audioUrl = (String) requestBody.get("audioUrl");
+            String imageUrl = (String) requestBody.get("imageUrl");
+            Integer userId = (Integer) requestBody.get("userId");
+
+            System.out.println("Received URL upload request with title: " + title + ", artist: " + artist);
+            if (audioUrl != null) {
+                System.out.println("Received audioUrl: " + audioUrl);
+            }
+            if (imageUrl != null) {
+                System.out.println("Received imageUrl: " + (imageUrl.length() > 50 ? imageUrl.substring(0, 50) + "..." : imageUrl));
+            }
+            
+            // Sanitize inputs to avoid null or empty string issues
+            audioUrl = (audioUrl != null && !audioUrl.trim().isEmpty()) ? audioUrl.trim() : null;
+            imageUrl = (imageUrl != null && !imageUrl.trim().isEmpty()) ? imageUrl.trim() : null;
+            
+            // Process image data to ensure it's not too large
+            if (imageUrl != null) {
+                imageUrl = processImageData(imageUrl);
+            }
+            
+            MusicEntity musicEntity = new MusicEntity();
+            musicEntity.setTitle(title);
+            musicEntity.setArtist(artist);
+            musicEntity.setGenre(genre);
+            musicEntity.setTime(0); // Default duration in seconds
+            musicEntity.setAudioUrl(audioUrl);
+            musicEntity.setImageUrl(imageUrl);
+
+            // Set owner if userId is provided
+            if (userId != null) {
+                Optional<UserEntity> userOptional = userRepository.findById(userId);
+                if (userOptional.isPresent()) {
+                    musicEntity.setOwner(userOptional.get());
+                } else {
+                    return ResponseEntity.badRequest().body(null);
+                }
+            }
+
+            MusicEntity savedMusic = musicService.postMusic(musicEntity);
+            return ResponseEntity.ok(savedMusic);
+        } catch (Exception e) {
+            System.err.println("Error processing URL upload: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 

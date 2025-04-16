@@ -184,7 +184,23 @@ public class UserController {
     @GetMapping("/user-info")
     public Map<String, Object> getUser(@AuthenticationPrincipal OAuth2User oAuth2User) {
         if (oAuth2User != null) {
-            return oAuth2User.getAttributes();
+            Map<String, Object> attributes = oAuth2User.getAttributes();
+            Map<String, Object> response = new HashMap<>();
+            
+            // Get the OAuth ID (sub) from the attributes
+            String oauthId = (String) attributes.get("sub");
+            if (oauthId != null) {
+                // Find user by OAuth ID
+                UserEntity user = userService.findByOauthId(oauthId);
+                if (user != null) {
+                    response.put("userId", user.getUserId());
+                    response.put("userName", user.getUserName());
+                    response.put("userEmail", user.getUserEmail());
+                    response.put("oauthId", user.getOauthId());
+                }
+            }
+            
+            return response;
         } else {
             return Collections.emptyMap();
         }
