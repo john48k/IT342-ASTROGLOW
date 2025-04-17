@@ -73,7 +73,14 @@ export const FavoritesProvider = ({ children }) => {
         if (response.ok) {
           const data = await response.json();
           console.log(`Refreshed ${data.length} favorites for user ID: ${user.userId}`);
-          setFavorites(data);
+          // Keep existing Firebase favorites while updating database favorites
+          setFavorites(prevFavorites => {
+            const firebaseFavorites = prevFavorites.filter(fav => 
+              typeof fav.music?.filename === 'string' && 
+              fav.music.filename.startsWith('firebase-')
+            );
+            return [...data, ...firebaseFavorites];
+          });
         } else {
           console.error(`Error refreshing favorites: ${response.status} ${response.statusText}`);
         }
@@ -115,9 +122,16 @@ export const FavoritesProvider = ({ children }) => {
         // For Firebase music, we'll just update the UI state
         if (isFirebaseMusic) {
           setFavorites(prevFavorites => {
-            if (isFavorited) {
+            // Check if the music is already in favorites
+            const isAlreadyFavorited = prevFavorites.some(fav => 
+              fav.music?.filename === musicId
+            );
+
+            if (isAlreadyFavorited) {
+              // If already favorited, remove it
               return prevFavorites.filter(fav => fav.music?.filename !== musicId);
             } else {
+              // If not favorited, add it
               return [...prevFavorites, { music: { filename: musicId } }];
             }
           });
@@ -154,8 +168,6 @@ export const FavoritesProvider = ({ children }) => {
   );
 };
 
-export const useFavorites = () => {
-  return useContext(FavoritesContext);
-};
+export const useFavorites = () => useContext(FavoritesContext);
 
 export default FavoritesContext;

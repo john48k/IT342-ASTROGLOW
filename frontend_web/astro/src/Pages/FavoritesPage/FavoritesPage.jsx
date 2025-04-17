@@ -264,14 +264,17 @@ export const FavoritesPage = () => {
             </div>
           ) : (
             <div className={styles.musicGrid}>
-              {favoriteMusic.map((music) => {
+              {favoriteMusic.map((music, index) => {
                 const imageUrl = getSafeImageUrl(imageUrls[music.musicId], getImageUrl);
                 const isCurrentlyPlaying = currentlyPlaying === music.musicId;
                 const isFavorited = isFavorite(music.musicId);
                 
+                // Generate a unique key by combining the music ID and index
+                const uniqueKey = `favorite-${music.musicId}-${index}`;
+                
                 return (
                   <div 
-                    key={`favorite-${music.musicId}`} 
+                    key={uniqueKey}
                     className={`${styles.musicCard} ${isCurrentlyPlaying ? 
                       (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
                     onClick={(e) => handleMusicCardClick(e, music.musicId)}
