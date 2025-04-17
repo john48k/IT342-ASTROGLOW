@@ -30,3 +30,4 @@ public interface FavoritesRepository extends JpaRepository<FavoritesEntity, Inte
     // Count by music
     long countByMusic(MusicEntity music);
 }
+//Test Commit

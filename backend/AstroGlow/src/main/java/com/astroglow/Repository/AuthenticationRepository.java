@@ -8,3 +8,4 @@ import org.springframework.stereotype.Repository;
 public interface AuthenticationRepository extends JpaRepository<AuthenticationEntity, Integer> {
 
 }
+//Test Commit
