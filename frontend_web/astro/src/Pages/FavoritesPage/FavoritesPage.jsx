@@ -226,6 +226,11 @@ export const FavoritesPage = () => {
   const handleFavoriteClick = (e, musicId) => {
     e.stopPropagation();
     toggleFavorite(musicId);
+    
+    // Immediately update the favoriteMusic state
+    setFavoriteMusic(prevList => 
+      prevList.filter(music => music.musicId !== musicId)
+    );
   };
 
   // Handle add to playlist button click

@@ -81,7 +81,9 @@ export const HomePage = () => {
     playPreviousSong,
     handleDoubleClick,
     stopPlayback,
-    getImageUrl
+    getImageUrl,
+    musicCategory,
+    setMusicCategory
   } = useAudioPlayer();
 
   const userName = user?.userName || "Guest";
@@ -109,6 +111,8 @@ export const HomePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [availableMusicList, setAvailableMusicList] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [musicToDelete, setMusicToDelete] = useState(null);
 
   // Add refs for tracking double clicks and click prevention
   const lastClickTimeRef = useRef({});
@@ -400,8 +404,8 @@ export const HomePage = () => {
         throw new Error('Failed to upload music to database');
       }
 
-      // Show success message
-      alert('Music uploaded successfully!');
+      // Success log
+      console.log('Music uploaded successfully!');
 
       // Refresh the user's music list
       fetchUserMusic();
@@ -518,17 +522,28 @@ export const HomePage = () => {
       // Ensure we've completely stopped before playing new song
       setTimeout(() => {
         try {
-          // Find the music item in either musicList or availableMusicList
-          const musicItem = [...musicList, ...availableMusicList].find(item => {
-            // Convert both IDs to strings for comparison
+          // Determine if this is in uploaded music or available music list
+          const uploadedItem = musicList.find(item => {
             const itemId = String(item.musicId || item.id);
             const searchId = String(musicId);
             return itemId === searchId;
           });
           
-          if (musicItem) {
-            console.log('Playing music file:', musicItem.title);
-            playMusic(String(musicId), musicItem.audioUrl);
+          const availableItem = availableMusicList.find(item => {
+            const itemId = String(item.musicId || item.id);
+            const searchId = String(musicId);
+            return itemId === searchId;
+          });
+          
+          // Set the music category based on which list contains the item
+          if (uploadedItem) {
+            console.log('Playing from uploaded music:', uploadedItem.title);
+            setMusicCategory('uploaded');
+            playMusic(String(musicId), uploadedItem.audioUrl, 'uploaded');
+          } else if (availableItem) {
+            console.log('Playing from available music:', availableItem.title);
+            setMusicCategory('available');
+            playMusic(String(musicId), availableItem.audioUrl, 'available');
           } else {
             console.log('Music item not found, ID:', musicId);
           }
@@ -545,36 +560,107 @@ export const HomePage = () => {
     }
   };
 
-  // Handle delete music
-  const handleDeleteMusic = async (musicId, event) => {
+  // Handle delete music click
+  const handleDeleteClick = (musicId, event) => {
     event.stopPropagation(); // Prevent triggering card click
-
-    if (window.confirm('Are you sure you want to delete this song? This action cannot be undone.')) {
-      try {
-        // Delete from database
-        const response = await fetch(`http://localhost:8080/api/music/deleteMusic/${musicId}`, {
-          method: 'DELETE',
-          credentials: 'include'
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to delete music from database');
-        }
-
-        // Update the local state
-        setMusicList(prevList => prevList.filter(music => music.musicId !== musicId));
-
-        // If the deleted music was playing, stop playback
-        if (currentlyPlaying === musicId) {
-          stopPlayback();
-        }
-
-        alert('Music deleted successfully!');
-      } catch (error) {
-        console.error('Error deleting music:', error);
-        alert(`Failed to delete music: ${error.message}`);
-      }
+    
+    // Find the music item to display in the confirmation modal
+    const musicItem = musicList.find(music => music.musicId === musicId);
+    if (musicItem) {
+      setMusicToDelete({
+        id: musicId,
+        title: musicItem.title,
+        artist: musicItem.artist
+      });
+      setShowDeleteModal(true);
     }
+  };
+
+  // Handle confirming deletion in the modal
+  const confirmDelete = async () => {
+    if (!musicToDelete) return;
+    
+    const musicId = musicToDelete.id;
+    
+    try {
+      // First, get the music details to check if it's stored in Firebase
+      const musicItem = musicList.find(music => music.musicId === musicId);
+      
+      if (musicItem && musicItem.audioUrl && musicItem.audioUrl.includes('firebasestorage.googleapis.com')) {
+        // Extract the filename from the Firebase URL
+        const urlParts = musicItem.audioUrl.split('/');
+        const fileName = decodeURIComponent(urlParts[urlParts.length - 1].split('?')[0]);
+        
+        // Delete from Firebase storage
+        const { storage } = await import('../../firebase');
+        const { ref, deleteObject } = await import('firebase/storage');
+        
+        // Create a reference to the file in Firebase storage
+        const storageRef = ref(storage, fileName);
+        
+        try {
+          await deleteObject(storageRef);
+          console.log('File deleted from Firebase storage');
+          
+          // Immediately update the available music list
+          setAvailableMusicList(prevList => {
+            const newList = prevList.filter(music => {
+              // Check both the ID and the audio URL to ensure we remove the correct item
+              return music.id !== musicId && 
+                    (!music.audioUrl || !music.audioUrl.includes(fileName));
+            });
+            console.log('Updated available music list:', newList);
+            return newList;
+          });
+        } catch (firebaseError) {
+          console.error('Error deleting from Firebase:', firebaseError);
+          // Continue with database deletion even if Firebase deletion fails
+        }
+      }
+
+      // Delete from database
+      const response = await fetch(`http://localhost:8080/api/music/deleteMusic/${musicId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete music from database');
+      }
+
+      // Immediately update both lists
+      setMusicList(prevList => {
+        const newList = prevList.filter(music => music.musicId !== musicId);
+        console.log('Updated music list:', newList);
+        return newList;
+      });
+
+      setAvailableMusicList(prevList => {
+        const newList = prevList.filter(music => music.id !== musicId);
+        console.log('Updated available music list:', newList);
+        return newList;
+      });
+
+      // If the deleted music was playing, stop playback
+      if (currentlyPlaying === musicId) {
+        stopPlayback();
+      }
+
+      // Success log
+      console.log('Music deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting music:', error);
+    } finally {
+      // Close delete modal
+      setShowDeleteModal(false);
+      setMusicToDelete(null);
+    }
+  };
+
+  // Handle cancelling deletion
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setMusicToDelete(null);
   };
 
   const handleEditClick = (music, event) => {
@@ -711,6 +797,7 @@ export const HomePage = () => {
         formData.append('imageUrl', uploadData.imageUrl);
       }
       formData.append('userId', user.userId); // Add user ID to the upload
+      formData.append('firebaseFileName', uploadData.audioFileName); // Add Firebase filename
 
       // Upload to database
       const response = await fetch('http://localhost:8080/api/music/upload', {
@@ -723,15 +810,32 @@ export const HomePage = () => {
         throw new Error('Failed to upload music to database');
       }
 
+      // Get the response data which should include the new music ID
+      const newMusicData = await response.json();
+      console.log('New music data:', newMusicData);
+
+      // Create a new music item for the available music list
+      const newMusicItem = {
+        id: newMusicData.musicId,
+        title: uploadData.title,
+        artist: uploadData.artist,
+        genre: uploadData.genre || 'Unknown',
+        audioUrl: uploadData.audioUrl,
+        imageUrl: uploadData.imageUrl,
+        userName: user.userName || 'Unknown User'
+      };
+
+      // Update the available music list immediately
+      setAvailableMusicList(prevList => [...prevList, newMusicItem]);
+
       // Show success message
-      alert('Music uploaded successfully!');
+      console.log('Music uploaded successfully!');
 
       // Refresh the user's music list
       fetchUserMusic();
       
     } catch (error) {
       console.error('Failed to upload music:', error);
-      alert(`Failed to upload: ${error.message}`);
     }
   };
 
@@ -831,7 +935,7 @@ export const HomePage = () => {
                           </button>
                           <button
                             className={styles.musicCardControlButton}
-                            onClick={(e) => handleDeleteMusic(music.musicId, e)}
+                            onClick={(e) => handleDeleteClick(music.musicId, e)}
                             title="Delete song"
                           >
                             🗑
@@ -1179,6 +1283,26 @@ export const HomePage = () => {
           </div>
         }
         showConfirmButton={false}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={cancelDelete}
+        title="Confirm Delete"
+        message={
+          musicToDelete ? 
+          <div>
+            <p>Are you sure you want to delete this song?</p>
+            <p className={styles.songDeleteInfo}>
+              <strong>{musicToDelete.title}</strong> by {musicToDelete.artist}
+            </p>
+            <p>This action cannot be undone.</p>
+          </div> : 
+          <p>Are you sure you want to delete this song?</p>
+        }
+        confirmText="Delete"
+        onConfirm={confirmDelete}
       />
     </div>
   );

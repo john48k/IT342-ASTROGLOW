@@ -114,28 +114,6 @@ const NowPlayingBar = () => {
     });
   };
   
-  // Handle next song
-  const handleNextSong = (e) => {
-    e.preventDefault();
-    
-    console.log("🔵 Next button clicked!");
-    console.log("🔵 Current playing:", currentlyPlaying);
-    console.log("🔵 Music list has", musicList?.length || 0, "items");
-    
-    if (musicList?.length > 0) {
-      // Log IDs in the music list for debugging
-      console.log("🔵 Music list IDs:", musicList.map(item => {
-        const id = item.id || item.musicId;
-        return id ? id.toString().substring(0, 15) + "..." : "unknown";
-      }).join(", "));
-    }
-    
-    debounce(() => {
-      console.log("🔵 Calling playNextSong with musicList:", musicList?.length || 0, "items");
-      playNextSong(musicList, albums);
-    });
-  };
-  
   // Handle backward button click - simple version without double-click
   const handleBackwardClick = (e) => {
     e.preventDefault();
@@ -150,13 +128,149 @@ const NowPlayingBar = () => {
     });
   };
   
+  // Handle next song
+  const handleNextSong = (e) => {
+    e.preventDefault();
+    
+    console.log("🔵 Next button clicked!");
+    console.log("🔵 Current playing:", currentlyPlaying);
+    console.log("🔵 Current track data:", currentTrackData?.title, "by", currentTrackData?.artist);
+    console.log("🔵 Music list has", musicList?.length || 0, "items");
+    
+    // Print full details of first few tracks to help debugging
+    if (musicList && musicList.length > 0) {
+      console.log("🔵 First track in list:", {
+        id: musicList[0].id || musicList[0].musicId,
+        title: musicList[0].title,
+        artist: musicList[0].artist
+      });
+      
+      if (musicList.length > 1) {
+        console.log("🔵 Second track in list:", {
+          id: musicList[1].id || musicList[1].musicId,
+          title: musicList[1].title,
+          artist: musicList[1].artist
+        });
+      }
+    }
+    
+    // If musicList is empty or not properly loaded, fetch it immediately
+    if (!musicList || musicList.length === 0) {
+      console.log("🔵 Music list is empty, fetching it now");
+      
+      const fetchMusicList = async () => {
+        try {
+          // Regular music from backend
+          const response = await fetch('http://localhost:8080/api/music/getAllMusic');
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Get Firebase music items from localStorage
+            let firebaseItems = [];
+            try {
+              const savedFirebaseMusic = localStorage.getItem('firebase-music-list');
+              if (savedFirebaseMusic) {
+                firebaseItems = JSON.parse(savedFirebaseMusic);
+                console.log(`[NextButton] Loaded ${firebaseItems.length} Firebase items for playback`);
+              }
+            } catch (error) {
+              console.error('[NextButton] Error loading Firebase music:', error);
+            }
+            
+            // Create a combined list
+            const combinedList = [...data, ...firebaseItems];
+            console.log(`[NextButton] Combined music list: ${combinedList.length} items`);
+            
+            setMusicList(combinedList);
+            
+            // Now play the next song with the fresh list
+            playNextSong(combinedList, albums);
+          } else {
+            console.error('Failed to fetch music list for Next button');
+            // Even if fetch fails, try with whatever might be in the existing list
+            playNextSong(musicList, albums);
+          }
+        } catch (error) {
+          console.error('Error fetching music list for Next button:', error);
+          // Even if fetch fails, try with whatever might be in the existing list
+          playNextSong(musicList, albums);
+        }
+      };
+      
+      fetchMusicList();
+    } else {
+      // If music list is already loaded, just play next song
+      console.log("🔵 Music list IDs:", musicList.map(item => {
+        const id = item.id || item.musicId;
+        return id ? id.toString().substring(0, 15) + "..." : "unknown";
+      }).join(", "));
+      
+      debounce(() => {
+        console.log("🔵 Calling playNextSong with musicList:", musicList?.length || 0, "items");
+        playNextSong(musicList, albums);
+      });
+    }
+  };
+  
   // Handle previous song
   const handlePreviousSong = (e) => {
     e.preventDefault();
     
-    debounce(() => {
-      playPreviousSong(musicList, albums);
-    });
+    console.log("🔵 Previous button clicked!");
+    console.log("🔵 Current playing:", currentlyPlaying);
+    console.log("🔵 Music list has", musicList?.length || 0, "items");
+    
+    // If musicList is empty or not properly loaded, fetch it immediately
+    if (!musicList || musicList.length === 0) {
+      console.log("🔵 Music list is empty, fetching it now");
+      
+      const fetchMusicList = async () => {
+        try {
+          // Regular music from backend
+          const response = await fetch('http://localhost:8080/api/music/getAllMusic');
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Get Firebase music items from localStorage
+            let firebaseItems = [];
+            try {
+              const savedFirebaseMusic = localStorage.getItem('firebase-music-list');
+              if (savedFirebaseMusic) {
+                firebaseItems = JSON.parse(savedFirebaseMusic);
+                console.log(`[PrevButton] Loaded ${firebaseItems.length} Firebase items for playback`);
+              }
+            } catch (error) {
+              console.error('[PrevButton] Error loading Firebase music:', error);
+            }
+            
+            // Create a combined list
+            const combinedList = [...data, ...firebaseItems];
+            console.log(`[PrevButton] Combined music list: ${combinedList.length} items`);
+            
+            setMusicList(combinedList);
+            
+            // Now play the previous song with the fresh list
+            playPreviousSong(combinedList, albums);
+          } else {
+            console.error('Failed to fetch music list for Previous button');
+            // Even if fetch fails, try with whatever might be in the existing list
+            playPreviousSong(musicList, albums);
+          }
+        } catch (error) {
+          console.error('Error fetching music list for Previous button:', error);
+          // Even if fetch fails, try with whatever might be in the existing list
+          playPreviousSong(musicList, albums);
+        }
+      };
+      
+      fetchMusicList();
+    } else {
+      // If music list is already loaded, just play previous song
+      debounce(() => {
+        console.log("🔵 Calling playPreviousSong with musicList:", musicList?.length || 0, "items");
+        playPreviousSong(musicList, albums);
+      });
+    }
   };
   
   // Handle play/pause with debounce
@@ -319,9 +433,9 @@ const NowPlayingBar = () => {
                   ⏪
                 </button>
                 <button
-                  className={styles.playbackButton}
+                  className={`${styles.playbackButton} ${styles.playButton}`}
                   onClick={handlePlayPause}
-                  title="Play/Pause"
+                  title={isPlaying ? 'Pause' : 'Play'}
                 >
                   {isPlaying ? '❚❚' : '▶'}
                 </button>
