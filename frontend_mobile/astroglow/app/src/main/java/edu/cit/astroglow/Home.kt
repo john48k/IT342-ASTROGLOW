@@ -183,13 +183,13 @@ class HomeActivity : ComponentActivity() {
         
         // Check if user is already logged in
         val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
-        val userId = sharedPreferences.getLong("user_id", -1)
-        
-        if (userId == -1L) {
+                val userId = sharedPreferences.getLong("user_id", -1)
+
+                if (userId == -1L) {
             // Only redirect to login if there's no valid user ID
-            val intent = Intent(this, LoginActivity::class.java)
-            startActivity(intent)
-            finish()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    startActivity(intent)
+                    finish()
             return
         }
         
@@ -309,7 +309,7 @@ class HomeActivity : ComponentActivity() {
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         }
-                                    } else {
+                } else {
                                         withContext(Dispatchers.Main) {
                                             Toast.makeText(
                                                 this@HomeActivity,
@@ -361,10 +361,12 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
     var showProfileTab by remember { mutableStateOf(false) }
     var profileImage by remember { mutableStateOf(initialProfileImage) }
     var currentUserName by remember { mutableStateOf(userName) }
-    var isDarkMode by remember { mutableStateOf(true) }
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
     val userId = sharedPreferences.getLong("user_id", -1)
+    var isDarkMode by remember { 
+        mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) 
+    }
 
     // Fetch profile picture when component is created
     LaunchedEffect(userId) {
@@ -557,13 +559,13 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                     .background(Color.Black)
             } else {
                 Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(firstColor, secondColor)
-                        )
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(firstColor, secondColor)
                     )
+                )
             }
         ) {
             when {
@@ -1491,12 +1493,12 @@ fun HomeTabWithSearch(userName: String) {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .width(160.dp)
-                                .height(140.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color.White)
+                    Box(
+                        modifier = Modifier
+                            .width(160.dp)
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.White)
                         )
                         Box(
                             modifier = Modifier
@@ -1593,8 +1595,8 @@ fun HomeTabWithSearch(userName: String) {
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(Color.White)
                         )
-                        Box(
-                            modifier = Modifier
+                Box(
+                    modifier = Modifier
                                 .width(160.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
@@ -1606,12 +1608,12 @@ fun HomeTabWithSearch(userName: String) {
                                     )
                                 )
                                 .padding(vertical = 4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
                                 text = "Favorite ${index + 1}",
                                 color = Color.White,
-                                fontSize = 14.sp,
+                        fontSize = 14.sp,
                                 fontFamily = interFontFamily,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.width(160.dp)
