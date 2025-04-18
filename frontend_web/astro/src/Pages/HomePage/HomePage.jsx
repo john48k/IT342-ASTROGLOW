@@ -9,6 +9,7 @@ import styles from "./HomePage.module.css";
 import Modal from '../../components/Modal/Modal';
 import AudioUploader from "../../components/AudioUploader";
 import UploadModal from '../../components/UploadModal';
+import { registerHomePageNavHandlers, unregisterHomePageNavHandlers } from "../../components/NowPlayingBar/NowPlayingBar";
 
 // Helper function to check if a string is a data URI
 const isDataUri = (str) => {
@@ -25,51 +26,69 @@ const getSafeImageUrl = (imageUrl, getImageUrl) => {
 
 // Add this function after imports and before the component definition
 const resizeImage = (file, maxWidth = 800, maxHeight = 600, quality = 0.7) => {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    // Create a FileReader to read the file
     const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
+    
+    // Set up the FileReader onload event
+    reader.onload = (readerEvent) => {
+      // Create an image object
       const img = new Image();
-      img.src = event.target.result;
-
+      
+      // Set up the image onload event
       img.onload = () => {
-        // Calculate new dimensions while maintaining aspect ratio
+        // Check if resizing is needed
         let width = img.width;
         let height = img.height;
-
+        
+        // Calculate new dimensions while maintaining aspect ratio
         if (width > maxWidth) {
-          height = Math.round(height * (maxWidth / width));
+          height = (height * maxWidth) / width;
           width = maxWidth;
         }
-
+        
         if (height > maxHeight) {
-          width = Math.round(width * (maxHeight / height));
+          width = (width * maxHeight) / height;
           height = maxHeight;
         }
-
-        // Create canvas and resize
+        
+        // Create a canvas element
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
-
-        // Draw resized image
+        
+        // Draw the image on the canvas
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-
-        // Convert to base64 with reduced quality
-        const resizedBase64 = canvas.toDataURL(file.type, quality);
-
-        // Log size reduction
-        console.log(`Original size: ~${Math.round(event.target.result.length / 1024)}KB, Resized: ~${Math.round(resizedBase64.length / 1024)}KB`);
-
-        resolve(resizedBase64);
+        
+        // Get the resized image as a data URL
+        const dataUrl = canvas.toDataURL(file.type, quality);
+        
+        // Resolve the promise with the resized image data URL
+        resolve(dataUrl);
       };
+      
+      // Handle image load error
+      img.onerror = (error) => {
+        reject(new Error('Error loading image.'));
+      };
+      
+      // Set the image source to the file data
+      img.src = readerEvent.target.result;
     };
+    
+    // Handle FileReader error
+    reader.onerror = (error) => {
+      reject(new Error('Error reading file.'));
+    };
+    
+    // Read the file as a data URL
+    reader.readAsDataURL(file);
   });
 };
 
 export const HomePage = () => {
-  const { user } = useUser();
+  const { user, isAuthenticated } = useUser();
   const { favorites, toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
   const {
     currentlyPlaying,
@@ -119,6 +138,33 @@ export const HomePage = () => {
   const doubleClickThreshold = 300; // milliseconds
   const isProcessingClickRef = useRef(false); // Track if we're currently processing a click
   const lockoutTimerRef = useRef(null); // For click lockout
+
+  // Albums state for playback functionality
+  const [albums, setAlbums] = useState([]);
+
+  // Register next/previous handlers and add key listeners
+  useEffect(() => {
+    // Register our handlers with the NowPlayingBar
+    registerHomePageNavHandlers(handleNextSong, handlePreviousSong);
+    
+    // Add keyboard navigation
+    const handleKeyDown = (e) => {
+      // Handle media key or keyboard shortcuts for next/previous
+      if (e.key === 'MediaTrackNext' || (e.ctrlKey && e.key === 'ArrowRight')) {
+        handleNextSong();
+      } else if (e.key === 'MediaTrackPrevious' || (e.ctrlKey && e.key === 'ArrowLeft')) {
+        handlePreviousSong();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
+    // Clean up on unmount
+    return () => {
+      unregisterHomePageNavHandlers();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [musicList, availableMusicList, currentlyPlaying, musicCategory]);
 
   // Fetch music lists when component mounts
   useEffect(() => {
@@ -251,6 +297,27 @@ export const HomePage = () => {
 
       // Set the available music list in state
       setAvailableMusicList(otherUsersMusic);
+      
+      // Save to localStorage with display index to preserve UI order
+      const musicFilesWithIndex = otherUsersMusic.map((item, index) => ({
+        ...item,
+        displayIndex: index,
+        category: 'available'
+      }));
+      
+      console.log('Saving Firebase music list to localStorage with display indices', 
+        `(${musicFilesWithIndex.length} items)`);
+      
+      // Log the first few items to verify correct order
+      if (musicFilesWithIndex.length > 0) {
+        console.log('First few items in order:');
+        musicFilesWithIndex.slice(0, 3).forEach((item, idx) => {
+          console.log(`${idx}: ${item.title} by ${item.artist} (ID: ${item.id})`);
+        });
+      }
+      
+      // Save to localStorage for the NowPlayingBar to use
+      localStorage.setItem('firebase-music-list', JSON.stringify(musicFilesWithIndex));
       
       return otherUsersMusic;
     } catch (error) {
@@ -866,6 +933,264 @@ export const HomePage = () => {
       isProcessingClickRef.current = false;
       lockoutTimerRef.current = null;
     }, duration);
+  };
+
+  // Handler for next song button - ensures it stays within the current section
+  const handleNextSong = () => {
+    console.log("Next song requested in HomePage");
+    console.log("Current music category:", musicCategory);
+    
+    // Set processing flag to prevent rapid clicks
+    if (isProcessingClickRef.current) {
+      console.log("Still processing previous action, ignoring request");
+      return;
+    }
+    
+    // Lock playback to prevent multiple simultaneous actions
+    lockPlayback(1000);
+    
+    // First stop the current playback to prevent multiple tracks playing
+    stopPlayback().then(() => {
+      // Determine which list to use based on the current category
+      if (musicCategory === 'uploaded') {
+        // Use uploaded music list for navigation
+        console.log("Using uploaded music list for next song");
+        
+        if (musicList.length > 0) {
+          // Find current track index
+          const currentIndex = musicList.findIndex(item => {
+            const itemId = String(item.musicId || item.id || '');
+            return itemId === String(currentlyPlaying);
+          });
+          
+          console.log(`Current index in uploaded list: ${currentIndex} of ${musicList.length}`);
+          
+          // If found in list and not the last track
+          if (currentIndex !== -1 && currentIndex < musicList.length - 1) {
+            const nextTrack = musicList[currentIndex + 1];
+            console.log(`Playing next track: ${nextTrack.title || 'Unknown'}`);
+            
+            // Play the track directly to avoid playNextSong complexity
+            playMusic(String(nextTrack.musicId), nextTrack.audioUrl, 'uploaded');
+          } 
+          // If last track, loop to first
+          else if (currentIndex === musicList.length - 1) {
+            const firstTrack = musicList[0];
+            console.log(`Looping to first track: ${firstTrack.title || 'Unknown'}`);
+            
+            playMusic(String(firstTrack.musicId), firstTrack.audioUrl, 'uploaded');
+          }
+          // If not found, start with the first track
+          else {
+            const firstTrack = musicList[0];
+            console.log(`Track not found in list, playing first: ${firstTrack.title || 'Unknown'}`);
+            
+            playMusic(String(firstTrack.musicId), firstTrack.audioUrl, 'uploaded');
+          }
+        } else {
+          console.log("Uploaded music list is empty");
+          playNextSong(musicList, albums);
+        }
+      } else if (musicCategory === 'available') {
+        // Use available music list for navigation
+        console.log("Using available music list for next song");
+        
+        if (availableMusicList.length > 0) {
+          // Find current track index
+          const currentIndex = availableMusicList.findIndex(item => {
+            const itemId = String(item.musicId || item.id || '');
+            return itemId === String(currentlyPlaying);
+          });
+          
+          console.log(`Current index in available list: ${currentIndex} of ${availableMusicList.length}`);
+          
+          // If found in list and not the last track
+          if (currentIndex !== -1 && currentIndex < availableMusicList.length - 1) {
+            const nextTrack = availableMusicList[currentIndex + 1];
+            console.log(`Playing next track: ${nextTrack.title || 'Unknown'}`);
+            
+            // Play the track directly to avoid playNextSong complexity
+            playMusic(String(nextTrack.id), nextTrack.audioUrl, 'available');
+          } 
+          // If last track, loop to first
+          else if (currentIndex === availableMusicList.length - 1) {
+            const firstTrack = availableMusicList[0];
+            console.log(`Looping to first track: ${firstTrack.title || 'Unknown'}`);
+            
+            playMusic(String(firstTrack.id), firstTrack.audioUrl, 'available');
+          }
+          // If not found, start with the first track
+          else {
+            const firstTrack = availableMusicList[0];
+            console.log(`Track not found in list, playing first: ${firstTrack.title || 'Unknown'}`);
+            
+            playMusic(String(firstTrack.id), firstTrack.audioUrl, 'available');
+          }
+        } else {
+          console.log("Available music list is empty");
+          playNextSong(availableMusicList, albums);
+        }
+      } else {
+        // If category is not set, try to determine it from the current track
+        const isInUploadedList = musicList.some(item => {
+          const itemId = String(item.musicId || item.id || '');
+          return itemId === String(currentlyPlaying);
+        });
+        
+        const isInAvailableList = availableMusicList.some(item => {
+          const itemId = String(item.musicId || item.id || '');
+          return itemId === String(currentlyPlaying);
+        });
+        
+        if (isInUploadedList) {
+          console.log("Current track found in uploaded list, using uploaded for next");
+          setMusicCategory('uploaded');
+          playNextSong(musicList, albums);
+        } else if (isInAvailableList) {
+          console.log("Current track found in available list, using available for next");
+          setMusicCategory('available');
+          playNextSong(availableMusicList, albums);
+        } else {
+          // Fallback to combined list if we can't determine where the current track is
+          console.log("Using combined list for next (fallback)");
+          const combinedList = [...musicList, ...availableMusicList];
+          playNextSong(combinedList, albums);
+        }
+      }
+    }).catch(err => {
+      console.error("Error stopping playback before next song:", err);
+      // Reset processing flag in case of error
+      isProcessingClickRef.current = false;
+    });
+  };
+  
+  // Handler for previous song button - ensures it stays within the current section
+  const handlePreviousSong = () => {
+    console.log("Previous song requested in HomePage");
+    console.log("Current music category:", musicCategory);
+    
+    // Set processing flag to prevent rapid clicks
+    if (isProcessingClickRef.current) {
+      console.log("Still processing previous action, ignoring request");
+      return;
+    }
+    
+    // Lock playback to prevent multiple simultaneous actions
+    lockPlayback(1000);
+    
+    // First stop the current playback to prevent multiple tracks playing
+    stopPlayback().then(() => {
+      // Determine which list to use based on the current category
+      if (musicCategory === 'uploaded') {
+        // Use uploaded music list for navigation
+        console.log("Using uploaded music list for previous song");
+        
+        if (musicList.length > 0) {
+          // Find current track index
+          const currentIndex = musicList.findIndex(item => {
+            const itemId = String(item.musicId || item.id || '');
+            return itemId === String(currentlyPlaying);
+          });
+          
+          console.log(`Current index in uploaded list: ${currentIndex} of ${musicList.length}`);
+          
+          // If found in list and not the first track
+          if (currentIndex > 0) {
+            const prevTrack = musicList[currentIndex - 1];
+            console.log(`Playing previous track: ${prevTrack.title || 'Unknown'}`);
+            
+            // Play the track directly to avoid playPreviousSong complexity
+            playMusic(String(prevTrack.musicId), prevTrack.audioUrl, 'uploaded');
+          } 
+          // If first track, loop to last
+          else if (currentIndex === 0) {
+            const lastTrack = musicList[musicList.length - 1];
+            console.log(`Looping to last track: ${lastTrack.title || 'Unknown'}`);
+            
+            playMusic(String(lastTrack.musicId), lastTrack.audioUrl, 'uploaded');
+          }
+          // If not found, start with the last track
+          else {
+            const lastTrack = musicList[musicList.length - 1];
+            console.log(`Track not found in list, playing last: ${lastTrack.title || 'Unknown'}`);
+            
+            playMusic(String(lastTrack.musicId), lastTrack.audioUrl, 'uploaded');
+          }
+        } else {
+          console.log("Uploaded music list is empty");
+          playPreviousSong(musicList, albums);
+        }
+      } else if (musicCategory === 'available') {
+        // Use available music list for navigation
+        console.log("Using available music list for previous song");
+        
+        if (availableMusicList.length > 0) {
+          // Find current track index
+          const currentIndex = availableMusicList.findIndex(item => {
+            const itemId = String(item.musicId || item.id || '');
+            return itemId === String(currentlyPlaying);
+          });
+          
+          console.log(`Current index in available list: ${currentIndex} of ${availableMusicList.length}`);
+          
+          // If found in list and not the first track
+          if (currentIndex > 0) {
+            const prevTrack = availableMusicList[currentIndex - 1];
+            console.log(`Playing previous track: ${prevTrack.title || 'Unknown'}`);
+            
+            // Play the track directly to avoid playPreviousSong complexity
+            playMusic(String(prevTrack.id), prevTrack.audioUrl, 'available');
+          } 
+          // If first track, loop to last
+          else if (currentIndex === 0) {
+            const lastTrack = availableMusicList[availableMusicList.length - 1];
+            console.log(`Looping to last track: ${lastTrack.title || 'Unknown'}`);
+            
+            playMusic(String(lastTrack.id), lastTrack.audioUrl, 'available');
+          }
+          // If not found, start with the last track
+          else {
+            const lastTrack = availableMusicList[availableMusicList.length - 1];
+            console.log(`Track not found in list, playing last: ${lastTrack.title || 'Unknown'}`);
+            
+            playMusic(String(lastTrack.id), lastTrack.audioUrl, 'available');
+          }
+        } else {
+          console.log("Available music list is empty");
+          playPreviousSong(availableMusicList, albums);
+        }
+      } else {
+        // If category is not set, try to determine it from the current track
+        const isInUploadedList = musicList.some(item => {
+          const itemId = String(item.musicId || item.id || '');
+          return itemId === String(currentlyPlaying);
+        });
+        
+        const isInAvailableList = availableMusicList.some(item => {
+          const itemId = String(item.musicId || item.id || '');
+          return itemId === String(currentlyPlaying);
+        });
+        
+        if (isInUploadedList) {
+          console.log("Current track found in uploaded list, using uploaded for previous");
+          setMusicCategory('uploaded');
+          playPreviousSong(musicList, albums);
+        } else if (isInAvailableList) {
+          console.log("Current track found in available list, using available for previous");
+          setMusicCategory('available');
+          playPreviousSong(availableMusicList, albums);
+        } else {
+          // Fallback to combined list if we can't determine where the current track is
+          console.log("Using combined list for previous (fallback)");
+          const combinedList = [...musicList, ...availableMusicList];
+          playPreviousSong(combinedList, albums);
+        }
+      }
+    }).catch(err => {
+      console.error("Error stopping playback before previous song:", err);
+      // Reset processing flag in case of error
+      isProcessingClickRef.current = false;
+    });
   };
 
   return (

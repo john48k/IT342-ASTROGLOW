@@ -12,9 +12,9 @@ export const AudioPlayerProvider = ({ children }) => {
   const [currentTrackData, setCurrentTrackData] = useState(null);
   const progressIntervalRef = useRef(null);
   const { isAuthenticated } = useUser();
-  
+
   // Add a state to track which category of music the user is browsing
-  const [musicCategory, setMusicCategory] = useState('all'); // 'uploaded', 'available', or 'all'
+  const [musicCategory, setMusicCategory] = useState('all'); // 'uploaded', 'available', 'favorites', or 'all'
 
   // Need to track the pending seek request
   const pendingSeekRef = useRef(null);
@@ -178,18 +178,29 @@ export const AudioPlayerProvider = ({ children }) => {
     }
   }, [isAuthenticated, isPlaying, audioElement]);
 
+  // Function to play a specific music track
   const playMusic = async (musicId, directAudioUrl = null, category = null) => {
+    console.log(`🎵 PlayMusic called with: ID=${musicId}, URL=${directAudioUrl}, Category=${category}`);
+    
     try {
-      console.log(`Attempting to play music with ID: ${musicId}`);
+      // Set the category if provided
+      if (category) {
+        setMusicCategory(category);
+        console.log(`🎵 Setting music category to: ${category}`);
+      }
+      
+      // Display debug info
+      console.log(`🎵 Starting playback for track: ${musicId}`);
       
       // Ensure any current playback is completely stopped
       await stopPlayback();
       
       // Short delay to ensure clean audio context
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Create a completely new audio element to avoid any state issues
       const newAudioElement = new Audio();
+      newAudioElement.autoplay = false; // Prevent auto-playing until we're ready
       
       // Set current track info right away to update UI
       setCurrentlyPlaying(musicId);
@@ -198,16 +209,29 @@ export const AudioPlayerProvider = ({ children }) => {
       if (category) {
         // Category is explicitly provided
         setMusicCategory(category);
+        console.log(`🎵 Setting music category to: ${category} (explicitly provided)`);
       } else if (musicId) {
         // Try to determine the category from the ID
         const idString = String(musicId);
         if (idString.startsWith('firebase-')) {
           setMusicCategory('available');
+          console.log(`🎵 Setting music category to: available (detected from Firebase ID)`);
         } else if (idString.match(/^\d+$/)) {
           // Numeric IDs are usually from uploaded music
           setMusicCategory('uploaded');
+          console.log(`🎵 Setting music category to: uploaded (detected from numeric ID)`);
+        } else {
+          // If we can't determine, try to use Firebase prefix as a heuristic
+          const isFirebase = idString.includes('firebase-');
+          if (isFirebase) {
+            setMusicCategory('available');
+            console.log(`🎵 Setting music category to: available (detected from Firebase prefix)`);
+          } else {
+            // Default to "all" category if we can't determine
+            setMusicCategory('all');
+            console.log(`🎵 Setting music category to: all (could not determine category)`);
+          }
         }
-        // Otherwise keep the current category
       }
       
       // Function to handle audio fetch failures
@@ -228,13 +252,13 @@ export const AudioPlayerProvider = ({ children }) => {
               directAudioUrl !== window.location.href && 
               directAudioUrl !== 'http://localhost:5173/home') {
               
-            console.log('Using direct audio URL:', directAudioUrl);
-            
-            // Set the source and type
-            newAudioElement.src = directAudioUrl;
-            newAudioElement.type = getAudioTypeFromUrl(directAudioUrl);
+          console.log('🎵 Using direct audio URL:', directAudioUrl);
+          
+          // Set the source and type
+          newAudioElement.src = directAudioUrl;
+          newAudioElement.type = getAudioTypeFromUrl(directAudioUrl);
           } else if (directAudioUrl) {
-            console.log('Invalid audio URL detected, skipping URL assignment');
+            console.log('🎵 Invalid audio URL detected, skipping URL assignment');
             // If we're a Firebase track but have an invalid URL, return early
             // to avoid attempting to play without a valid source
             if (musicIdString.startsWith('firebase-')) {
@@ -245,7 +269,7 @@ export const AudioPlayerProvider = ({ children }) => {
           // Set up event handlers for the new audio element
           const setupAudioEvents = () => {
             newAudioElement.onended = () => {
-              console.log('Audio playback ended');
+              console.log('🎵 Audio playback ended');
               // Reset state when audio ends
               setIsPlaying(false);
               setCurrentlyPlaying(null);
@@ -256,12 +280,12 @@ export const AudioPlayerProvider = ({ children }) => {
             };
             
             newAudioElement.onplay = () => {
-              console.log('Audio started playing');
+              console.log('🎵 Audio started playing');
               setIsPlaying(true);
             };
             
             newAudioElement.onpause = () => {
-              console.log('Audio paused');
+              console.log('🎵 Audio paused');
               setIsPlaying(false);
             };
             
@@ -301,7 +325,7 @@ export const AudioPlayerProvider = ({ children }) => {
           // Wait for metadata before playing to avoid playback errors
           newAudioElement.onloadedmetadata = () => {
             try {
-              console.log('Audio metadata loaded, starting playback');
+              console.log('🎵 Audio metadata loaded, starting playback');
               newAudioElement.play().catch(playError => {
                 console.error('Error starting playback:', playError);
                 console.error('Audio element state during play error:', {
@@ -359,15 +383,15 @@ export const AudioPlayerProvider = ({ children }) => {
           }
           
           const musicData = await response.json();
-          console.log('Fetched music data:', musicData);
+          console.log('🎵 Fetched music data:', musicData);
           
           // Check if we have an audio URL
           if (musicData.audioUrl) {
-            console.log('Using audio URL from music data:', musicData.audioUrl);
+            console.log('🎵 Using audio URL from music data:', musicData.audioUrl);
             newAudioElement.src = musicData.audioUrl;
           } else if (musicData.audioData) {
             // If we have base64 audio data, create a data URL
-            console.log('Using base64 audio data');
+            console.log('🎵 Using base64 audio data');
             newAudioElement.src = `data:audio/mpeg;base64,${musicData.audioData}`;
           } else {
             throw new Error('No audio data available for this track');
@@ -376,7 +400,7 @@ export const AudioPlayerProvider = ({ children }) => {
           // Set up event handlers
           const setupAudioEvents = () => {
             newAudioElement.onended = () => {
-              console.log('Audio playback ended');
+              console.log('🎵 Audio playback ended');
               setIsPlaying(false);
               setCurrentlyPlaying(null);
               setAudioElement(null);
@@ -386,12 +410,12 @@ export const AudioPlayerProvider = ({ children }) => {
             };
             
             newAudioElement.onplay = () => {
-              console.log('Audio started playing');
+              console.log('🎵 Audio started playing');
               setIsPlaying(true);
             };
             
             newAudioElement.onpause = () => {
-              console.log('Audio paused');
+              console.log('🎵 Audio paused');
               setIsPlaying(false);
             };
             
@@ -423,7 +447,7 @@ export const AudioPlayerProvider = ({ children }) => {
           // Wait for metadata before playing
           newAudioElement.onloadedmetadata = () => {
             try {
-              console.log('Audio metadata loaded, starting playback');
+              console.log('🎵 Audio metadata loaded, starting playback');
               newAudioElement.play().catch(playError => {
                 console.error('Error starting playback:', playError);
               });
@@ -599,7 +623,7 @@ export const AudioPlayerProvider = ({ children }) => {
     }
   };
 
-  // Function to play next song in the list
+  // Play the next song in the music list
   const playNextSong = (musicList, albums) => {
     try {
       if (!currentlyPlaying) {
@@ -611,6 +635,10 @@ export const AudioPlayerProvider = ({ children }) => {
       console.log('⏭️ Play Next: Current track ID:', currentlyPlaying);
       console.log('⏭️ Music list contains', musicList?.length || 0, 'items');
       console.log('⏭️ Current music category:', musicCategory);
+      
+      // Store the current category to maintain context when changing songs
+      const currentCategory = musicCategory || 'all';
+      console.log('⏭️ Using category for next song:', currentCategory);
       
       // If musicList is empty, just restart the current song
       if (!musicList || !Array.isArray(musicList) || musicList.length === 0) {
@@ -637,8 +665,9 @@ export const AudioPlayerProvider = ({ children }) => {
         // For uploaded items, typically numeric IDs or other non-Firebase IDs
         const isUploadedItem = !isFirebaseItem && rawIdStr !== '';
         
-        // Determine the category based on ID format
-        const category = isFirebaseItem ? 'available' : (isUploadedItem ? 'uploaded' : 'unknown');
+        // Get the category from the item or determine based on ID format
+        // If item already has a category property, use it (e.g., 'favorites')
+        const category = item.category || (isFirebaseItem ? 'available' : (isUploadedItem ? 'uploaded' : 'unknown'));
         
         // Create a normalized item with consistent ID field for comparison
         return {
@@ -649,13 +678,22 @@ export const AudioPlayerProvider = ({ children }) => {
           isFirebase: isFirebaseItem,
           // For determining if it's an uploaded item
           isUploaded: isUploadedItem,
-          // For category filtering
+          // For category filtering - preserve the original category if present
           category: category,
           // Extract the title portion of the filename for Firebase items
           // This helps with partial matching
-          titleFromId: isFirebaseItem ? extractTitleFromFirebaseId(rawIdStr) : ''
+          titleFromId: isFirebaseItem ? extractTitleFromFirebaseId(rawIdStr) : '',
+          // For display order sorting
+          displayIndex: item.displayIndex || 0,
+          // Original position in the array (to maintain UI order)
+          originalIndex: 0
         };
       }).filter(item => item.trackId !== null);
+      
+      // Assign original indices to preserve UI order
+      normalizedList.forEach((item, index) => {
+        item.originalIndex = index;
+      });
       
       // Helper function to extract the title portion from a Firebase ID
       function extractTitleFromFirebaseId(id) {
@@ -684,13 +722,28 @@ export const AudioPlayerProvider = ({ children }) => {
       } else if (musicCategory === 'available') {
         filteredList = normalizedList.filter(item => item.isFirebase);
         console.log('⏭️ Filtered to available music only:', filteredList.length, 'items');
+      } else if (musicCategory === 'favorites') {
+        // For favorites, we use the list as provided - it's already filtered
+        filteredList = normalizedList;
+        console.log('⏭️ Using favorites list with:', filteredList.length, 'items');
+      } else {
+        console.log('⏭️ Using all music tracks:', normalizedList.length, 'items');
       }
       
-      // If the filtered list is empty, use the full list
+      // Sort the filtered list by original index to maintain UI order
+      filteredList.sort((a, b) => a.originalIndex - b.originalIndex);
+      
+      // If the filtered list is empty, use all tracks as fallback
       if (filteredList.length === 0) {
-        console.log('⏭️ Filtered list is empty, using full list');
+        console.log('⏭️ Filtered list is empty, using all tracks as fallback');
         filteredList = normalizedList;
       }
+      
+      // Log the order of tracks in the filtered list
+      console.log('⏭️ Filtered list order:');
+      filteredList.forEach((item, index) => {
+        console.log(`   ${index}: ${item.title || 'Unnamed'} - ${item.artist || 'Unknown Artist'} (ID: ${item.trackId})`);
+      });
       
       // Find the current track
       const currentTrackIndex = filteredList.findIndex(item => 
@@ -716,10 +769,11 @@ export const AudioPlayerProvider = ({ children }) => {
           // Check if one contains the other (both ways)
           if (itemId.includes(currentId) || currentId.includes(itemId)) return true;
           
-          // If both are Firebase items, try matching by the title portion
+          // Special case for Firebase items
           const currentIsFirebase = currentId.includes('firebase-');
           const itemIsFirebase = itemId.includes('firebase-');
           
+          // If both are Firebase items, try title matching
           if (currentIsFirebase && itemIsFirebase) {
             // Extract title portions for comparison
             const currentTitle = extractTitleFromFirebaseId(currentId).toLowerCase();
@@ -735,6 +789,9 @@ export const AudioPlayerProvider = ({ children }) => {
             }
           }
           
+          // For comparison between database and firebase music:
+          // Database items often have consistent numeric IDs
+          // So we primarily use category matching to determine which list to navigate
           return false;
         });
         
@@ -757,9 +814,9 @@ export const AudioPlayerProvider = ({ children }) => {
           if (nextTrack.isFirebase && nextTrack.audioUrl && 
               nextTrack.audioUrl !== window.location.href && 
               nextTrack.audioUrl !== 'http://localhost:5173/home') {
-            playMusic(nextTrack.trackId, nextTrack.audioUrl, nextTrack.category);
+            playMusic(nextTrack.trackId, nextTrack.audioUrl, currentCategory);
           } else {
-            playMusic(nextTrack.trackId, null, nextTrack.category);
+            playMusic(nextTrack.trackId, null, currentCategory);
           }
           return true;
         }
@@ -778,9 +835,9 @@ export const AudioPlayerProvider = ({ children }) => {
         if (firstTrack.isFirebase && firstTrack.audioUrl && 
             firstTrack.audioUrl !== window.location.href && 
             firstTrack.audioUrl !== 'http://localhost:5173/home') {
-          playMusic(firstTrack.trackId, firstTrack.audioUrl, firstTrack.category);
+          playMusic(firstTrack.trackId, firstTrack.audioUrl, currentCategory);
         } else {
-          playMusic(firstTrack.trackId, null, firstTrack.category);
+          playMusic(firstTrack.trackId, null, currentCategory);
         }
         return true;
       }
@@ -802,9 +859,9 @@ export const AudioPlayerProvider = ({ children }) => {
         if (nextTrack.isFirebase && nextTrack.audioUrl && 
             nextTrack.audioUrl !== window.location.href && 
             nextTrack.audioUrl !== 'http://localhost:5173/home') {
-          playMusic(nextTrack.trackId, nextTrack.audioUrl, nextTrack.category);
+          playMusic(nextTrack.trackId, nextTrack.audioUrl, currentCategory);
         } else {
-          playMusic(nextTrack.trackId, null, nextTrack.category);
+          playMusic(nextTrack.trackId, null, currentCategory);
         }
         return true;
       }
@@ -825,9 +882,9 @@ export const AudioPlayerProvider = ({ children }) => {
         if (firstTrack.isFirebase && firstTrack.audioUrl && 
             firstTrack.audioUrl !== window.location.href && 
             firstTrack.audioUrl !== 'http://localhost:5173/home') {
-          playMusic(firstTrack.trackId, firstTrack.audioUrl, firstTrack.category);
+          playMusic(firstTrack.trackId, firstTrack.audioUrl, currentCategory);
         } else {
-          playMusic(firstTrack.trackId, null, firstTrack.category);
+          playMusic(firstTrack.trackId, null, currentCategory);
         }
         return true;
       }
@@ -850,9 +907,9 @@ export const AudioPlayerProvider = ({ children }) => {
         if (firstTrack.isFirebase && firstTrack.audioUrl && 
             firstTrack.audioUrl !== window.location.href && 
             firstTrack.audioUrl !== 'http://localhost:5173/home') {
-          playMusic(firstTrack.trackId, firstTrack.audioUrl, firstTrack.category);
+          playMusic(firstTrack.trackId, firstTrack.audioUrl, currentCategory);
         } else {
-          playMusic(firstTrack.trackId, null, firstTrack.category);
+          playMusic(firstTrack.trackId, null, currentCategory);
         }
         return true;
       }
@@ -864,7 +921,7 @@ export const AudioPlayerProvider = ({ children }) => {
     }
   };
 
-  // Function to play previous song in the list
+  // Play the previous song in the music list
   const playPreviousSong = (musicList, albums) => {
     try {
       if (!currentlyPlaying) {
@@ -876,6 +933,10 @@ export const AudioPlayerProvider = ({ children }) => {
       console.log('⏮️ Play Previous: Current track ID:', currentlyPlaying);
       console.log('⏮️ Music list contains', musicList?.length || 0, 'items');
       console.log('⏮️ Current music category:', musicCategory);
+      
+      // Store the current category to maintain context when changing songs
+      const currentCategory = musicCategory || 'all';
+      console.log('⏮️ Using category for previous song:', currentCategory);
       
       // If musicList is empty, just restart the current song
       if (!musicList || !Array.isArray(musicList) || musicList.length === 0) {
@@ -902,8 +963,9 @@ export const AudioPlayerProvider = ({ children }) => {
         // For uploaded items, typically numeric IDs or other non-Firebase IDs
         const isUploadedItem = !isFirebaseItem && rawIdStr !== '';
         
-        // Determine the category based on ID format
-        const category = isFirebaseItem ? 'available' : (isUploadedItem ? 'uploaded' : 'unknown');
+        // Get the category from the item or determine based on ID format
+        // If item already has a category property, use it (e.g., 'favorites')
+        const category = item.category || (isFirebaseItem ? 'available' : (isUploadedItem ? 'uploaded' : 'unknown'));
         
         // Create a normalized item with consistent ID field for comparison
         return {
@@ -914,13 +976,22 @@ export const AudioPlayerProvider = ({ children }) => {
           isFirebase: isFirebaseItem,
           // For determining if it's an uploaded item
           isUploaded: isUploadedItem,
-          // For category filtering
+          // For category filtering - preserve the original category if present
           category: category,
           // Extract the title portion of the filename for Firebase items
           // This helps with partial matching
-          titleFromId: isFirebaseItem ? extractTitleFromFirebaseId(rawIdStr) : ''
+          titleFromId: isFirebaseItem ? extractTitleFromFirebaseId(rawIdStr) : '',
+          // For display order sorting
+          displayIndex: item.displayIndex || 0,
+          // Original position in the array (to maintain UI order)
+          originalIndex: 0
         };
       }).filter(item => item.trackId !== null);
+      
+      // Assign original indices to preserve UI order
+      normalizedList.forEach((item, index) => {
+        item.originalIndex = index;
+      });
       
       // Helper function to extract the title portion from a Firebase ID
       function extractTitleFromFirebaseId(id) {
@@ -949,13 +1020,28 @@ export const AudioPlayerProvider = ({ children }) => {
       } else if (musicCategory === 'available') {
         filteredList = normalizedList.filter(item => item.isFirebase);
         console.log('⏮️ Filtered to available music only:', filteredList.length, 'items');
+      } else if (musicCategory === 'favorites') {
+        // For favorites, we use the list as provided - it's already filtered
+        filteredList = normalizedList;
+        console.log('⏮️ Using favorites list with:', filteredList.length, 'items');
+      } else {
+        console.log('⏮️ Using all music tracks:', normalizedList.length, 'items');
       }
       
-      // If the filtered list is empty, use the full list
+      // Sort the filtered list by original index to maintain UI order
+      filteredList.sort((a, b) => a.originalIndex - b.originalIndex);
+      
+      // If the filtered list is empty, use all tracks as fallback
       if (filteredList.length === 0) {
-        console.log('⏮️ Filtered list is empty, using full list');
+        console.log('⏮️ Filtered list is empty, using all tracks as fallback');
         filteredList = normalizedList;
       }
+      
+      // Log the order of tracks in the filtered list
+      console.log('⏮️ Filtered list order:');
+      filteredList.forEach((item, index) => {
+        console.log(`   ${index}: ${item.title || 'Unnamed'} - ${item.artist || 'Unknown Artist'} (ID: ${item.trackId})`);
+      });
       
       // Find the current track
       const currentTrackIndex = filteredList.findIndex(item => 
@@ -981,10 +1067,11 @@ export const AudioPlayerProvider = ({ children }) => {
           // Check if one contains the other (both ways)
           if (itemId.includes(currentId) || currentId.includes(itemId)) return true;
           
-          // If both are Firebase items, try matching by the title portion
+          // Special case for Firebase items
           const currentIsFirebase = currentId.includes('firebase-');
           const itemIsFirebase = itemId.includes('firebase-');
           
+          // If both are Firebase items, try title matching
           if (currentIsFirebase && itemIsFirebase) {
             // Extract title portions for comparison
             const currentTitle = extractTitleFromFirebaseId(currentId).toLowerCase();
@@ -1000,6 +1087,9 @@ export const AudioPlayerProvider = ({ children }) => {
             }
           }
           
+          // For comparison between database and firebase music:
+          // Database items often have consistent numeric IDs
+          // So we primarily use category matching to determine which list to navigate
           return false;
         });
         
@@ -1022,9 +1112,9 @@ export const AudioPlayerProvider = ({ children }) => {
           if (prevTrack.isFirebase && prevTrack.audioUrl && 
               prevTrack.audioUrl !== window.location.href && 
               prevTrack.audioUrl !== 'http://localhost:5173/home') {
-            playMusic(prevTrack.trackId, prevTrack.audioUrl, prevTrack.category);
+            playMusic(prevTrack.trackId, prevTrack.audioUrl, currentCategory);
           } else {
-            playMusic(prevTrack.trackId, null, prevTrack.category);
+            playMusic(prevTrack.trackId, null, currentCategory);
           }
           return true;
         }
@@ -1043,9 +1133,9 @@ export const AudioPlayerProvider = ({ children }) => {
         if (lastTrack.isFirebase && lastTrack.audioUrl && 
             lastTrack.audioUrl !== window.location.href && 
             lastTrack.audioUrl !== 'http://localhost:5173/home') {
-          playMusic(lastTrack.trackId, lastTrack.audioUrl, lastTrack.category);
+          playMusic(lastTrack.trackId, lastTrack.audioUrl, currentCategory);
         } else {
-          playMusic(lastTrack.trackId, null, lastTrack.category);
+          playMusic(lastTrack.trackId, null, currentCategory);
         }
         return true;
       }
@@ -1067,9 +1157,9 @@ export const AudioPlayerProvider = ({ children }) => {
         if (prevTrack.isFirebase && prevTrack.audioUrl && 
             prevTrack.audioUrl !== window.location.href && 
             prevTrack.audioUrl !== 'http://localhost:5173/home') {
-          playMusic(prevTrack.trackId, prevTrack.audioUrl, prevTrack.category);
+          playMusic(prevTrack.trackId, prevTrack.audioUrl, currentCategory);
         } else {
-          playMusic(prevTrack.trackId, null, prevTrack.category);
+          playMusic(prevTrack.trackId, null, currentCategory);
         }
         return true;
       }
@@ -1090,9 +1180,9 @@ export const AudioPlayerProvider = ({ children }) => {
         if (lastTrack.isFirebase && lastTrack.audioUrl && 
             lastTrack.audioUrl !== window.location.href && 
             lastTrack.audioUrl !== 'http://localhost:5173/home') {
-          playMusic(lastTrack.trackId, lastTrack.audioUrl, lastTrack.category);
+          playMusic(lastTrack.trackId, lastTrack.audioUrl, currentCategory);
         } else {
-          playMusic(lastTrack.trackId, null, lastTrack.category);
+          playMusic(lastTrack.trackId, null, currentCategory);
         }
         return true;
       }
@@ -1115,9 +1205,9 @@ export const AudioPlayerProvider = ({ children }) => {
         if (lastTrack.isFirebase && lastTrack.audioUrl && 
             lastTrack.audioUrl !== window.location.href && 
             lastTrack.audioUrl !== 'http://localhost:5173/home') {
-          playMusic(lastTrack.trackId, lastTrack.audioUrl, lastTrack.category);
+          playMusic(lastTrack.trackId, lastTrack.audioUrl, currentCategory);
         } else {
-          playMusic(lastTrack.trackId, null, lastTrack.category);
+          playMusic(lastTrack.trackId, null, currentCategory);
         }
         return true;
       }
@@ -1179,6 +1269,90 @@ export const AudioPlayerProvider = ({ children }) => {
     }
   };
 
+  // Function to skip forward by a specific number of seconds
+  const skipForward = (seconds = 10) => {
+    try {
+      console.log(`Attempting to skip forward by ${seconds} seconds`);
+      
+      if (!audioElement) {
+        console.log("Audio element not available for skip forward");
+        return false;
+      }
+      
+      if (!audioElement.duration || isNaN(audioElement.duration)) {
+        console.log("Invalid duration for skip forward");
+        return false;
+      }
+      
+      const currentTime = audioElement.currentTime || 0;
+      const duration = audioElement.duration;
+      
+      // Calculate new position (clamped to the duration)
+      const newTime = Math.min(duration, currentTime + seconds);
+      
+      console.log(`Skipping from ${formatTime(currentTime)} to ${formatTime(newTime)}`);
+      
+      // Set the current time
+      audioElement.currentTime = newTime;
+      
+      // Update the time display
+      setAudioTime({
+        elapsed: formatTime(newTime),
+        total: formatTime(duration)
+      });
+      
+      // Also update progress
+      setAudioProgress((newTime / duration) * 100);
+      
+      return true;
+    } catch (error) {
+      console.error("Error in skipForward:", error);
+      return false;
+    }
+  };
+  
+  // Function to skip backward by a specific number of seconds
+  const skipBackward = (seconds = 10) => {
+    try {
+      console.log(`Attempting to skip backward by ${seconds} seconds`);
+      
+      if (!audioElement) {
+        console.log("Audio element not available for skip backward");
+        return false;
+      }
+      
+      if (!audioElement.duration || isNaN(audioElement.duration)) {
+        console.log("Invalid duration for skip backward");
+        return false;
+      }
+      
+      const currentTime = audioElement.currentTime || 0;
+      const duration = audioElement.duration;
+      
+      // Calculate new position (clamped to 0)
+      const newTime = Math.max(0, currentTime - seconds);
+      
+      console.log(`Skipping from ${formatTime(currentTime)} to ${formatTime(newTime)}`);
+      
+      // Set the current time
+      audioElement.currentTime = newTime;
+      
+      // Update the time display
+      setAudioTime({
+        elapsed: formatTime(newTime),
+        total: formatTime(duration)
+      });
+      
+      // Also update progress
+      setAudioProgress((newTime / duration) * 100);
+      
+      return true;
+    } catch (error) {
+      console.error("Error in skipBackward:", error);
+      return false;
+    }
+  };
+
   const stopPlayback = () => {
     return new Promise(resolve => {
       try {
@@ -1232,10 +1406,18 @@ export const AudioPlayerProvider = ({ children }) => {
             clearInterval(progressIntervalRef.current);
             progressIntervalRef.current = null;
           }
+          
+          // Explicitly stop all audio playback in case multiple elements are active
+          try {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            context.close().catch(err => console.error('Error closing audio context:', err));
+          } catch (err) {
+            console.error('Error creating/closing audio context:', err);
+          }
         }
         
-        // Give the browser a moment to release audio resources
-        setTimeout(resolve, 10);
+        // Give the browser extra time to release audio resources
+        setTimeout(resolve, 100);
       } catch (err) {
         console.error('Error in stopPlayback:', err);
         resolve(); // Resolve anyway to allow execution to continue
@@ -1253,6 +1435,8 @@ export const AudioPlayerProvider = ({ children }) => {
         playMusic,
         togglePlayPause,
         seekAudio,
+        skipForward,
+        skipBackward,
         playAlbumTrack,
         playNextSong,
         playPreviousSong,
@@ -1261,7 +1445,8 @@ export const AudioPlayerProvider = ({ children }) => {
         currentTrackData,
         getImageUrl,
         musicCategory,
-        setMusicCategory
+        setMusicCategory,
+        formatTime
       }}
     >
       {children}
