@@ -4,17 +4,44 @@ import { useUser } from './UserContext';
 const FavoritesContext = createContext();
 
 export const FavoritesProvider = ({ children }) => {
-  const [favorites, setFavorites] = useState(() => {
-    // Initialize from localStorage if available
-    const savedFavorites = localStorage.getItem('firebaseFavorites');
-    return savedFavorites ? JSON.parse(savedFavorites) : [];
-  });
   const { user } = useUser();
+  const [favorites, setFavorites] = useState([]);
+
+  // Initialize from localStorage when user changes
+  useEffect(() => {
+    if (user?.userId) {
+      // Use user-specific key for localStorage
+      const storageKey = `firebaseFavorites-${user.userId}`;
+      const savedFavorites = localStorage.getItem(storageKey);
+      
+      if (savedFavorites) {
+        try {
+          const parsedFavorites = JSON.parse(savedFavorites);
+          console.log(`Loaded ${parsedFavorites.length} Firebase favorites from localStorage for user ${user.userId}`);
+          setFavorites(parsedFavorites);
+        } catch (error) {
+          console.error('Error parsing favorites from localStorage:', error);
+          setFavorites([]);
+        }
+      } else {
+        // No saved favorites for this user
+        setFavorites([]);
+      }
+    } else {
+      // Clear favorites when no user is logged in
+      setFavorites([]);
+    }
+  }, [user?.userId]);
 
   // Save to localStorage whenever favorites change
   useEffect(() => {
-    localStorage.setItem('firebaseFavorites', JSON.stringify(favorites));
-  }, [favorites]);
+    if (user?.userId) {
+      // Use user-specific key for localStorage
+      const storageKey = `firebaseFavorites-${user.userId}`;
+      localStorage.setItem(storageKey, JSON.stringify(favorites));
+      console.log(`Saved ${favorites.length} Firebase favorites to localStorage for user ${user.userId}`);
+    }
+  }, [favorites, user?.userId]);
 
   // Load favorites from backend when component mounts or user changes
   useEffect(() => {
@@ -34,15 +61,18 @@ export const FavoritesProvider = ({ children }) => {
           
           if (response.ok) {
             const data = await response.json();
-            console.log(`Loaded ${data.length} favorites for user ID: ${user.userId}`);
-            // Only update database favorites, keep Firebase favorites
-            setFavorites(prevFavorites => {
-              const firebaseFavorites = prevFavorites.filter(fav => 
-                typeof fav.music?.filename === 'string' && 
-                fav.music.filename.startsWith('firebase-')
-              );
-              return [...data, ...firebaseFavorites];
-            });
+            console.log(`Loaded ${data.length} favorites from database for user ID: ${user.userId}`);
+            
+            // Get Firebase favorites from localStorage
+            const storageKey = `firebaseFavorites-${user.userId}`;
+            const savedFavorites = localStorage.getItem(storageKey);
+            const firebaseFavorites = savedFavorites ? JSON.parse(savedFavorites).filter(fav => 
+              typeof fav.music?.filename === 'string' && 
+              fav.music.filename.startsWith('firebase-')
+            ) : [];
+            
+            // Combine database favorites with Firebase favorites
+            setFavorites([...data, ...firebaseFavorites]);
           } else {
             console.error(`Error loading favorites: ${response.status} ${response.statusText}`);
           }
@@ -72,7 +102,8 @@ export const FavoritesProvider = ({ children }) => {
         
         if (response.ok) {
           const data = await response.json();
-          console.log(`Refreshed ${data.length} favorites for user ID: ${user.userId}`);
+          console.log(`Refreshed ${data.length} favorites from database for user ID: ${user.userId}`);
+          
           // Keep existing Firebase favorites while updating database favorites
           setFavorites(prevFavorites => {
             const firebaseFavorites = prevFavorites.filter(fav => 
@@ -135,6 +166,14 @@ export const FavoritesProvider = ({ children }) => {
               return [...prevFavorites, { music: { filename: musicId } }];
             }
           });
+          
+          // Update user-specific favorites in localStorage
+          const storageKey = `firebaseFavorites-${user.userId}`;
+          const updatedFavorites = isFavorited 
+            ? favorites.filter(fav => fav.music?.filename !== musicId)
+            : [...favorites, { music: { filename: musicId } }];
+          
+          localStorage.setItem(storageKey, JSON.stringify(updatedFavorites));
         } else {
           // For database music, refresh the favorites list
           await refreshFavorites();
@@ -143,7 +182,7 @@ export const FavoritesProvider = ({ children }) => {
     } catch (error) {
       console.error('Error toggling favorite:', error);
     }
-  }, [user?.userId, refreshFavorites]);
+  }, [user?.userId, refreshFavorites, favorites]);
 
   const isFavorite = useCallback((musicId) => {
     // Handle both Firebase and database music IDs
