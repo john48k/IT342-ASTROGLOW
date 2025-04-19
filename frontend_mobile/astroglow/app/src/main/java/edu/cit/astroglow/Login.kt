@@ -523,12 +523,6 @@ class LoginActivity : ComponentActivity() {
                         } catch (e: Exception) {
                             Log.e(TAG, "Error fetching user by email", e)
                         }
-                        
-                        // Special case for the user with email that should have ID 6
-                        if (userId <= 0 && email.contains("cg.fernandez")) {
-                            Log.d(TAG, "Special case detected for user with email containing 'cg.fernandez', using hardcoded ID 6")
-                            userId = 6L
-                        }
                     }
                     
                     // Make sure we have a valid user ID
@@ -636,12 +630,6 @@ class LoginActivity : ComponentActivity() {
                                         } catch (e: Exception) {
                                             Log.e(TAG, "Error fetching user by email", e)
                                         }
-                                        
-                                        // Special case for the user with email that should have ID 6
-                                        if (userId <= 0 && email.contains("cg.fernandez")) {
-                                            Log.d(TAG, "Special case detected for user with email containing 'cg.fernandez', using hardcoded ID 6")
-                                            userId = 6L
-                                        }
                                     }
                                     
                                     // Make sure we have a valid user ID
@@ -716,12 +704,6 @@ class LoginActivity : ComponentActivity() {
                                                     }
                                                 } catch (e: Exception) {
                                                     Log.e(TAG, "Error fetching user by email", e)
-                                                }
-                                                
-                                                // Special case for the user with email that should have ID 6
-                                                if (userId <= 0 && email.contains("cg.fernandez")) {
-                                                    Log.d(TAG, "Special case detected for user with email containing 'cg.fernandez', using hardcoded ID 6")
-                                                    userId = 6L
                                                 }
                                             }
                                             
