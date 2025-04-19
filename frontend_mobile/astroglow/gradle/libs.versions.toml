@@ -2,6 +2,8 @@
 agp = "8.9.1"
 coilCompose = "2.1.0"
 converterGson = "2.9.0"
+fuel = "2.3.1"
+googleServices = "4.4.2"
 kotlin = "2.0.0"
 coreKtx = "1.10.1"
 junit = "4.13.2"
@@ -15,6 +17,8 @@ compose = "1.7.8"
 lifecycleViewmodelKtx = "2.8.7"
 loggingInterceptor = "4.9.3"
 okhttp = "4.9.3"
+playServicesAuth = "21.3.0"
+playServicesAuthVersion = "20.7.0"
 retrofit = "2.9.0"
 uiTextGoogleFonts = "1.7.8"
 compose_material_icons = "1.6.8"
@@ -30,6 +34,11 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-ui-text-google-fonts = { module = "androidx.compose.ui:ui-text-google-fonts", version.ref = "uiTextGoogleFonts" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
+fuel = { module = "com.github.kittinunf.fuel:fuel", version.ref = "fuel" }
+fuel-android = { module = "com.github.kittinunf.fuel:fuel-android", version.ref = "fuel" }
+fuel-coroutines = { module = "com.github.kittinunf.fuel:fuel-coroutines", version.ref = "fuel" }
+fuel-json = { module = "com.github.kittinunf.fuel:fuel-json", version.ref = "fuel" }
+google-services = { module = "com.google.gms:google-services", version.ref = "googleServices" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -46,6 +55,8 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
 logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor", version.ref = "loggingInterceptor" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
+play-services-auth-v2070 = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuthVersion" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 androidx-animation-core-lint = { group = "androidx.compose.animation", name = "animation-core-lint", version.ref = "animationCoreLint" }
 

@@ -2,6 +2,7 @@ package edu.cit.astroglow
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.animateColor
@@ -68,7 +69,7 @@ import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
-import coil.compose.rememberImagePainter
+import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -86,6 +87,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.lint.kotlin.metadata.Visibility
+import coil.request.ImageRequest
 
 class HomeActivity : ComponentActivity() {
     private val client = OkHttpClient.Builder()
@@ -183,21 +185,33 @@ class HomeActivity : ComponentActivity() {
         
         // Check if user is already logged in
         val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
-                val userId = sharedPreferences.getLong("user_id", -1)
+        val userId = sharedPreferences.getLong("user_id", -1)
+        val userEmail = sharedPreferences.getString("user_email", "") ?: ""
+        val userName = sharedPreferences.getString("user_name", "") ?: ""
+        val isLoggedIn = sharedPreferences.getBoolean("is_logged_in", false)
+        
+        Log.d("HomeActivity", "Checking user data - ID: $userId, Email: $userEmail, Name: $userName, IsLoggedIn: $isLoggedIn")
 
-                if (userId == -1L) {
-            // Only redirect to login if there's no valid user ID
-                    val intent = Intent(this, LoginActivity::class.java)
-                    startActivity(intent)
-                    finish()
+        if (!isLoggedIn || userId < 0L || userEmail.isEmpty() || userName.isEmpty()) {
+            Log.d("HomeActivity", "Missing user data or not logged in, redirecting to LoginActivity")
+            // Only redirect to login if there's no valid user data
+            val intent = Intent(this, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
             return
         }
+        
+        Log.d("HomeActivity", "User data valid, proceeding to HomeScreen")
         
         setContent {
             AstroglowTheme {
                 // Get user data from SharedPreferences
                 val userName = sharedPreferences.getString("user_name", "") ?: ""
                 val userEmail = sharedPreferences.getString("user_email", "") ?: ""
+                val profilePictureUrl = sharedPreferences.getString("profile_picture_url", null)
+                
+                Log.d("HomeActivity", "Profile picture URL from SharedPreferences: $profilePictureUrl")
 
                 // Fetch profile picture immediately
                 var profileImage by remember { mutableStateOf<Uri?>(null) }
@@ -206,26 +220,31 @@ class HomeActivity : ComponentActivity() {
                     if (userId != -1L) {
                         CoroutineScope(Dispatchers.IO).launch {
                             try {
-                                val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
-                                val request = Request.Builder()
-                                    .url(url)
-                                    .get()
-                                    .build()
-                                
-                                val response = client.newCall(request).execute()
-                                
-                                if (response.isSuccessful) {
-                                    val responseBody = response.body?.string()
-                                    val jsonObject = JSONObject(responseBody)
-                                    val status = jsonObject.getString("status")
-                                    
-                                    if (status == "success") {
-                                        val profilePicture = jsonObject.optString("profilePicture", "")
+                                // First try to use Google profile picture if available
+                                if (profilePictureUrl != null) {
+                                    Log.d("HomeActivity", "Attempting to load Google profile picture from URL: $profilePictureUrl")
+                                    try {
+                                        val client = OkHttpClient.Builder()
+                                            .connectTimeout(30, TimeUnit.SECONDS)
+                                            .readTimeout(30, TimeUnit.SECONDS)
+                                            .writeTimeout(30, TimeUnit.SECONDS)
+                                            .build()
                                         
-                                        if (profilePicture.isNotEmpty()) {
-                                            try {
-                                                val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
+                                        val request = Request.Builder()
+                                            .url(profilePictureUrl)
+                                            .get()
+                                            .build()
+                                        
+                                        val response = client.newCall(request).execute()
+                                        Log.d("HomeActivity", "Google profile picture response code: ${response.code}")
+                                        
+                                        if (response.isSuccessful) {
+                                            val responseBody = response.body
+                                            if (responseBody != null) {
+                                                val imageBytes = responseBody.bytes()
+                                                Log.d("HomeActivity", "Google profile picture bytes size: ${imageBytes.size}")
                                                 val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                                Log.d("HomeActivity", "Google profile picture bitmap created: ${bitmap != null}")
                                                 
                                                 if (bitmap != null) {
                                                     val cachePath = File(cacheDir, "images")
@@ -241,17 +260,81 @@ class HomeActivity : ComponentActivity() {
                                                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
                                                     outputStream.close()
                                                     
+                                                    val uri = Uri.fromFile(file)
+                                                    Log.d("HomeActivity", "Google profile picture saved to: $uri")
+                                                    
                                                     withContext(Dispatchers.Main) {
-                                                        profileImage = Uri.fromFile(file)
+                                                        profileImage = uri
+                                                        Log.d("HomeActivity", "Profile image URI set to: $uri")
+                                                    }
+                                                    return@launch
+                                                }
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("HomeActivity", "Error loading Google profile picture", e)
+                                    }
+                                }
+                                
+                                // If Google profile picture fails or is not available, try server
+                                Log.d("HomeActivity", "Falling back to server profile picture")
+                                val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
+                                val request = Request.Builder()
+                                    .url(url)
+                                    .get()
+                                    .build()
+                                
+                                val response = client.newCall(request).execute()
+                                Log.d("HomeActivity", "Server profile picture response code: ${response.code}")
+                                
+                                if (response.isSuccessful) {
+                                    val responseBody = response.body?.string()
+                                    val jsonObject = JSONObject(responseBody)
+                                    val status = jsonObject.getString("status")
+                                    Log.d("HomeActivity", "Server profile picture status: $status")
+                                    
+                                    if (status == "success") {
+                                        val profilePicture = jsonObject.optString("profilePicture", "")
+                                        Log.d("HomeActivity", "Server profile picture length: ${profilePicture.length}")
+                                        
+                                        if (profilePicture.isNotEmpty()) {
+                                            try {
+                                                val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
+                                                Log.d("HomeActivity", "Server profile picture bytes size: ${imageBytes.size}")
+                                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                                Log.d("HomeActivity", "Server profile picture bitmap created: ${bitmap != null}")
+                                                
+                                                if (bitmap != null) {
+                                                    val cachePath = File(cacheDir, "images")
+                                                    cachePath.mkdirs()
+                                                    val file = File(cachePath, "profile_$userId.jpg")
+                                                    
+                                                    if (file.exists()) {
+                                                        file.delete()
+                                                    }
+                                                    
+                                                    file.createNewFile()
+                                                    val outputStream = FileOutputStream(file)
+                                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                                    outputStream.close()
+                                                    
+                                                    val uri = Uri.fromFile(file)
+                                                    Log.d("HomeActivity", "Server profile picture saved to: $uri")
+                                                    
+                                                    withContext(Dispatchers.Main) {
+                                                        profileImage = uri
+                                                        Log.d("HomeActivity", "Profile image URI set to: $uri")
                                                     }
                                                 }
                                             } catch (e: Exception) {
+                                                Log.e("HomeActivity", "Error processing server profile picture", e)
                                                 e.printStackTrace()
                                             }
                                         }
                                     }
                                 }
                             } catch (e: Exception) {
+                                Log.e("HomeActivity", "Error in profile picture loading process", e)
                                 e.printStackTrace()
                             }
                         }
@@ -284,61 +367,78 @@ class HomeActivity : ComponentActivity() {
                             val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
                             val userId = sharedPreferences.getLong("user_id", -1)
                             
-                            if (userId != -1L) {
-                                // Update profile picture
-                                val url = "${Constants.BASE_URL}/api/user/update-profile-picture/$userId"
+                            // Validate user ID
+                            if (userId <= 0) {
+                                Log.e("HomeActivity", "Invalid user ID: $userId")
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        this@HomeActivity,
+                                        "Error: Invalid user ID. Please log out and log in again.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                                return@launch
+                            }
+                            
+                            Log.d("HomeActivity", "Updating profile picture for user ID: $userId")
+                            
+                            // Update profile picture
+                            val url = "${Constants.BASE_URL}/api/user/update-profile-picture/$userId"
+                            
+                            val requestBody = JSONObject().apply {
+                                put("profilePicture", base64Image)
+                            }.toString()
+                            
+                            val request = Request.Builder()
+                                .url(url)
+                                .put(requestBody.toRequestBody("application/json".toMediaType()))
+                                .build()
+                            
+                            try {
+                                val response = client.newCall(request).execute()
                                 
-                                val requestBody = JSONObject().apply {
-                                    put("profilePicture", base64Image)
-                                }.toString()
-                                
-                                val request = Request.Builder()
-                                    .url(url)
-                                    .put(requestBody.toRequestBody("application/json".toMediaType()))
-                                    .build()
-                                
-                                try {
-                                    val response = client.newCall(request).execute()
-                                    
-                                    if (response.isSuccessful) {
-                                        // Update UI on main thread
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(
-                                                this@HomeActivity,
-                                                "Profile picture updated successfully",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                } else {
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(
-                                                this@HomeActivity,
-                                                "Failed to update profile picture: ${response.message}",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
-                                } catch (e: SocketTimeoutException) {
+                                if (response.isSuccessful) {
+                                    // Update UI on main thread
                                     withContext(Dispatchers.Main) {
                                         Toast.makeText(
                                             this@HomeActivity,
-                                            "Connection timeout. Please check if the backend server is running.",
-                                            Toast.LENGTH_LONG
+                                            "Profile picture updated successfully",
+                                            Toast.LENGTH_SHORT
                                         ).show()
                                     }
-                                } catch (e: IOException) {
+                                } else {
+                                    val errorBody = response.body?.string()
+                                    Log.e("HomeActivity", "Failed to update profile picture. Status: ${response.code}, Error: $errorBody")
                                     withContext(Dispatchers.Main) {
                                         Toast.makeText(
                                             this@HomeActivity,
-                                            "Cannot connect to the server. Please ensure the backend is running.",
-                                            Toast.LENGTH_LONG
+                                            "Failed to update profile picture: ${response.message}",
+                                            Toast.LENGTH_SHORT
                                         ).show()
                                     }
+                                }
+                            } catch (e: SocketTimeoutException) {
+                                Log.e("HomeActivity", "Socket timeout when updating profile picture", e)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        this@HomeActivity,
+                                        "Connection timeout. Please check if the backend server is running.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            } catch (e: IOException) {
+                                Log.e("HomeActivity", "IO exception when updating profile picture", e)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        this@HomeActivity,
+                                        "Cannot connect to the server. Please ensure the backend is running.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
                             }
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e("HomeActivity", "Error updating profile picture", e)
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 this@HomeActivity,
@@ -370,79 +470,84 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
 
     // Fetch profile picture when component is created
     LaunchedEffect(userId) {
-        if (userId != -1L) {
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
-                    android.util.Log.d("HomeScreen", "Fetching profile picture from: $url")
+        if (userId <= 0) {
+            Log.e("HomeScreen", "Invalid user ID: $userId")
+            return@LaunchedEffect
+        }
+        
+        Log.d("HomeScreen", "Fetching profile picture for user ID: $userId")
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
+                android.util.Log.d("HomeScreen", "Fetching profile picture from: $url")
+                
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .build()
+                
+                val request = Request.Builder()
+                    .url(url)
+                    .get()
+                    .build()
+                
+                val response = client.newCall(request).execute()
+                android.util.Log.d("HomeScreen", "Response code: ${response.code}")
+                
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    val jsonObject = JSONObject(responseBody)
+                    val status = jsonObject.getString("status")
                     
-                    val client = OkHttpClient.Builder()
-                        .connectTimeout(30, TimeUnit.SECONDS)
-                        .readTimeout(30, TimeUnit.SECONDS)
-                        .writeTimeout(30, TimeUnit.SECONDS)
-                        .build()
-                    
-                    val request = Request.Builder()
-                        .url(url)
-                        .get()
-                        .build()
-                    
-                    val response = client.newCall(request).execute()
-                    android.util.Log.d("HomeScreen", "Response code: ${response.code}")
-                    
-                    if (response.isSuccessful) {
-                        val responseBody = response.body?.string()
-                        val jsonObject = JSONObject(responseBody)
-                        val status = jsonObject.getString("status")
+                    if (status == "success") {
+                        val profilePicture = jsonObject.optString("profilePicture", "")
                         
-                        if (status == "success") {
-                            val profilePicture = jsonObject.optString("profilePicture", "")
-                            
-                            if (profilePicture.isNotEmpty()) {
-                                try {
-                                    val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
-                                    val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                        if (profilePicture.isNotEmpty()) {
+                            try {
+                                val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
+                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                
+                                if (bitmap != null) {
+                                    val cachePath = File(context.cacheDir, "images")
+                                    cachePath.mkdirs()
+                                    val file = File(cachePath, "profile_$userId.jpg")
                                     
-                                    if (bitmap != null) {
-                                        val cachePath = File(context.cacheDir, "images")
-                                        cachePath.mkdirs()
-                                        val file = File(cachePath, "profile_$userId.jpg")
-                                        
-                                        if (file.exists()) {
-                                            file.delete()
-                                        }
-                                        
-                                        file.createNewFile()
-                                        val outputStream = FileOutputStream(file)
-                                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                        outputStream.close()
-                                        
-                                        withContext(Dispatchers.Main) {
-                                            profileImage = Uri.fromFile(file)
-                                        }
+                                    if (file.exists()) {
+                                        file.delete()
                                     }
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
+                                    
+                                    file.createNewFile()
+                                    val outputStream = FileOutputStream(file)
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                    outputStream.close()
+                                    
                                     withContext(Dispatchers.Main) {
-                                        Toast.makeText(
-                                            context,
-                                            "Error processing profile picture: ${e.message}",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
+                                        profileImage = Uri.fromFile(file)
                                     }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        "Error processing profile picture: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
                         }
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            context,
-                            "Error loading profile picture: ${e.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "Error loading profile picture: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
@@ -507,14 +612,25 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                             .clip(RoundedCornerShape(16.dp))
                             .background(Color(0xFF6A1B9A))
                             .clickable { 
-                        showHomeTab = false
-                        showProfileTab = true
+                                showHomeTab = false
+                                showProfileTab = true
                             },
                         contentAlignment = Alignment.Center
                     ) {
                         if (profileImage != null) {
+                            Log.d("HomeActivity", "Rendering profile image: $profileImage")
                             Image(
-                                painter = rememberImagePainter(profileImage),
+                                painter = rememberAsyncImagePainter(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(profileImage)
+                                        .crossfade(true)
+                                        .error(R.drawable.ic_profile_placeholder)
+                                        .build(),
+                                    onError = {
+                                        Log.e("HomeActivity", "Error loading profile image")
+                                        profileImage = null
+                                    }
+                                ),
                                 contentDescription = "Profile Picture",
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -522,6 +638,7 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                                 contentScale = ContentScale.Crop
                             )
                         } else {
+                            Log.d("HomeActivity", "No profile image, showing initial: ${currentUserName.take(1).uppercase()}")
                             Text(
                                 text = currentUserName.take(1).uppercase(),
                                 color = Color.White,
@@ -607,6 +724,7 @@ fun ProfileTab(
     val userEmail = sharedPreferences.getString("user_email", "") ?: ""
     var userName by remember { mutableStateOf(sharedPreferences.getString("user_name", "") ?: "") }
     val userId = sharedPreferences.getLong("user_id", -1)
+    val profilePictureUrl = sharedPreferences.getString("profile_picture_url", null)
     
     var showImagePicker by remember { mutableStateOf(false) }
     var profileImage by remember { mutableStateOf<Uri?>(null) }
@@ -615,136 +733,201 @@ fun ProfileTab(
     
     // Fetch profile picture when component is created
     LaunchedEffect(userId) {
-        if (userId != -1L) {
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
-                    android.util.Log.d("ProfileTab", "Fetching profile picture from: $url")
-                    android.util.Log.d("ProfileTab", "User ID: $userId")
-                    
-                    val client = OkHttpClient.Builder()
-                        .connectTimeout(30, TimeUnit.SECONDS)
-                        .readTimeout(30, TimeUnit.SECONDS)
-                        .writeTimeout(30, TimeUnit.SECONDS)
-                        .build()
-                    
-                    val request = Request.Builder()
-                        .url(url)
-                        .get()
-                        .build()
-                    
-                    val response = client.newCall(request).execute()
-                    android.util.Log.d("ProfileTab", "Response code: ${response.code}")
-                    android.util.Log.d("ProfileTab", "Response message: ${response.message}")
-                    
-                    if (response.isSuccessful) {
-                        val responseBody = response.body?.string()
-                        android.util.Log.d("ProfileTab", "Response body: $responseBody")
+        if (userId <= 0) {
+            Log.e("ProfileTab", "Invalid user ID: $userId")
+            return@LaunchedEffect
+        }
+        
+        Log.d("ProfileTab", "Fetching profile picture for user ID: $userId")
+        Log.d("ProfileTab", "Google profile picture URL: $profilePictureUrl")
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // First try to use Google profile picture if available
+                if (profilePictureUrl != null) {
+                    Log.d("ProfileTab", "Attempting to load Google profile picture from URL: $profilePictureUrl")
+                    try {
+                        val client = OkHttpClient.Builder()
+                            .connectTimeout(30, TimeUnit.SECONDS)
+                            .readTimeout(30, TimeUnit.SECONDS)
+                            .writeTimeout(30, TimeUnit.SECONDS)
+                            .build()
                         
-                        val jsonObject = JSONObject(responseBody)
-                        val status = jsonObject.getString("status")
-                        android.util.Log.d("ProfileTab", "Status: $status")
+                        val request = Request.Builder()
+                            .url(profilePictureUrl)
+                            .get()
+                            .build()
                         
-                        if (status == "success") {
-                            val profilePicture = jsonObject.optString("profilePicture", "")
-                            android.util.Log.d("ProfileTab", "Profile picture length: ${profilePicture.length}")
-                            android.util.Log.d("ProfileTab", "Profile picture first 50 chars: ${profilePicture.take(50)}")
-                            
-                            if (profilePicture.isNotEmpty()) {
-                                try {
-                                    // Convert base64 to bitmap
-                                    val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
-                                    android.util.Log.d("ProfileTab", "Image bytes length: ${imageBytes.size}")
+                        val response = client.newCall(request).execute()
+                        Log.d("ProfileTab", "Google profile picture response code: ${response.code}")
+                        
+                        if (response.isSuccessful) {
+                            val responseBody = response.body
+                            if (responseBody != null) {
+                                val imageBytes = responseBody.bytes()
+                                Log.d("ProfileTab", "Google profile picture bytes size: ${imageBytes.size}")
+                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                Log.d("ProfileTab", "Google profile picture bitmap created: ${bitmap != null}")
+                                
+                                if (bitmap != null) {
+                                    val cachePath = File(context.cacheDir, "images")
+                                    cachePath.mkdirs()
+                                    val file = File(cachePath, "profile_$userId.jpg")
                                     
-                                    val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                                    android.util.Log.d("ProfileTab", "Bitmap created: ${bitmap != null}")
-                                    
-                                    if (bitmap != null) {
-                                        // Save bitmap to cache and get URI
-                                        val cachePath = File(context.cacheDir, "images")
-                                        cachePath.mkdirs()
-                                        val file = File(cachePath, "profile_$userId.jpg")
-                                        
-                                        // Delete existing file if it exists
-                                        if (file.exists()) {
-                                            file.delete()
-                                        }
-                                        
-                                        file.createNewFile()
-                                        val outputStream = FileOutputStream(file)
-                                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                        outputStream.close()
-                                        
-                                        withContext(Dispatchers.Main) {
-                                            val newUri = Uri.fromFile(file)
-                                            profileImage = newUri
-                                            onProfileImageChanged(newUri)
-                                            android.util.Log.d("ProfileTab", "Profile image URI set: $newUri")
-                                            android.util.Log.d("ProfileTab", "File exists: ${file.exists()}")
-                                            android.util.Log.d("ProfileTab", "File size: ${file.length()}")
-                                        }
-                                    } else {
-                                        android.util.Log.e("ProfileTab", "Failed to decode bitmap from base64")
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(
-                                                context,
-                                                "Failed to decode profile picture",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
+                                    if (file.exists()) {
+                                        file.delete()
                                     }
-                                } catch (e: Exception) {
-                                    android.util.Log.e("ProfileTab", "Error processing profile picture: ${e.message}")
-                                    e.printStackTrace()
+                                    
+                                    file.createNewFile()
+                                    val outputStream = FileOutputStream(file)
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                    outputStream.close()
+                                    
+                                    val uri = Uri.fromFile(file)
+                                    Log.d("ProfileTab", "Google profile picture saved to: $uri")
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        profileImage = uri
+                                        onProfileImageChanged(uri)
+                                        Log.d("ProfileTab", "Profile image URI set to: $uri")
+                                    }
+                                    return@launch
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("ProfileTab", "Error loading Google profile picture", e)
+                    }
+                }
+                
+                // If Google profile picture fails or is not available, try server
+                Log.d("ProfileTab", "Falling back to server profile picture")
+                val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
+                android.util.Log.d("ProfileTab", "Fetching profile picture from: $url")
+                android.util.Log.d("ProfileTab", "User ID: $userId")
+                
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .build()
+                
+                val request = Request.Builder()
+                    .url(url)
+                    .get()
+                    .build()
+                
+                val response = client.newCall(request).execute()
+                android.util.Log.d("ProfileTab", "Response code: ${response.code}")
+                android.util.Log.d("ProfileTab", "Response message: ${response.message}")
+                
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    android.util.Log.d("ProfileTab", "Response body: $responseBody")
+                    
+                    val jsonObject = JSONObject(responseBody)
+                    val status = jsonObject.getString("status")
+                    android.util.Log.d("ProfileTab", "Status: $status")
+                    
+                    if (status == "success") {
+                        val profilePicture = jsonObject.optString("profilePicture", "")
+                        android.util.Log.d("ProfileTab", "Profile picture length: ${profilePicture.length}")
+                        android.util.Log.d("ProfileTab", "Profile picture first 50 chars: ${profilePicture.take(50)}")
+                        
+                        if (profilePicture.isNotEmpty()) {
+                            try {
+                                // Convert base64 to bitmap
+                                val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
+                                android.util.Log.d("ProfileTab", "Image bytes length: ${imageBytes.size}")
+                                
+                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                android.util.Log.d("ProfileTab", "Bitmap created: ${bitmap != null}")
+                                
+                                if (bitmap != null) {
+                                    // Save bitmap to cache and get URI
+                                    val cachePath = File(context.cacheDir, "images")
+                                    cachePath.mkdirs()
+                                    val file = File(cachePath, "profile_$userId.jpg")
+                                    
+                                    // Delete existing file if it exists
+                                    if (file.exists()) {
+                                        file.delete()
+                                    }
+                                    
+                                    file.createNewFile()
+                                    val outputStream = FileOutputStream(file)
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                    outputStream.close()
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        val newUri = Uri.fromFile(file)
+                                        profileImage = newUri
+                                        onProfileImageChanged(newUri)
+                                        android.util.Log.d("ProfileTab", "Profile image URI set: $newUri")
+                                        android.util.Log.d("ProfileTab", "File exists: ${file.exists()}")
+                                        android.util.Log.d("ProfileTab", "File size: ${file.length()}")
+                                    }
+                                } else {
+                                    android.util.Log.e("ProfileTab", "Failed to decode bitmap from base64")
                                     withContext(Dispatchers.Main) {
                                         Toast.makeText(
                                             context,
-                                            "Error processing profile picture: ${e.message}",
+                                            "Failed to decode profile picture",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     }
                                 }
-                            } else {
-                                android.util.Log.d("ProfileTab", "No profile picture found in response")
+                            } catch (e: Exception) {
+                                android.util.Log.e("ProfileTab", "Error processing profile picture: ${e.message}")
+                                e.printStackTrace()
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(
                                         context,
-                                        "No profile picture found",
+                                        "Error processing profile picture: ${e.message}",
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
                             }
                         } else {
-                            val message = jsonObject.optString("message", "Failed to load profile picture")
-                            android.util.Log.e("ProfileTab", "Error status: $message")
+                            android.util.Log.d("ProfileTab", "No profile picture found in response")
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(
                                     context,
-                                    message,
+                                    "No profile picture found",
                                     Toast.LENGTH_SHORT
                                 ).show()
                             }
                         }
                     } else {
-                        android.util.Log.e("ProfileTab", "Unsuccessful response: ${response.code}")
+                        val message = jsonObject.optString("message", "Failed to load profile picture")
+                        android.util.Log.e("ProfileTab", "Error status: $message")
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 context,
-                                "Failed to load profile picture: ${response.code}",
+                                message,
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
                     }
-                } catch (e: Exception) {
-                    android.util.Log.e("ProfileTab", "Error loading profile picture: ${e.message}")
-                    e.printStackTrace()
+                } else {
+                    android.util.Log.e("ProfileTab", "Unsuccessful response: ${response.code}")
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
                             context,
-                            "Error loading profile picture: ${e.message}",
+                            "Failed to load profile picture: ${response.code}",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ProfileTab", "Error loading profile picture: ${e.message}")
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "Error loading profile picture: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
@@ -814,7 +997,12 @@ fun ProfileTab(
             ) {
                 if (profileImage != null) {
                     Image(
-                        painter = rememberImagePainter(profileImage),
+                        painter = rememberAsyncImagePainter(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(profileImage)
+                                .crossfade(true)
+                                .build()
+                        ),
                         contentDescription = "Profile Picture",
                         modifier = Modifier
                             .fillMaxSize()
@@ -923,6 +1111,21 @@ fun ProfileTab(
                                     // Save username
                                     CoroutineScope(Dispatchers.IO).launch {
                                         try {
+                                            // Validate user ID
+                                            if (userId <= 0) {
+                                                Log.e("ProfileTab", "Invalid user ID for username update: $userId")
+                                                withContext(Dispatchers.Main) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Error: Invalid user ID. Please log out and log in again.",
+                                                        Toast.LENGTH_LONG
+                                                    ).show()
+                                                }
+                                                return@launch
+                                            }
+                                            
+                                            Log.d("ProfileTab", "Updating username for user ID: $userId")
+                                            
                                             val url = "${Constants.BASE_URL}/api/user/putUser?id=$userId"
                                             val client = OkHttpClient.Builder()
                                                 .connectTimeout(30, TimeUnit.SECONDS)
@@ -954,9 +1157,19 @@ fun ProfileTab(
                                                         Toast.LENGTH_SHORT
                                                     ).show()
                                                 }
+                                            } else {
+                                                val errorBody = response.body?.string()
+                                                Log.e("ProfileTab", "Failed to update username. Status: ${response.code}, Error: $errorBody")
+                                                withContext(Dispatchers.Main) {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Failed to update username: ${response.message}",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
                                             }
                                         } catch (e: Exception) {
-                                            e.printStackTrace()
+                                            Log.e("ProfileTab", "Error updating username", e)
                                             withContext(Dispatchers.Main) {
                                                 Toast.makeText(
                                                     context,
@@ -1175,6 +1388,17 @@ fun ProfileTab(
                             // Call the change password API
                             CoroutineScope(Dispatchers.IO).launch {
                                 try {
+                                    // Validate user ID
+                                    if (userId <= 0) {
+                                        Log.e("ProfileTab", "Invalid user ID for password change: $userId")
+                                        withContext(Dispatchers.Main) {
+                                            passwordError = "Error: Invalid user ID. Please log out and log in again."
+                                        }
+                                        return@launch
+                                    }
+                                    
+                                    Log.d("ProfileTab", "Changing password for user ID: $userId")
+                                    
                                     val url = "${Constants.BASE_URL}/api/user/changePassword/$userId"
                                     val client = OkHttpClient.Builder()
                                         .connectTimeout(30, TimeUnit.SECONDS)
@@ -1209,11 +1433,13 @@ fun ProfileTab(
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         } else {
+                                            val errorBody = response.body?.string()
+                                            Log.e("ProfileTab", "Failed to change password. Status: ${response.code}, Error: $errorBody")
                                             passwordError = jsonResponse.optString("message", "Failed to change password")
                                         }
                                     }
                                 } catch (e: Exception) {
-                                    e.printStackTrace()
+                                    Log.e("ProfileTab", "Error changing password", e)
                                     withContext(Dispatchers.Main) {
                                         passwordError = "Error: ${e.message}"
                                     }

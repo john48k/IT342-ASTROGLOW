@@ -6,6 +6,7 @@ import edu.cit.astroglow.data.api.Playlist
 import edu.cit.astroglow.data.model.LoginRequest
 import edu.cit.astroglow.data.model.LoginResponse
 import edu.cit.astroglow.data.model.User
+import edu.cit.astroglow.data.model.UserEntity
 import retrofit2.Response
 
 class AstroGlowRepository(private val api: AstroGlowApi) {
@@ -43,5 +44,18 @@ class AstroGlowRepository(private val api: AstroGlowApi) {
 
     suspend fun createPlaylist(playlist: Playlist): Response<Playlist> {
         return api.createPlaylist(playlist)
+    }
+
+    suspend fun postUser(user: UserEntity): UserEntity? {
+        return try {
+            val response = api.postUser(user)
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 } 

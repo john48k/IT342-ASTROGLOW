@@ -34,8 +34,30 @@ public class UserController {
     }
 
     @GetMapping("/getAllUser")
-    public List<UserEntity> getAllUser(){
-        return userService.getAllUsers();
+    public ResponseEntity<?> getAllUser() {
+        try {
+            List<UserEntity> users = userService.getAllUsers();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error retrieving users: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/getUserByEmail/{email}")
+    public ResponseEntity<?> getUserByEmail(@PathVariable String email) {
+        try {
+            UserEntity user = userService.findByEmail(email);
+            if (user != null) {
+                return ResponseEntity.ok(user);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("User not found with email: " + email);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error retrieving user: " + e.getMessage());
+        }
     }
 
     @PutMapping(value = "/putUser", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)

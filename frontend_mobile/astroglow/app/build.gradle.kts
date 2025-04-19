@@ -72,4 +72,13 @@ dependencies {
     // Coroutines for async operations
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+
+    // Google Sign-In
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    
+    // GitHub OAuth
+    implementation(libs.fuel)
+    implementation(libs.fuel.android)
+    implementation(libs.fuel.json)
+    implementation(libs.fuel.coroutines)
 }
