@@ -16,45 +16,57 @@ import { FavoritesProvider } from "./context/FavoritesContext";
 import { AudioPlayerProvider } from "./context/AudioPlayerContext";
 import { PlaylistProvider } from "./context/PlaylistContext";
 import NowPlayingBar from "./components/NowPlayingBar/NowPlayingBar";
+import { useUser } from "./context/UserContext";
+
+// Create a wrapper component to conditionally render NowPlayingBar
+const AppContent = () => {
+  const { isAuthenticated } = useUser();
+  
+  return (
+    <FavoritesProvider>
+      <PlaylistProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/oauth2/redirect" element={<OAuth2Redirect />} />
+          
+          {/* Protected Routes - Require Authentication */}
+          <Route path="/home" element={
+            <ProtectedRoute>
+              <HomePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <UserProfilePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/favorites" element={
+            <ProtectedRoute>
+              <FavoritesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/search" element={
+            <ProtectedRoute>
+              <SearchPage />
+            </ProtectedRoute>
+          } />
+        </Routes>
+        
+        {/* Only render NowPlayingBar when user is authenticated */}
+        {isAuthenticated && <NowPlayingBar />}
+      </PlaylistProvider>
+    </FavoritesProvider>
+  );
+};
 
 function App() {
   return (
     <UserProvider>
       <AudioPlayerProvider>
-        <FavoritesProvider>
-          <PlaylistProvider>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/signup" element={<SignUpPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/oauth2/redirect" element={<OAuth2Redirect />} />
-              
-              {/* Protected Routes - Require Authentication */}
-              <Route path="/home" element={
-                <ProtectedRoute>
-                  <HomePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <UserProfilePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/favorites" element={
-                <ProtectedRoute>
-                  <FavoritesPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/search" element={
-                <ProtectedRoute>
-                  <SearchPage />
-                </ProtectedRoute>
-              } />
-            </Routes>
-            <NowPlayingBar />
-          </PlaylistProvider>
-        </FavoritesProvider>
+        <AppContent />
       </AudioPlayerProvider>
     </UserProvider>
   );

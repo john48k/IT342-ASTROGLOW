@@ -292,27 +292,47 @@ body {
   
   /* Favorite button styles */
   .favoriteButton {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: none;
-    border: none;
-    font-size: 24px;
+    position: static;
+    background-color: rgba(0, 0, 0, 0.5);
     color: white;
+    border: none;
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
     cursor: pointer;
-    z-index: 2;
-    transition: transform 0.2s ease, color 0.3s ease;
-    padding: 0;
-    line-height: 1;
+    transition: opacity 0.3s ease, color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .favoriteButton:hover {
-    transform: scale(1.2);
+    color: #ffdd55;
   }
   
-  .favoriteButton.favorited {
-    color: #ffd700;
-    text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
+  .favorited {
+    color: #ffdd55;
+  }
+  
+  .addToPlaylistButton {
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .addToPlaylistButton:hover {
+    background-color: rgba(127, 90, 240, 0.8);
+    transform: scale(1.1);
   }
   
   /* Media queries */
@@ -1537,5 +1557,213 @@ body {
   .uploadModalButton:hover {
     filter: brightness(1.1);
     transform: scale(1.03);
+  }
+  
+  /* Add these styles for the playlists section */
+
+  .playlistsSection {
+    margin: 3rem 0;
+  }
+
+  .playlistGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+    margin-top: 20px;
+  }
+
+  .playlistCard {
+    background-color: rgba(30, 30, 45, 0.7);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    padding-bottom: 16px;
+    border: 1px solid rgba(80, 80, 120, 0.3);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .playlistCard:hover {
+    transform: translateY(-5px);
+    background-color: rgba(40, 40, 60, 0.8);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  .playlistImageContainer {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%; /* 1:1 Aspect ratio */
+    overflow: hidden;
+  }
+
+  .playlistImage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .playlistCard:hover .playlistImage {
+    transform: scale(1.05);
+  }
+
+  .playlistPlaceholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    color: white;
+    background: linear-gradient(45deg, #8b5cf6, #ec4899);
+  }
+
+  .playlistOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0);
+    transition: background-color 0.3s ease;
+  }
+
+  .playlistCard:hover .playlistOverlay {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .playlistPlayButton {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background-color: #7f5af0;
+    color: white;
+    border: none;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 2;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  }
+
+  .playlistPlayButton:disabled {
+    background-color: #666;
+    cursor: not-allowed;
+  }
+
+  .playlistCard:hover .playlistPlayButton {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .playlistPlayButton:hover {
+    background-color: #9775fa;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  .playlistPlayButton.playing {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    background-color: #7f5af0;
+  }
+
+  .playlistPlayButton.playing:hover {
+    background-color: #9775fa;
+  }
+
+  .playlistInfo {
+    padding: 16px 16px 0;
+  }
+
+  .playlistTitle {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: white;
+  }
+
+  .playlistTracks {
+    font-size: 14px;
+    color: #b3b3b3;
+    margin: 0;
+  }
+
+  .playlistCardControls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .playlistImageContainer:hover .playlistCardControls {
+    opacity: 1;
+  }
+
+  .playlistCardControlButton {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .playlistCardControlButton:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  @media (max-width: 768px) {
+    .playlistGrid {
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .playlistGrid {
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 12px;
+    }
+  }
+  
+  /* Add styles for music card actions and add to playlist button */
+  .musicCardActions {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    display: flex;
+    gap: 8px;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .musicImageContainer:hover .musicCardActions {
+    opacity: 1;
   }
   

@@ -218,9 +218,11 @@ public class MusicEntity {
      */
     @JsonIgnore
     public List<UserEntity> getFavoritedByUsers() {
-        return favorites.stream()
-            .map(FavoritesEntity::getUser)
-            .collect(Collectors.toList());
+        List<UserEntity> users = new ArrayList<>();
+        for (FavoritesEntity favorite : favorites) {
+            users.add(favorite.getUser());
+        }
+        return users;
     }
 
     public UserEntity getOwner() {
