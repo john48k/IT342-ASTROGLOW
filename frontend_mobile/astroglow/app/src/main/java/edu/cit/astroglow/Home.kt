@@ -73,6 +73,7 @@ import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -353,15 +354,47 @@ class HomeActivity : ComponentActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 1 && resultCode == RESULT_OK) {
             data?.data?.let { uri ->
-                // Convert image to base64
+                // Convert image to base64 with compression
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        // Load the image from URI
                         val inputStream = contentResolver.openInputStream(uri)
-                        val bytes = inputStream?.readBytes()
+                        val originalBitmap = BitmapFactory.decodeStream(inputStream)
                         inputStream?.close()
                         
-                        if (bytes != null) {
-                            val base64Image = Base64.encodeToString(bytes, Base64.DEFAULT)
+                        if (originalBitmap != null) {
+                            // Calculate new dimensions (max 800px on longest side)
+                            val maxDimension = 800
+                            val width = originalBitmap.width
+                            val height = originalBitmap.height
+                            
+                            val scaleFactor = if (width > height) {
+                                maxDimension.toFloat() / width
+                            } else {
+                                maxDimension.toFloat() / height
+                            }
+                            
+                            val newWidth = (width * scaleFactor).toInt()
+                            val newHeight = (height * scaleFactor).toInt()
+                            
+                            // Resize the bitmap
+                            val resizedBitmap = Bitmap.createScaledBitmap(
+                                originalBitmap, 
+                                newWidth, 
+                                newHeight, 
+                                true
+                            )
+                            
+                            // Compress to JPEG with lower quality
+                            val outputStream = ByteArrayOutputStream()
+                            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
+                            
+                            // Convert to base64
+                            val base64Image = Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT)
+                            
+                            // Clean up bitmaps
+                            originalBitmap.recycle()
+                            resizedBitmap.recycle()
                             
                             // Get user ID from SharedPreferences
                             val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
@@ -381,6 +414,7 @@ class HomeActivity : ComponentActivity() {
                             }
                             
                             Log.d("HomeActivity", "Updating profile picture for user ID: $userId")
+                            Log.d("HomeActivity", "Compressed image size: ${outputStream.size()} bytes")
                             
                             // Update profile picture
                             val url = "${Constants.BASE_URL}/api/user/update-profile-picture/$userId"
@@ -398,8 +432,38 @@ class HomeActivity : ComponentActivity() {
                                 val response = client.newCall(request).execute()
                                 
                                 if (response.isSuccessful) {
+                                    // Save the compressed image to cache for immediate display
+                                    val cachePath = File(cacheDir, "images")
+                                    cachePath.mkdirs()
+                                    val file = File(cachePath, "profile_$userId.jpg")
+                                    
+                                    if (file.exists()) {
+                                        file.delete()
+                                    }
+                                    
+                                    file.createNewFile()
+                                    val fileOutputStream = FileOutputStream(file)
+                                    fileOutputStream.write(outputStream.toByteArray())
+                                    fileOutputStream.close()
+                                    
+                                    val newProfileUri = Uri.fromFile(file)
+                                    
                                     // Update UI on main thread
                                     withContext(Dispatchers.Main) {
+                                        // Update the profile image in the UI
+                                        setContent {
+                                            AstroglowTheme {
+                                                // Get user data from SharedPreferences
+                                                val userName = sharedPreferences.getString("user_name", "") ?: ""
+                                                
+                                                // Show the HomeScreen with the updated profile image
+                                                HomeScreen(
+                                                    userName = userName,
+                                                    initialProfileImage = newProfileUri
+                                                )
+                                            }
+                                        }
+                                        
                                         Toast.makeText(
                                             this@HomeActivity,
                                             "Profile picture updated successfully",
@@ -435,6 +499,15 @@ class HomeActivity : ComponentActivity() {
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }
+                            }
+                        } else {
+                            Log.e("HomeActivity", "Failed to decode bitmap from URI: $uri")
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    this@HomeActivity,
+                                    "Failed to process the selected image",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
                     } catch (e: Exception) {
