@@ -91,6 +91,19 @@ import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import okhttp3.ResponseBody
 import edu.cit.astroglow.data.model.AuthenticationEntity
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonElement
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.webkit.WebSettings
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceError
+import android.webkit.ConsoleMessage
+import android.net.Uri
+import android.graphics.Bitmap
+import android.webkit.WebChromeClient
+import com.google.gson.JsonSyntaxException
+import android.os.Build
 
 class LoginActivity : ComponentActivity() {
     companion object {
@@ -815,98 +828,734 @@ class LoginActivity : ComponentActivity() {
     
     private fun handleGitHubLogin() {
         Log.d(TAG, "Starting GitHub login process")
+        
+        // List of possible IP addresses to try
+        val possibleIps = listOf(
+            "192.168.254.105",  // Your current IP
+            "10.0.2.2",         // Android emulator
+            "192.168.1.1",      // Common router IP
+            "192.168.0.1"       // Another common router IP
+        )
+        
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(30, TimeUnit.SECONDS)
-                    .writeTimeout(30, TimeUnit.SECONDS)
-                    .build()
-
-                // Use 10.0.2.2 for Android emulator (this points to the host machine's localhost)
-                // For real devices, you'll need to use your computer's IP address
-                val baseUrl = "http://10.0.2.2:8080"
-                val request = Request.Builder()
-                    .url("$baseUrl/oauth2/authorization/github")
-                    .build()
+            var connectionSuccessful = false
+            var workingBaseUrl = ""
+            
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    this@LoginActivity,
+                    "Testing connection to backend...",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            
+            // Try each IP address
+            for (ip in possibleIps) {
+                val baseUrl = "http://$ip:8080"
+                Log.d(TAG, "Trying to connect to: $baseUrl")
                 
-                Log.d(TAG, "Making request to GitHub OAuth endpoint: ${request.url}")
-                val response = client.newCall(request).execute()
-                
-                if (response.isSuccessful) {
-                    Log.d(TAG, "GitHub OAuth request successful")
-                    val responseBody = response.body?.string()
-                    if (responseBody != null) {
-                        try {
-                            Log.d(TAG, "Parsing GitHub response: $responseBody")
-                            val jsonResponse = Gson().fromJson(responseBody, JsonObject::class.java)
-                            val email = jsonResponse.get("email")?.asString
-                            val name = jsonResponse.get("name")?.asString
-                            
-                            if (email != null && name != null) {
-                                Log.d(TAG, "Successfully retrieved GitHub user info - email: $email, name: $name")
-                                withContext(Dispatchers.Main) {
-                                    handleGoogleSignIn(email, name)
-                                }
-                            } else {
-                                Log.e(TAG, "GitHub response missing email or name")
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(
-                                        this@LoginActivity,
-                                        "Failed to get user information from GitHub. Email or name is null.",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error parsing GitHub response", e)
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(
-                                    this@LoginActivity,
-                                    "Failed to parse GitHub response: ${e.message}",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                try {
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(2, TimeUnit.SECONDS)
+                        .readTimeout(2, TimeUnit.SECONDS)
+                        .build()
+                    
+                    val request = Request.Builder()
+                        .url(baseUrl)
+                        .build()
+                    
+                    try {
+                        client.newCall(request).execute().use { response ->
+                            if (response.isSuccessful) {
+                                connectionSuccessful = true
+                                workingBaseUrl = baseUrl
+                                Log.d(TAG, "Successfully connected to: $baseUrl")
+                                return@use
                             }
                         }
-                    } else {
-                        Log.e(TAG, "Empty response body from GitHub")
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                this@LoginActivity,
-                                "Empty response from GitHub",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "Failed to connect to $baseUrl: ${e.message}")
+                        continue
                     }
-                } else {
-                    val errorBody = response.body?.string()
-                    Log.e(TAG, "GitHub login failed with status ${response.code}: $errorBody")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            this@LoginActivity,
-                            "GitHub login failed. Status: ${response.code}, Error: $errorBody",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error creating client for $baseUrl", e)
+                    continue
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error during GitHub login", e)
-                val errorMessage = when {
-                    e.message?.contains("timeout") == true -> 
-                        "Request timed out. Please check if the server is running."
-                    e.message?.contains("Failed to connect") == true -> 
-                        "Cannot connect to the server. Please ensure the backend is running on port 8080."
-                    else -> "Error during GitHub login: ${e.message}"
-                }
-                withContext(Dispatchers.Main) {
+            }
+            
+            withContext(Dispatchers.Main) {
+                if (connectionSuccessful) {
+                    Log.d(TAG, "Connection successful to $workingBaseUrl")
                     Toast.makeText(
                         this@LoginActivity,
-                        errorMessage,
+                        "Connected to backend successfully!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    
+                    // Launch GitHubLoginActivity with the working URL
+                    val intent = Intent(this@LoginActivity, GitHubLoginActivity::class.java).apply {
+                        putExtra("auth_url", "$workingBaseUrl/oauth2/authorization/github")
+                        putExtra("base_url", workingBaseUrl)
+                    }
+                    startActivity(intent)
+                } else {
+                    Log.e(TAG, "Could not connect to any backend server")
+                    val message = """
+                        Cannot connect to backend server. Please check:
+                        1. Backend server is running
+                        2. Phone and computer are on the same WiFi network
+                        3. Windows firewall allows port 8080
+                        4. Try accessing http://192.168.254.105:8080 in your phone's browser
+                    """.trimIndent()
+                    
+                    Toast.makeText(
+                        this@LoginActivity,
+                        message,
                         Toast.LENGTH_LONG
                     ).show()
                 }
             }
         }
+    }
+    
+    private fun isEmulator(): Boolean {
+        return (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")
+                || Build.FINGERPRINT.startsWith("generic")
+                || Build.FINGERPRINT.startsWith("unknown")
+                || Build.HARDWARE.contains("goldfish")
+                || Build.HARDWARE.contains("ranchu")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || Build.MANUFACTURER.contains("Genymotion")
+                || Build.PRODUCT.contains("sdk_gphone")
+                || Build.PRODUCT.contains("google_sdk")
+                || Build.PRODUCT.contains("sdk")
+                || Build.PRODUCT.contains("sdk_x86")
+                || Build.PRODUCT.contains("vbox86p"))
+    }
+}
+
+class GitHubLoginActivity : ComponentActivity() {
+    companion object {
+        private const val TAG = "GitHubLoginActivity"
+    }
+    
+    private var webView: WebView? = null
+    private var isLoading = false
+    private lateinit var authUrl: String
+    private lateinit var baseUrl: String
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Get the auth URL and base URL from intent
+        authUrl = intent.getStringExtra("auth_url") ?: "http://10.0.2.2:8080/oauth2/authorization/github"
+        baseUrl = intent.getStringExtra("base_url") ?: "http://10.0.2.2:8080"
+        
+        // Log the URLs for debugging
+        Log.d(TAG, "Auth URL: $authUrl")
+        Log.d(TAG, "Base URL: $baseUrl")
+        
+        // Show a toast with connection info for debugging
+        Toast.makeText(
+            this,
+            "Connecting to: $baseUrl",
+            Toast.LENGTH_LONG
+        ).show()
+        
+        setContent {
+            AstroglowTheme {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Color(0xFFE81EDE), Color(0xFF251468))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(color = Color.White)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Connecting to GitHub...",
+                                    color = Color.White,
+                                    fontFamily = interFontFamily
+                                )
+                            } else {
+                                Text(
+                                    text = "GitHub Login",
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = interFontFamily,
+                                    color = Color.White,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Please complete the login process in the browser",
+                                    fontSize = 16.sp,
+                                    fontFamily = interFontFamily,
+                                    color = Color.White,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Initialize WebView
+        webView = WebView(this).apply {
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+                setSupportMultipleWindows(true)
+                setSupportZoom(true)
+                setGeolocationEnabled(true)
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                
+                // Additional settings for better compatibility
+                allowContentAccess = true
+                allowFileAccess = true
+                javaScriptCanOpenWindowsAutomatically = true
+                loadWithOverviewMode = true
+                useWideViewPort = true
+                setRenderPriority(WebSettings.RenderPriority.HIGH)
+            }
+            
+            webViewClient = object : WebViewClient() {
+                @Deprecated("Deprecated in Java")
+                override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    isLoading = true
+                    Log.d(TAG, "Loading page: $url")
+                }
+                
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    isLoading = false
+                    Log.d(TAG, "Page loaded: $url")
+                    
+                    // Check for error messages in the page content
+                    view?.evaluateJavascript("""
+                        (function() {
+                            try {
+                                // Check for connection errors
+                                if (document.body.textContent.includes('ERR_CONNECTION_REFUSED') || 
+                                    document.body.textContent.includes('ERR_CONNECTION_TIMED_OUT')) {
+                                    return 'CONNECTION_ERROR';
+                                }
+                                // Check for redirect URI error
+                                if (document.body.textContent.includes('redirect_uri is not associated with this application')) {
+                                    return 'REDIRECT_URI_ERROR';
+                                }
+                                // Check for other GitHub errors
+                                if (document.body.textContent.includes("You can't perform that action at this time")) {
+                                    return 'GITHUB_ERROR';
+                                }
+                                // If we're on the callback URL, get the user info
+                                if (window.location.href.includes('login/oauth2/code/github')) {
+                                    return document.body.textContent;
+                                }
+                                return 'OK';
+                            } catch(e) {
+                                return 'Error: ' + e.message;
+                            }
+                        })();
+                    """.trimIndent()) { result ->
+                        Log.d(TAG, "Page content check result: $result")
+                        when (result) {
+                            "CONNECTION_ERROR" -> {
+                                Log.e(TAG, "Connection error - check if server is running and IP is correct")
+                                Toast.makeText(
+                                    this@GitHubLoginActivity,
+                                    "Cannot connect to server. Please check:\n1. Server is running\n2. IP address is correct\n3. Device is on the same network",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                finish()
+                            }
+                            "REDIRECT_URI_ERROR" -> {
+                                Log.e(TAG, "Redirect URI not registered with GitHub OAuth app")
+                                Toast.makeText(
+                                    this@GitHubLoginActivity,
+                                    "GitHub OAuth configuration error. Please contact support.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                finish()
+                            }
+                            "GITHUB_ERROR" -> {
+                                Log.e(TAG, "GitHub returned an error")
+                                Toast.makeText(
+                                    this@GitHubLoginActivity,
+                                    "GitHub login failed. Please try again later.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                finish()
+                            }
+                            else -> {
+                                if (result.startsWith("Error:")) {
+                                    Log.e(TAG, "JavaScript error: $result")
+                                } else if (url?.contains("login/oauth2/code/github") == true) {
+                                    handleUserInfo(result)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    val url = request?.url.toString() ?: ""
+                    Log.d(TAG, "Should override URL loading: $url")
+                    
+                    // Handle the OAuth callback
+                    if (url.contains("login/oauth2/code/github")) {
+                        view?.loadUrl(url)
+                        return true
+                    }
+                    
+                    return false
+                }
+                
+                override fun onReceivedError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    error: WebResourceError?
+                ) {
+                    super.onReceivedError(view, request, error)
+                    isLoading = false
+                    Log.e(TAG, "WebView error: ${error?.description}, URL: ${request?.url}")
+                    
+                    val errorMessage = when {
+                        error?.description.toString().contains("net::ERR_CONNECTION_REFUSED") ->
+                            "Cannot connect to the server. Please ensure the backend is running."
+                        error?.description.toString().contains("net::ERR_TIMED_OUT") ->
+                            "Connection timed out. Please check your internet connection."
+                        else -> "An error occurred: ${error?.description}"
+                    }
+                    
+                    Toast.makeText(this@GitHubLoginActivity, errorMessage, Toast.LENGTH_LONG).show()
+                    finish()
+                }
+            }
+            
+            setWebChromeClient(object : WebChromeClient() {
+                override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
+                    Log.d(TAG, "Console: ${consoleMessage?.message()}")
+                    return true
+                }
+            })
+            
+            // Load the OAuth URL
+            Log.d(TAG, "Loading GitHub auth URL: $authUrl")
+            loadUrl(authUrl)
+        }
+    }
+    
+    private fun handleUserInfo(userInfoJson: String) {
+        try {
+            // First try to parse as JSON object
+            val gson = GsonBuilder().setLenient().create()
+            val userInfo = try {
+                gson.fromJson(userInfoJson, JsonObject::class.java)
+            } catch (e: JsonSyntaxException) {
+                Log.d(TAG, "Failed to parse as JSON object, trying regex extraction")
+                // If JSON parsing fails, try regex extraction
+                val emailMatch = Regex("email\":\"([^\"]+)\"").find(userInfoJson)
+                val nameMatch = Regex("name\":\"([^\"]+)\"").find(userInfoJson)
+                
+                val email = emailMatch?.groupValues?.get(1)
+                val name = nameMatch?.groupValues?.get(1) ?: email?.split("@")?.get(0)?.replace(".", " ")
+                
+                if (email != null && name != null) {
+                    Log.d(TAG, "Successfully extracted user info using regex - email: $email, name: $name")
+                    handleGitHubSignIn(email, name)
+                    return
+                } else {
+                    throw e
+                }
+            }
+            
+            val email = userInfo.get("email")?.asString
+            val name = userInfo.get("name")?.asString ?: email?.split("@")?.get(0)?.replace(".", " ")
+            
+            if (email != null && name != null) {
+                Log.d(TAG, "Successfully extracted user info from JSON - email: $email, name: $name")
+                handleGitHubSignIn(email, name)
+            } else {
+                Log.e(TAG, "Could not extract user info from response")
+                Toast.makeText(
+                    this@GitHubLoginActivity,
+                    "Failed to get user information",
+                    Toast.LENGTH_LONG
+                ).show()
+                finish()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing user info", e)
+            Toast.makeText(
+                this@GitHubLoginActivity,
+                "Error parsing user information: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+            finish()
+        }
+    }
+    
+    private fun handleGitHubSignIn(email: String, name: String) {
+        Log.d(TAG, "Starting GitHub Sign In process for email: $email")
+        val repository = AstroGlowRepository(RetrofitClient.api)
+        
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                val existingUser = withContext(Dispatchers.IO) {
+                    try {
+                        // First check if user exists by getting all users and checking email
+                        val usersResponse = RetrofitClient.api.getAllUsers()
+                        
+                        if (usersResponse.isSuccessful) {
+                            val allUsers = usersResponse.body() ?: emptyList()
+                            allUsers.find { it.userEmail == email }
+                        } else {
+                            null
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error checking existing user", e)
+                        null
+                    }
+                }
+
+                if (existingUser != null) {
+                    // User exists, proceed with login
+                    Log.d(TAG, "Existing user found, logging in: ${existingUser.userName}")
+                    
+                    // Store user information including the user ID
+                    var userId = existingUser.id ?: 0L
+                    Log.d(TAG, "User ID from existingUser: ${existingUser.id}, using: $userId")
+                    
+                    // If user ID is null or 0, try to fetch it directly from the server
+                    if (userId <= 0) {
+                        Log.d(TAG, "User ID is null or 0, attempting to fetch it directly from server")
+                        try {
+                            // Try to get the user by email directly
+                            val userResponse = withContext(Dispatchers.IO) {
+                                RetrofitClient.api.getUserByEmail(email)
+                            }
+                            
+                            if (userResponse.isSuccessful && userResponse.body() != null) {
+                                val user = userResponse.body()
+                                userId = user?.id ?: 0L
+                                Log.d(TAG, "Fetched user ID from server: $userId")
+                            } else {
+                                Log.e(TAG, "Failed to fetch user by email. Status: ${userResponse.code()}")
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error fetching user by email", e)
+                        }
+                    }
+                    
+                    // Make sure we have a valid user ID
+                    if (userId <= 0) {
+                        Log.e(TAG, "Invalid user ID: $userId")
+                        Toast.makeText(
+                            this@GitHubLoginActivity,
+                            "Error: Invalid user ID. Please try again.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@launch
+                    }
+                    
+                    getSharedPreferences("auth", MODE_PRIVATE)
+                        .edit()
+                        .putLong("user_id", userId)
+                        .putString("user_email", existingUser.userEmail)
+                        .putString("user_name", existingUser.userName)
+                        .putString("display_name", name)
+                        .putString("user_password", existingUser.userPassword)
+                        .putBoolean("is_logged_in", true)
+                        .apply()
+                    
+                    Log.d(TAG, "Stored user data - ID: $userId, Email: ${existingUser.userEmail}, Name: ${existingUser.userName}")
+                    
+                    Toast.makeText(this@GitHubLoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
+                    
+                    // Navigate to HomeActivity and finish this activity
+                    val intent = Intent(this@GitHubLoginActivity, HomeActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    Log.d(TAG, "Starting HomeActivity with flags: ${intent.flags}")
+                    startActivity(intent)
+                    finish()
+                    return@launch
+                }
+                
+                // If we get here, user doesn't exist, create new account
+                Log.d(TAG, "User not found, creating new account")
+                
+                withContext(Dispatchers.IO) {
+                    try {
+                        // Format username to comply with backend validation while preserving readability
+                        var formattedUsername = name.replace(" ", "_")
+                            .replace(Regex("[^a-zA-Z0-9_]"), "") // Remove any other special characters
+                        
+                        // Check if username exists and append number if needed
+                        var counter = 1
+                        var originalUsername = formattedUsername
+                        while (true) {
+                            val checkResponse = RetrofitClient.api.getAllUsers()
+                            if (!checkResponse.isSuccessful) break
+                            
+                            val users = checkResponse.body() ?: emptyList()
+                            if (!users.any { it.userName == formattedUsername }) break
+                            
+                            formattedUsername = "${originalUsername}_${counter++}"
+                        }
+                        
+                        // Generate a secure password that meets the requirements
+                        val securePassword = generateSecurePassword()
+                        
+                        // Create a user entity with GitHub credentials
+                        val user = UserEntity(
+                            userName = formattedUsername,
+                            userEmail = email,
+                            userPassword = securePassword,
+                            authentication = AuthenticationEntity(type = "GITHUB"),
+                            playlists = emptyList(),
+                            offlineLibraries = emptyList(),
+                            favorites = emptyList()
+                        )
+                        
+                        Log.d(TAG, "Attempting to create new user: $user")
+                        
+                        // Post the user to the backend using the /api/user/postUser endpoint
+                        val response = RetrofitClient.api.postUser(user)
+                        
+                        withContext(Dispatchers.Main) {
+                            if (response.isSuccessful) {
+                                val userResponse = response.body()
+                                if (userResponse != null) {
+                                    Log.d(TAG, "User successfully created: ${userResponse.userName}")
+                                    
+                                    // Store both formatted and display names, including user ID
+                                    var userId = userResponse.id ?: 0L
+                                    Log.d(TAG, "User ID from userResponse: ${userResponse.id}, using: $userId")
+                                    
+                                    // If user ID is null or 0, try to fetch it directly from the server
+                                    if (userId <= 0) {
+                                        Log.d(TAG, "User ID is null or 0, attempting to fetch it directly from server")
+                                        try {
+                                            // Try to get the user by email directly
+                                            val directUserResponse = withContext(Dispatchers.IO) {
+                                                RetrofitClient.api.getUserByEmail(email)
+                                            }
+                                            
+                                            if (directUserResponse.isSuccessful && directUserResponse.body() != null) {
+                                                val directUser = directUserResponse.body()
+                                                userId = directUser?.id ?: 0L
+                                                Log.d(TAG, "Fetched user ID from server: $userId")
+                                            } else {
+                                                Log.e(TAG, "Failed to fetch user by email. Status: ${directUserResponse.code()}")
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e(TAG, "Error fetching user by email", e)
+                                        }
+                                    }
+                                    
+                                    // Make sure we have a valid user ID
+                                    if (userId <= 0) {
+                                        Log.e(TAG, "Invalid user ID from server: $userId")
+                                        Toast.makeText(
+                                            this@GitHubLoginActivity,
+                                            "Error: Invalid user ID received from server. Please try again.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        return@withContext
+                                    }
+                                    
+                                    getSharedPreferences("auth", MODE_PRIVATE)
+                                        .edit()
+                                        .putLong("user_id", userId)
+                                        .putString("user_email", userResponse.userEmail)
+                                        .putString("user_name", userResponse.userName)
+                                        .putString("display_name", name)
+                                        .putString("user_password", userResponse.userPassword)
+                                        .putBoolean("is_logged_in", true)
+                                        .apply()
+                                    
+                                    Log.d(TAG, "Stored user data - ID: $userId, Email: ${userResponse.userEmail}, Name: ${userResponse.userName}")
+                                    
+                                    Toast.makeText(this@GitHubLoginActivity, "Account created successfully", Toast.LENGTH_SHORT).show()
+                                    
+                                    // Navigate to HomeActivity and finish this activity
+                                    val intent = Intent(this@GitHubLoginActivity, HomeActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    startActivity(intent)
+                                    finish()
+                                } else {
+                                    Log.e(TAG, "Response successful but body is null")
+                                    Toast.makeText(
+                                        this@GitHubLoginActivity,
+                                        "Failed to create user: Empty response",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            } else {
+                                val errorBody = response.errorBody()?.string()
+                                Log.e(TAG, "Failed to create user. Status: ${response.code()}, Error: $errorBody")
+                                
+                                // If user already exists by email, try to log in directly
+                                if (errorBody?.contains("Duplicate entry") == true && errorBody.contains("uk_user_email")) {
+                                    // Retry getting the user one last time
+                                    val finalCheckResponse = RetrofitClient.api.getAllUsers()
+                                    if (finalCheckResponse.isSuccessful) {
+                                        val finalUser = finalCheckResponse.body()?.find { it.userEmail == email }
+                                        if (finalUser != null) {
+                                            // Store user information including the user ID
+                                            var userId = finalUser.id ?: 0L
+                                            Log.d(TAG, "User ID from finalUser: ${finalUser.id}, using: $userId")
+                                            
+                                            // If user ID is null or 0, try to fetch it directly from the server
+                                            if (userId <= 0) {
+                                                Log.d(TAG, "User ID is null or 0, attempting to fetch it directly from server")
+                                                try {
+                                                    // Try to get the user by email directly
+                                                    val directUserResponse = withContext(Dispatchers.IO) {
+                                                        RetrofitClient.api.getUserByEmail(email)
+                                                    }
+                                                    
+                                                    if (directUserResponse.isSuccessful && directUserResponse.body() != null) {
+                                                        val directUser = directUserResponse.body()
+                                                        userId = directUser?.id ?: 0L
+                                                        Log.d(TAG, "Fetched user ID from server: $userId")
+                                                    } else {
+                                                        Log.e(TAG, "Failed to fetch user by email. Status: ${directUserResponse.code()}")
+                                                    }
+                                                } catch (e: Exception) {
+                                                    Log.e(TAG, "Error fetching user by email", e)
+                                                }
+                                            }
+                                            
+                                            // Make sure we have a valid user ID
+                                            if (userId <= 0) {
+                                                Log.e(TAG, "Invalid user ID from final check: $userId")
+                                                Toast.makeText(
+                                                    this@GitHubLoginActivity,
+                                                    "Error: Invalid user ID. Please try again.",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                                return@withContext
+                                            }
+                                            
+                                            getSharedPreferences("auth", MODE_PRIVATE)
+                                                .edit()
+                                                .putLong("user_id", userId)
+                                                .putString("user_email", finalUser.userEmail)
+                                                .putString("user_name", finalUser.userName)
+                                                .putString("display_name", name)
+                                                .putString("user_password", finalUser.userPassword)
+                                                .putBoolean("is_logged_in", true)
+                                                .apply()
+                                            
+                                            Log.d(TAG, "Stored user data - ID: $userId, Email: ${finalUser.userEmail}, Name: ${finalUser.userName}")
+                                            
+                                            Toast.makeText(this@GitHubLoginActivity, "Login successful", Toast.LENGTH_SHORT).show()
+                                            
+                                            // Navigate to HomeActivity and finish this activity
+                                            val intent = Intent(this@GitHubLoginActivity, HomeActivity::class.java)
+                                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                            startActivity(intent)
+                                            finish()
+                                            return@withContext
+                                        }
+                                    }
+                                }
+                                
+                                // If we get here, show the error message
+                                val errorMessage = when {
+                                    errorBody?.contains("Username can only contain") == true -> 
+                                        "Username can only contain letters, numbers, and underscores"
+                                    errorBody?.contains("Username must be between") == true -> 
+                                        "Username must be between 3 and 30 characters"
+                                    errorBody?.contains("Duplicate entry") == true ->
+                                        "Username already exists. Please try again."
+                                    errorBody?.contains("Password must be at least") == true ->
+                                        "Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character"
+                                    else -> "Failed to create user: ${errorBody ?: "Unknown error"}"
+                                }
+                                
+                                Toast.makeText(
+                                    this@GitHubLoginActivity,
+                                    errorMessage,
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Log.e(TAG, "Error during user creation/login", e)
+                            val errorMessage = when {
+                                e.message?.contains("timeout") == true -> 
+                                    "Request timed out. Please check if the server is running."
+                                e.message?.contains("Failed to connect") == true -> 
+                                    "Cannot connect to the server. Please ensure the backend is running."
+                                else -> "Error processing request: ${e.message}"
+                            }
+                            Toast.makeText(
+                                this@GitHubLoginActivity,
+                                errorMessage,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error preparing user data", e)
+                Toast.makeText(
+                    this@GitHubLoginActivity,
+                    "Error preparing user data: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+    
+    private fun generateSecurePassword(): String {
+        val upperCase = ('A'..'Z').random().toString()
+        val lowerCase = ('a'..'z').random().toString()
+        val number = ('0'..'9').random().toString()
+        val specialChars = listOf('!', '@', '#', '$', '%', '^', '&', '*')
+        val special = specialChars.random().toString()
+        
+        // Generate remaining characters (ensuring at least 8 characters total)
+        val remainingLength = 8
+        val remainingChars = (('A'..'Z') + ('a'..'z') + ('0'..'9') + specialChars)
+            .shuffled()
+            .take(remainingLength - 4) // -4 because we already have 4 required characters
+            .joinToString("")
+        
+        // Combine all parts and shuffle
+        return (upperCase + lowerCase + number + special + remainingChars)
+            .toList()
+            .shuffled()
+            .joinToString("")
+    }
+    
+    override fun onDestroy() {
+        webView?.destroy()
+        webView = null
+        super.onDestroy()
     }
 }
 

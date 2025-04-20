@@ -1,6 +1,7 @@
 package edu.cit.astroglow
 
 object Constants {
-    // Use 10.0.2.2 for Android emulator to access localhost
-    const val BASE_URL = "http://10.0.2.2:8080"
+    // For Android emulator, use: "http://10.0.2.2:8080"
+    // For physical device, use your computer's IP address
+    const val BASE_URL = "http://192.168.254.105:8080"
 } 

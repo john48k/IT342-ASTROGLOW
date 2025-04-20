@@ -63,6 +63,11 @@
             android:exported="false"
             android:label="Search"
             android:theme="@style/Theme.Astroglow" />
+        <activity
+            android:name=".GitHubLoginActivity"
+            android:exported="false"
+            android:label="GitHub Login"
+            android:theme="@style/Theme.Astroglow" />
     </application>
 
 </manifest>

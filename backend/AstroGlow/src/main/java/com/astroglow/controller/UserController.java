@@ -19,7 +19,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:5174"}, allowCredentials = "true")
+@CrossOrigin(origins = {
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://192.168.254.105:8080",
+    "astroglow://oauth/callback"
+}, allowCredentials = "true")
 public class UserController {
     @GetMapping
     public String index(){
@@ -552,5 +558,27 @@ public class UserController {
             errorResponse.put("message", "An error occurred while retrieving the profile picture");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> healthCheck() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "Backend server is running");
+        response.put("timestamp", System.currentTimeMillis());
+        response.put("serverAddress", "192.168.254.105:8080");
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/mobile/health")
+    public ResponseEntity<Map<String, Object>> mobileHealthCheck(HttpServletRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "Backend server is running");
+        response.put("timestamp", System.currentTimeMillis());
+        response.put("serverAddress", "192.168.254.105:8080");
+        response.put("clientIp", request.getRemoteAddr());
+        response.put("userAgent", request.getHeader("User-Agent"));
+        return ResponseEntity.ok(response);
     }
 }
