@@ -77,21 +77,31 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 UserEntity newUser = new UserEntity();
                 newUser.setUserEmail(email);
                 
-                // Use name from OAuth or generate one based on email
+                // Generate username
+                String baseUsername;
                 if (name != null && !name.isEmpty()) {
-                    newUser.setUserName(name);
+                    baseUsername = name;
                 } else {
                     // Extract username from email (before @)
-                    String username = email.split("@")[0];
-                    newUser.setUserName(username);
+                    baseUsername = email.split("@")[0];
                 }
+                
+                // Check if username exists and append random number if it does
+                String finalUsername = baseUsername;
+                int attempt = 1;
+                while (userRepository.findByUserName(finalUsername) != null) {
+                    finalUsername = baseUsername + "_" + attempt;
+                    attempt++;
+                }
+                
+                newUser.setUserName(finalUsername);
                 
                 // Generate a secure random password for OAuth users
                 // They won't use this password but we need it for the database
                 String randomPassword = UUID.randomUUID().toString();
                 newUser.setUserPassword(passwordEncoder.encode(randomPassword));
                 
-                logger.info("Creating new user from OAuth2 login: {}", email);
+                logger.info("Creating new user from OAuth2 login: {} with username: {}", email, finalUsername);
                 userRepository.save(newUser);
             } else {
                 logger.info("Existing user logged in via OAuth2: {}", email);
