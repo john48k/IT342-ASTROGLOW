@@ -1,6 +1,27 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useAudioPlayer } from '../../context/AudioPlayerContext';
+import { useLocation } from 'react-router-dom';
 import styles from './NowPlayingBar.module.css';
+
+// Add global event listeners for HomePage navigation
+let homePageNavHandlers = {
+  next: null,
+  previous: null
+};
+
+// Register HomePage navigation handlers globally
+export const registerHomePageNavHandlers = (nextHandler, prevHandler) => {
+  homePageNavHandlers.next = nextHandler;
+  homePageNavHandlers.previous = prevHandler;
+  console.log('HomePage navigation handlers registered');
+};
+
+// Unregister handlers when HomePage unmounts
+export const unregisterHomePageNavHandlers = () => {
+  homePageNavHandlers.next = null;
+  homePageNavHandlers.previous = null;
+  console.log('HomePage navigation handlers unregistered');
+};
 
 const NowPlayingBar = () => {
   const {
@@ -16,8 +37,16 @@ const NowPlayingBar = () => {
     playNextSong,
     playPreviousSong,
     seekAudio,
-    stopPlayback
+    skipForward,
+    skipBackward,
+    stopPlayback,
+    musicCategory,
+    setMusicCategory
   } = useAudioPlayer();
+  
+  // Get current route to determine if we're on the HomePage
+  const location = useLocation();
+  const isHomePage = location.pathname === '/home' || location.pathname === '/';
   
   // Add state for music list and albums
   const [musicList, setMusicList] = useState([]);
@@ -28,16 +57,21 @@ const NowPlayingBar = () => {
   
   // Debouncing mechanism to prevent rapid successive clicks
   const isActionAllowedRef = useRef(true);
-  const debounceTime = 300; // milliseconds
+  const debounceTime = 500; // increased from 300 to 500 milliseconds
   
   const debounce = (callback) => {
-    if (!isActionAllowedRef.current) return;
+    if (!isActionAllowedRef.current) {
+      console.log("Action blocked by debounce");
+      return;
+    }
     
     isActionAllowedRef.current = false;
+    console.log("Action allowed, debouncing for", debounceTime, "ms");
     callback();
     
     setTimeout(() => {
       isActionAllowedRef.current = true;
+      console.log("Debounce period ended, new actions allowed");
     }, debounceTime);
   };
   
@@ -100,63 +134,402 @@ const NowPlayingBar = () => {
     }
   }, [currentlyPlaying]);
   
-  // Handle forward button click - simple version without double-click
+  // Handle forward button click - uses skipForward from context
   const handleForwardClick = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("⏩ Forward 10 seconds button clicked");
     
     debounce(() => {
-      if (audioElement) {
-        // Forward 10 seconds
-        const newTime = Math.min(audioElement.duration, audioElement.currentTime + 10);
-        audioElement.currentTime = newTime;
-        seekAudio(newTime / audioElement.duration * 100);
-      }
+      // Use the skipForward function directly from context
+      skipForward(10);
     });
   };
   
-  // Handle next song
-  const handleNextSong = (e) => {
-    e.preventDefault();
-    
-    console.log("🔵 Next button clicked!");
-    console.log("🔵 Current playing:", currentlyPlaying);
-    console.log("🔵 Music list has", musicList?.length || 0, "items");
-    
-    if (musicList?.length > 0) {
-      // Log IDs in the music list for debugging
-      console.log("🔵 Music list IDs:", musicList.map(item => {
-        const id = item.id || item.musicId;
-        return id ? id.toString().substring(0, 15) + "..." : "unknown";
-      }).join(", "));
-    }
-    
-    debounce(() => {
-      console.log("🔵 Calling playNextSong with musicList:", musicList?.length || 0, "items");
-      playNextSong(musicList, albums);
-    });
-  };
-  
-  // Handle backward button click - simple version without double-click
+  // Handle backward button click - uses skipBackward from context
   const handleBackwardClick = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("⏪ Rewind 10 seconds button clicked");
     
     debounce(() => {
-      if (audioElement) {
-        // Rewind 10 seconds
-        const newTime = Math.max(0, audioElement.currentTime - 10);
-        audioElement.currentTime = newTime;
-        seekAudio(newTime / audioElement.duration * 100);
-      }
+      // Use the skipBackward function directly from context
+      skipBackward(10);
     });
   };
   
-  // Handle previous song
-  const handlePreviousSong = (e) => {
+  // Handle next song with strong debounce
+  const handleNextSong = (e) => {
+    if (e) {
     e.preventDefault();
+      e.stopPropagation();
+    }
     
+    console.log("🔵 Next button clicked!");
+    
+    // Check if we're already in the process of changing tracks
+    if (!isActionAllowedRef.current) {
+      console.log("🔵 Next action blocked by debounce - still processing previous action");
+      return;
+    }
+    
+    // If we're on the HomePage and have a registered next handler, use it
+    if (isHomePage && homePageNavHandlers.next) {
+      console.log("🔵 Using HomePage's next song handler");
+      debounce(() => {
+        homePageNavHandlers.next();
+      });
+      return;
+    }
+    
+    // If we're on the favorites page, load the favorites list directly
+    const isFavoritesPage = location.pathname.includes('/favorites');
+    if (isFavoritesPage) {
+      console.log("🔵 On favorites page, using favorites list directly");
+      try {
+        // Load the favorites list from localStorage
+        const savedFavorites = localStorage.getItem('favorites-music-list');
+        if (savedFavorites) {
+          const favoritesList = JSON.parse(savedFavorites);
+          console.log(`🔵 Loaded ${favoritesList.length} favorites from localStorage`);
+          
+          // Make sure we're in favorites mode
+          setMusicCategory('favorites');
+          
+          debounce(() => {
+            // First stop any current playback to ensure clean state
+            stopPlayback().then(() => {
+              playNextSong(favoritesList, []);
+            });
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("Error loading favorites list:", error);
+      }
+    }
+    
+    console.log("🔵 Current playing:", currentlyPlaying);
+    console.log("🔵 Current track data:", currentTrackData?.title, "by", currentTrackData?.artist);
+    console.log("🔵 Current music category:", musicCategory || "not set");
+    console.log("🔵 Music list has", musicList?.length || 0, "items");
+    
+    // If musicList is empty or not properly loaded, fetch it immediately
+    if (!musicList || musicList.length === 0) {
+      console.log("🔵 Music list is empty, fetching it now");
+      
+      const fetchMusicList = async () => {
+        try {
+          // Regular music from backend
+          const response = await fetch('http://localhost:8080/api/music/getAllMusic');
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Add displayIndex to uploaded items
+            const uploadedItems = data.map((item, index) => ({
+              ...item,
+              displayIndex: index,
+              category: 'uploaded'
+            }));
+            
+            // Get Firebase music items from localStorage
+            let firebaseItems = [];
+            try {
+              const savedFirebaseMusic = localStorage.getItem('firebase-music-list');
+              if (savedFirebaseMusic) {
+                const parsedItems = JSON.parse(savedFirebaseMusic);
+                console.log(`[NextButton] Loaded ${parsedItems.length} Firebase items`);
+                
+                // Ensure each item has the correct properties
+                firebaseItems = parsedItems.map((item, index) => ({
+                  ...item,
+                  // If displayIndex doesn't exist, use the array index
+                  displayIndex: item.displayIndex !== undefined ? item.displayIndex : index,
+                  category: 'available'
+                }));
+                
+                // Log the Firebase items to verify correct order
+                console.log("[NextButton] Firebase items with display indices:");
+                firebaseItems.slice(0, 3).forEach((item, idx) => {
+                  console.log(`${idx}: ${item.title} by ${item.artist} (Index: ${item.displayIndex})`);
+                });
+              }
+            } catch (error) {
+              console.error('[NextButton] Error loading Firebase music:', error);
+            }
+            
+            // Create a combined list
+            const combinedList = [...uploadedItems, ...firebaseItems];
+            console.log(`[NextButton] Combined music list: ${combinedList.length} items`);
+            
+            setMusicList(combinedList);
+            
+            // Now play the next song with the fresh list
+            playNextSong(combinedList, albums);
+          } else {
+            console.error('Failed to fetch music list for Next button');
+            // Even if fetch fails, try with whatever might be in the existing list
+            playNextSong(musicList, albums);
+          }
+        } catch (error) {
+          console.error('Error fetching music list for Next button:', error);
+          // Even if fetch fails, try with whatever might be in the existing list
+      playNextSong(musicList, albums);
+        }
+      };
+      
+      fetchMusicList();
+    } else {
+      // If music list is already loaded, just play next song
+      if (typeof musicCategory !== 'undefined') {
+        console.log("🔵 Using music category:", musicCategory, "for next song navigation");
+        
+        // Filter music list by category first
+        let filteredList = musicList;
+        if (musicCategory === 'available') {
+          filteredList = musicList.filter(item => {
+            const id = String(item.id || item.musicId || '');
+            return id.includes('firebase-') || item.category === 'available';
+          });
+          console.log(`🔵 Filtered to ${filteredList.length} available music items`);
+        } else if (musicCategory === 'uploaded') {
+          filteredList = musicList.filter(item => {
+            const id = String(item.id || item.musicId || '');
+            return !id.includes('firebase-') || item.category === 'uploaded';
+          });
+          console.log(`🔵 Filtered to ${filteredList.length} uploaded music items`);
+        }
+        
+        // Sort by displayIndex to ensure correct order
+        filteredList.sort((a, b) => {
+          const indexA = a.displayIndex !== undefined ? a.displayIndex : 0;
+          const indexB = b.displayIndex !== undefined ? b.displayIndex : 0;
+          return indexA - indexB;
+        });
+        
+        // Log current track index and what should be next
+        const currentIndex = filteredList.findIndex(item => {
+          const itemId = String(item.id || item.musicId || '');
+          return itemId === String(currentlyPlaying);
+        });
+        
+        console.log(`🔵 Current track index in filtered list: ${currentIndex} of ${filteredList.length}`);
+        
+        if (currentIndex !== -1 && currentIndex < filteredList.length - 1) {
+          const nextItem = filteredList[currentIndex + 1];
+          console.log("🔵 Next track should be:", 
+            nextItem?.title || 'Unknown', "by", nextItem?.artist || 'Unknown Artist',
+            `(ID: ${nextItem?.id || nextItem?.musicId || 'undefined'})`);
+        } else if (currentIndex === filteredList.length - 1) {
+          const firstItem = filteredList[0];
+          console.log("🔵 Looping back to first track:", 
+            firstItem?.title || 'Unknown', "by", firstItem?.artist || 'Unknown Artist');
+        }
+        
+        // If we have a properly filtered list, use it directly
+        if (filteredList.length > 0) {
+          console.log("🔵 Calling playNextSong with filtered list:", filteredList.length, "items");
+    debounce(() => {
+            playNextSong(filteredList, albums);
+          });
+          return;
+        }
+      }
+      
+      // Fallback to using the full list
+      console.log("🔵 Using full music list of", musicList.length, "items");
+      debounce(() => {
+        playNextSong(musicList, albums);
+      });
+    }
+  };
+  
+  // Handle previous song with strong debounce
+  const handlePreviousSong = (e) => {
+    if (e) {
+    e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    console.log("🔵 Previous button clicked!");
+    
+    // Check if we're already in the process of changing tracks
+    if (!isActionAllowedRef.current) {
+      console.log("🔵 Previous action blocked by debounce - still processing previous action");
+      return;
+    }
+    
+    // If we're on the HomePage and have a registered previous handler, use it
+    if (isHomePage && homePageNavHandlers.previous) {
+      console.log("🔵 Using HomePage's previous song handler");
+      debounce(() => {
+        homePageNavHandlers.previous();
+      });
+      return;
+    }
+    
+    // If we're on the favorites page, load the favorites list directly
+    const isFavoritesPage = location.pathname.includes('/favorites');
+    if (isFavoritesPage) {
+      console.log("🔵 On favorites page, using favorites list directly");
+      try {
+        // Load the favorites list from localStorage
+        const savedFavorites = localStorage.getItem('favorites-music-list');
+        if (savedFavorites) {
+          const favoritesList = JSON.parse(savedFavorites);
+          console.log(`🔵 Loaded ${favoritesList.length} favorites from localStorage`);
+          
+          // Make sure we're in favorites mode
+          setMusicCategory('favorites');
+          
+          debounce(() => {
+            // First stop any current playback to ensure clean state
+            stopPlayback().then(() => {
+              playPreviousSong(favoritesList, []);
+            });
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("Error loading favorites list:", error);
+      }
+    }
+    
+    console.log("🔵 Current playing:", currentlyPlaying);
+    console.log("🔵 Current track data:", currentTrackData?.title, "by", currentTrackData?.artist);
+    console.log("🔵 Current music category:", musicCategory || "not set");
+    console.log("🔵 Music list has", musicList?.length || 0, "items");
+    
+    // If musicList is empty or not properly loaded, fetch it immediately
+    if (!musicList || musicList.length === 0) {
+      console.log("🔵 Music list is empty, fetching it now");
+      
+      const fetchMusicList = async () => {
+        try {
+          // Regular music from backend
+          const response = await fetch('http://localhost:8080/api/music/getAllMusic');
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Add displayIndex to uploaded items
+            const uploadedItems = data.map((item, index) => ({
+              ...item,
+              displayIndex: index,
+              category: 'uploaded'
+            }));
+            
+            // Get Firebase music items from localStorage
+            let firebaseItems = [];
+            try {
+              const savedFirebaseMusic = localStorage.getItem('firebase-music-list');
+              if (savedFirebaseMusic) {
+                const parsedItems = JSON.parse(savedFirebaseMusic);
+                console.log(`[PrevButton] Loaded ${parsedItems.length} Firebase items`);
+                
+                // Ensure each item has the correct properties
+                firebaseItems = parsedItems.map((item, index) => ({
+                  ...item,
+                  // If displayIndex doesn't exist, use the array index
+                  displayIndex: item.displayIndex !== undefined ? item.displayIndex : index,
+                  category: 'available'
+                }));
+                
+                // Log the Firebase items to verify correct order
+                console.log("[PrevButton] Firebase items with display indices:");
+                firebaseItems.slice(0, 3).forEach((item, idx) => {
+                  console.log(`${idx}: ${item.title} by ${item.artist} (Index: ${item.displayIndex})`);
+                });
+              }
+            } catch (error) {
+              console.error('[PrevButton] Error loading Firebase music:', error);
+            }
+            
+            // Create a combined list
+            const combinedList = [...uploadedItems, ...firebaseItems];
+            console.log(`[PrevButton] Combined music list: ${combinedList.length} items`);
+            
+            setMusicList(combinedList);
+            
+            // Now play the previous song with the fresh list
+            playPreviousSong(combinedList, albums);
+          } else {
+            console.error('Failed to fetch music list for Previous button');
+            // Even if fetch fails, try with whatever might be in the existing list
+            playPreviousSong(musicList, albums);
+          }
+        } catch (error) {
+          console.error('Error fetching music list for Previous button:', error);
+          // Even if fetch fails, try with whatever might be in the existing list
+          playPreviousSong(musicList, albums);
+        }
+      };
+      
+      fetchMusicList();
+    } else {
+      // If music list is already loaded, just play previous song
+      if (typeof musicCategory !== 'undefined') {
+        console.log("🔵 Using music category:", musicCategory, "for previous song navigation");
+        
+        // Filter music list by category first
+        let filteredList = musicList;
+        if (musicCategory === 'available') {
+          filteredList = musicList.filter(item => {
+            const id = String(item.id || item.musicId || '');
+            return id.includes('firebase-') || item.category === 'available';
+          });
+          console.log(`🔵 Filtered to ${filteredList.length} available music items`);
+        } else if (musicCategory === 'uploaded') {
+          filteredList = musicList.filter(item => {
+            const id = String(item.id || item.musicId || '');
+            return !id.includes('firebase-') || item.category === 'uploaded';
+          });
+          console.log(`🔵 Filtered to ${filteredList.length} uploaded music items`);
+        }
+        
+        // Sort by displayIndex to ensure correct order
+        filteredList.sort((a, b) => {
+          const indexA = a.displayIndex !== undefined ? a.displayIndex : 0;
+          const indexB = b.displayIndex !== undefined ? b.displayIndex : 0;
+          return indexA - indexB;
+        });
+        
+        // Log current track index and what should be previous
+        const currentIndex = filteredList.findIndex(item => {
+          const itemId = String(item.id || item.musicId || '');
+          return itemId === String(currentlyPlaying);
+        });
+        
+        console.log(`🔵 Current track index in filtered list: ${currentIndex} of ${filteredList.length}`);
+        
+        if (currentIndex > 0) {
+          const prevItem = filteredList[currentIndex - 1];
+          console.log("🔵 Previous track should be:", 
+            prevItem?.title || 'Unknown', "by", prevItem?.artist || 'Unknown Artist',
+            `(ID: ${prevItem?.id || prevItem?.musicId || 'undefined'})`);
+        } else if (currentIndex === 0 && filteredList.length > 0) {
+          const lastItem = filteredList[filteredList.length - 1];
+          console.log("🔵 Looping back to last track:", 
+            lastItem?.title || 'Unknown', "by", lastItem?.artist || 'Unknown Artist');
+        }
+        
+        // If we have a properly filtered list, use it directly
+        if (filteredList.length > 0) {
+          console.log("🔵 Calling playPreviousSong with filtered list:", filteredList.length, "items");
+          debounce(() => {
+            playPreviousSong(filteredList, albums);
+          });
+          return;
+        }
+      }
+      
+      // Fallback to using the full list
+      console.log("🔵 Using full music list of", musicList.length, "items");
     debounce(() => {
       playPreviousSong(musicList, albums);
     });
+    }
   };
   
   // Handle play/pause with debounce
@@ -319,9 +692,9 @@ const NowPlayingBar = () => {
                   ⏪
                 </button>
                 <button
-                  className={styles.playbackButton}
+                  className={`${styles.playbackButton} ${styles.playButton}`}
                   onClick={handlePlayPause}
-                  title="Play/Pause"
+                  title={isPlaying ? 'Pause' : 'Play'}
                 >
                   {isPlaying ? '❚❚' : '▶'}
                 </button>

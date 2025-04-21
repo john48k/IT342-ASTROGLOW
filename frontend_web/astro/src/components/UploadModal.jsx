@@ -113,59 +113,39 @@ const UploadModal = ({ isOpen, onClose, onUploadComplete }) => {
   }, []);
 
   // Handle final submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!audioFileUrl || !title || !artist) {
-      setError('Please ensure audio is uploaded and title/artist fields are filled.');
+  const handleSubmit = async () => {
+    if (!audioFileUrl) {
+      setError('Please upload an audio file first');
       return;
     }
+
+    if (!title || !artist) {
+      setError('Please provide a title and artist');
+      return;
+    }
+
     setIsSubmitting(true);
     setError('');
 
     try {
-      // Process title and artist - make sure long titles are preserved properly
+      // Clean and format the input data
       const cleanTitle = title.trim();
       const cleanArtist = artist.trim();
-      
-      // Format genre properly - default to 'Music' if empty
-      const finalGenre = genre || 'Music';
-      
-      // Make sure to add TikTok genre if title contains specific TikTok phrases but genre is unspecified
-      const finalFormattedGenre = (!genre && title.toLowerCase().includes("tiktok song")) ? 
-        "TikTok song" : finalGenre;
-      
+      const finalFormattedGenre = genre ? genre.trim() : 'Music';
+
+      // Create upload data object
       const uploadData = {
         title: cleanTitle,
         artist: cleanArtist,
         genre: finalFormattedGenre,
         audioUrl: audioFileUrl,
-        imageUrl: imageUrl, // Can be null if no image provided
-        audioFileName: audioFileName // Keep original filename if needed
+        imageUrl: imageUrl,
+        audioFileName: audioFileUrl.split('/').pop() // Extract filename from URL
       };
 
-      console.log('Submitting Upload Data:', uploadData);
-
-      // --- IMPORTANT --- 
-      // HERE YOU WOULD CALL YOUR BACKEND API TO SAVE THIS DATA
-      // For example:
-      // const response = await fetch('/api/music/upload', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(uploadData),
-      // });
-      // if (!response.ok) {
-      //   throw new Error('Failed to save music data');
-      // }
-      // const savedMusic = await response.json();
-      // console.log('Music saved:', savedMusic);
-      // -----------------
-
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Notify parent component (e.g., HomePage) about the successful upload
+      // Save to Firebase only, not to database
       if (onUploadComplete) {
-        onUploadComplete(uploadData); // Pass the complete data back
+        onUploadComplete(uploadData);
       }
 
       handleClose(); // Close modal on success

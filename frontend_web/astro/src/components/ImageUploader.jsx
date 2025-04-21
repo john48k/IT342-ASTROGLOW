@@ -4,7 +4,6 @@ import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 
 const ImageUploader = ({ onImageUploaded, initialImageUrl = null }) => {
   const [imageFile, setImageFile] = useState(null);
-  const [imageUrlInput, setImageUrlInput] = useState(initialImageUrl || '');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
@@ -29,22 +28,7 @@ const ImageUploader = ({ onImageUploaded, initialImageUrl = null }) => {
     setError('');
     setImageFile(file);
     setPreviewUrl(URL.createObjectURL(file)); // Show local preview
-    setImageUrlInput(''); // Clear URL input if file is selected
     handleUpload(file);
-  };
-
-  // Handle image URL input
-  const handleUrlInputChange = (e) => {
-    const url = e.target.value;
-    setImageUrlInput(url);
-    setImageFile(null); // Clear file input if URL is entered
-    setPreviewUrl(url); // Show preview from URL
-    // Notify parent immediately if URL is valid (basic check)
-    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-       onImageUploaded(url); // Pass the URL directly
-    } else if (!url) {
-       onImageUploaded(null); // Clear if URL is empty
-    }
   };
 
   // Handle the actual upload process
@@ -99,9 +83,9 @@ const ImageUploader = ({ onImageUploaded, initialImageUrl = null }) => {
             alt="Cover preview" 
             style={{ width: '100%', height: 'auto', display: 'block' }} 
             onError={(e) => { 
-              // Handle broken image links for URLs
+              // Handle broken image links
               e.target.style.display = 'none'; 
-              if (imageUrlInput) setError('Invalid image URL or unable to load preview.');
+              setError('Unable to load preview image.');
             }}
           />
         </div>
@@ -131,24 +115,6 @@ const ImageUploader = ({ onImageUploaded, initialImageUrl = null }) => {
       >
         {imageFile ? 'Change Image File' : 'Upload Image File'}
       </label>
-
-      <span style={{ margin: '0 10px' }}>OR</span>
-
-      {/* URL Input */}
-      <input
-        type="text"
-        placeholder="Paste Image URL"
-        value={imageUrlInput}
-        onChange={handleUrlInputChange}
-        disabled={isUploading}
-        style={{
-            padding: '5px 10px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            width: 'calc(100% - 220px)', // Adjust width as needed
-            minWidth: '150px'
-        }}
-      />
 
       {/* Upload Progress */}
       {isUploading && (

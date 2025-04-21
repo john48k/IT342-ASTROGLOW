@@ -29,10 +29,10 @@ const OAuth2Redirect = () => {
 
         // Extract user information (format depends on the OAuth provider)
         const userInfo = {
-          userName: userData.name || userData.login || userData.email?.split('@')[0] || 'User',
-          userEmail: userData.email || `${userData.login}@github.com` || 'unknown@email.com',
-          // We don't get or store the password for OAuth users
-          userId: userData.sub || userData.id || Date.now().toString()
+          userName: userData.userName || userData.name || userData.login || userData.email?.split('@')[0] || 'User',
+          userEmail: userData.userEmail || userData.email || `${userData.login}@github.com` || 'unknown@email.com',
+          // Use the numeric userId from the backend response
+          userId: userData.userId || userData.id || Date.now().toString()
         };
 
         // Generate a simple session token (in a real app, this would be a JWT from the server)

@@ -5,12 +5,14 @@ import { useUser } from "../../context/UserContext";
 import logo from "../../assets/images/AstroGlow-logo.png";
 import "../../components/NavBarStyle/NavBar.css";
 import Modal from "../Modal/Modal";
+import { FaSearch } from 'react-icons/fa';
 
 const Navbar = () => {
   const { isAuthenticated, logout } = useUser();
   const navigate = useNavigate();
   // Explicitly initialize modal to closed
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleLogoutClick = () => {
     setShowLogoutModal(true);
@@ -26,6 +28,24 @@ const Navbar = () => {
     setShowLogoutModal(false);
   };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate to search results page with the query as a parameter
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit(e);
+    }
+  };
+
   return (
     <>
       <nav className="navbar">
@@ -38,6 +58,26 @@ const Navbar = () => {
             <h1 className="navbar-title-text">AstroGlow</h1>
           </Link>
         </div>
+
+        {isAuthenticated && (
+          <div className="navbar-search">
+            <form onSubmit={handleSearchSubmit} className="search-form">
+              <input
+                type="text"
+                placeholder="Search for music..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onKeyDown={handleKeyDown}
+                className="search-input"
+                aria-label="Search for music"
+              />
+              <button type="submit" className="search-button" aria-label="Search">
+                <FaSearch />
+              </button>
+            </form>
+          </div>
+        )}
+
         <div className="navbar-links">
           <Link to="/about" className="about-us">
             About Us

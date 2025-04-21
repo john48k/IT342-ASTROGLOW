@@ -240,4 +240,8 @@ public class UserService {
         // Save and return the updated user
         return userRepository.save(user);
     }
+
+    public UserEntity findByOauthId(String oauthId) {
+        return userRepository.findByOauthId(oauthId);
+    }
 }

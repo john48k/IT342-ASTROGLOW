@@ -19,13 +19,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
-@CrossOrigin(origins = {
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://192.168.254.105:8080",
-    "astroglow://oauth/callback"
-}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:5174"}, allowCredentials = "true")
 public class UserController {
     @GetMapping
     public String index(){
@@ -40,30 +34,8 @@ public class UserController {
     }
 
     @GetMapping("/getAllUser")
-    public ResponseEntity<?> getAllUser() {
-        try {
-            List<UserEntity> users = userService.getAllUsers();
-            return ResponseEntity.ok(users);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving users: " + e.getMessage());
-        }
-    }
-
-    @GetMapping("/getUserByEmail/{email}")
-    public ResponseEntity<?> getUserByEmail(@PathVariable String email) {
-        try {
-            UserEntity user = userService.findByEmail(email);
-            if (user != null) {
-                return ResponseEntity.ok(user);
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("User not found with email: " + email);
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving user: " + e.getMessage());
-        }
+    public List<UserEntity> getAllUser(){
+        return userService.getAllUsers();
     }
 
     @PutMapping(value = "/putUser", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -178,7 +150,7 @@ public class UserController {
         }
     }
 
-    @PostMapping("/login")
+    @PostMapping(value = "/login", consumes = {"application/json", "application/json;charset=UTF-8"})
     public ResponseEntity<?> login(@RequestBody UserEntity user) {
         try {
             // Validate login data
@@ -212,7 +184,23 @@ public class UserController {
     @GetMapping("/user-info")
     public Map<String, Object> getUser(@AuthenticationPrincipal OAuth2User oAuth2User) {
         if (oAuth2User != null) {
-            return oAuth2User.getAttributes();
+            Map<String, Object> attributes = oAuth2User.getAttributes();
+            Map<String, Object> response = new HashMap<>();
+            
+            // Get the OAuth ID (sub) from the attributes
+            String oauthId = (String) attributes.get("sub");
+            if (oauthId != null) {
+                // Find user by OAuth ID
+                UserEntity user = userService.findByOauthId(oauthId);
+                if (user != null) {
+                    response.put("userId", user.getUserId());
+                    response.put("userName", user.getUserName());
+                    response.put("userEmail", user.getUserEmail());
+                    response.put("oauthId", user.getOauthId());
+                }
+            }
+            
+            return response;
         } else {
             return Collections.emptyMap();
         }
@@ -560,25 +548,169 @@ public class UserController {
         }
     }
 
-    @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> healthCheck() {
+    /**
+     * Simple test endpoint specifically for testing JSON content type
+     */
+    @PostMapping(value = "/test-content-type", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Map<String, Object>> testContentType(@RequestBody Map<String, Object> request) {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
-        response.put("message", "Backend server is running");
-        response.put("timestamp", System.currentTimeMillis());
-        response.put("serverAddress", "192.168.254.105:8080");
+        response.put("message", "Content type test passed successfully");
+        response.put("received", request);
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/mobile/health")
-    public ResponseEntity<Map<String, Object>> mobileHealthCheck(HttpServletRequest request) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "Backend server is running");
-        response.put("timestamp", System.currentTimeMillis());
-        response.put("serverAddress", "192.168.254.105:8080");
-        response.put("clientIp", request.getRemoteAddr());
-        response.put("userAgent", request.getHeader("User-Agent"));
-        return ResponseEntity.ok(response);
+    /**
+     * Alternative login endpoint that accepts form data instead of JSON
+     * to work around potential Content-Type issues
+     */
+    @PostMapping(value = "/login-form", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public ResponseEntity<?> loginWithForm(
+            @RequestParam("userEmail") String email,
+            @RequestParam("userPassword") String password,
+            @RequestParam(value = "rememberMe", defaultValue = "false") boolean rememberMe) {
+        try {
+            // Validate login data
+            if (email == null || email.trim().isEmpty()) {
+                throw new IllegalArgumentException("Email is required");
+            }
+            if (password == null || password.trim().isEmpty()) {
+                throw new IllegalArgumentException("Password is required");
+            }
+
+            UserEntity user = new UserEntity();
+            user.setUserEmail(email);
+            user.setUserPassword(password);
+
+            UserEntity loggedInUser = userService.loginUser(email, password);
+            if (loggedInUser != null) {
+                return ResponseEntity.ok(loggedInUser);
+            }
+
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Invalid email or password");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "An error occurred during login");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
+     * Alternative login endpoint that accepts multipart form data instead of JSON
+     * to work around potential Content-Type issues
+     */
+    @PostMapping(value = "/login-form", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> loginWithMultipartForm(
+            @RequestParam("userEmail") String email,
+            @RequestParam("userPassword") String password,
+            @RequestParam(value = "rememberMe", defaultValue = "false") boolean rememberMe) {
+        try {
+            // Validate login data
+            if (email == null || email.trim().isEmpty()) {
+                throw new IllegalArgumentException("Email is required");
+            }
+            if (password == null || password.trim().isEmpty()) {
+                throw new IllegalArgumentException("Password is required");
+            }
+
+            UserEntity user = new UserEntity();
+            user.setUserEmail(email);
+            user.setUserPassword(password);
+
+            UserEntity loggedInUser = userService.loginUser(email, password);
+            if (loggedInUser != null) {
+                return ResponseEntity.ok(loggedInUser);
+            }
+
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Invalid email or password");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "An error occurred during login");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
+     * Fallback login endpoint that accepts any content type
+     * as a last resort for clients with problematic content-type handling
+     */
+    @PostMapping(value = "/login-any", consumes = {"*/*"})
+    public ResponseEntity<?> loginWithAnyContentType(@RequestBody(required = false) Object requestObject) {
+        try {
+            // Try to extract login credentials from the request, handling different formats
+            String email = null;
+            String password = null;
+            
+            // Try to interpret the request body based on its type
+            if (requestObject instanceof Map) {
+                // Request body is a map
+                Map<String, Object> loginData = (Map<String, Object>) requestObject;
+                email = (String) loginData.get("userEmail");
+                password = (String) loginData.get("userPassword");
+            } else if (requestObject instanceof String) {
+                // Try to parse as JSON string
+                try {
+                    // Use a simple approach to extract email and password from the string
+                    String requestBody = (String) requestObject;
+                    if (requestBody.contains("userEmail") && requestBody.contains("userPassword")) {
+                        // Extremely basic "parsing" for demonstration
+                        int emailIdx = requestBody.indexOf("userEmail") + 10;
+                        int emailEndIdx = requestBody.indexOf(",", emailIdx);
+                        email = requestBody.substring(emailIdx, emailEndIdx).replace("\"", "").trim();
+                        
+                        int pwdIdx = requestBody.indexOf("userPassword") + 12;
+                        int pwdEndIdx = requestBody.indexOf("}", pwdIdx);
+                        password = requestBody.substring(pwdIdx, pwdEndIdx).replace("\"", "").trim();
+                    }
+                } catch (Exception e) {
+                    System.out.println("Error parsing string request: " + e.getMessage());
+                }
+            }
+            
+            // Validate login data
+            if (email == null || email.trim().isEmpty()) {
+                throw new IllegalArgumentException("Email is required");
+            }
+            if (password == null || password.trim().isEmpty()) {
+                throw new IllegalArgumentException("Password is required");
+            }
+
+            // Try to log in the user
+            UserEntity loggedInUser = userService.loginUser(email, password);
+            if (loggedInUser != null) {
+                // Return more detailed response
+                Map<String, Object> response = new HashMap<>();
+                response.put("userId", loggedInUser.getUserId());
+                response.put("userName", loggedInUser.getUserName());
+                response.put("userEmail", loggedInUser.getUserEmail());
+                response.put("message", "Login successful");
+                return ResponseEntity.ok(response);
+            }
+
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Invalid email or password");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        } catch (Exception e) {
+            e.printStackTrace(); // Log the full stack trace
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "An error occurred during login: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 }
