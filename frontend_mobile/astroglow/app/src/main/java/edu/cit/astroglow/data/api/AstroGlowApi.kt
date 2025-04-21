@@ -3,6 +3,7 @@ package edu.cit.astroglow.data.api
 import edu.cit.astroglow.data.model.LoginRequest
 import edu.cit.astroglow.data.model.LoginResponse
 import edu.cit.astroglow.data.model.User
+import edu.cit.astroglow.data.model.UserEntity
 import retrofit2.Response
 import retrofit2.http.*
 
@@ -33,6 +34,15 @@ interface AstroGlowApi {
 
     @POST("api/playlists")
     suspend fun createPlaylist(@Body playlist: Playlist): Response<Playlist>
+
+    @POST("api/user/postUser")
+    suspend fun postUser(@Body user: UserEntity): Response<UserEntity>
+
+    @GET("/api/user/getAllUser")
+    suspend fun getAllUsers(): Response<List<UserEntity>>
+
+    @GET("/api/user/getUserByEmail/{email}")
+    suspend fun getUserByEmail(@Path("email") email: String): Response<UserEntity>
 }
 
 data class Music(
