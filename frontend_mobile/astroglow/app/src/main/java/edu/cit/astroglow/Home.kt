@@ -225,64 +225,8 @@ class HomeActivity : FragmentActivity() {
                     if (userId != -1L) {
                         CoroutineScope(Dispatchers.IO).launch {
                             try {
-                                // First try to use Google profile picture if available
-                                if (profilePictureUrl != null) {
-                                    Log.d("HomeActivity", "Attempting to load Google profile picture from URL: $profilePictureUrl")
-                                    try {
-                                        val client = OkHttpClient.Builder()
-                                            .connectTimeout(30, TimeUnit.SECONDS)
-                                            .readTimeout(30, TimeUnit.SECONDS)
-                                            .writeTimeout(30, TimeUnit.SECONDS)
-                                            .build()
-                                        
-                                        val request = Request.Builder()
-                                            .url(profilePictureUrl)
-                                            .get()
-                                            .build()
-                                        
-                                        val response = client.newCall(request).execute()
-                                        Log.d("HomeActivity", "Google profile picture response code: ${response.code}")
-                                        
-                                        if (response.isSuccessful) {
-                                            val responseBody = response.body
-                                            if (responseBody != null) {
-                                                val imageBytes = responseBody.bytes()
-                                                Log.d("HomeActivity", "Google profile picture bytes size: ${imageBytes.size}")
-                                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                                                Log.d("HomeActivity", "Google profile picture bitmap created: ${bitmap != null}")
-                                                
-                                                if (bitmap != null) {
-                                                    val cachePath = File(cacheDir, "images")
-                                                    cachePath.mkdirs()
-                                                    val file = File(cachePath, "profile_$userId.jpg")
-                                                    
-                                                    if (file.exists()) {
-                                                        file.delete()
-                                                    }
-                                                    
-                                                    file.createNewFile()
-                                                    val outputStream = FileOutputStream(file)
-                                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                                    outputStream.close()
-                                                    
-                                                    val uri = Uri.fromFile(file)
-                                                    Log.d("HomeActivity", "Google profile picture saved to: $uri")
-                                                    
-                                                    withContext(Dispatchers.Main) {
-                                                        profileImage = uri
-                                                        Log.d("HomeActivity", "Profile image URI set to: $uri")
-                                                    }
-                                                    return@launch
-                                                }
-                                            }
-                                        }
-                                    } catch (e: Exception) {
-                                        Log.e("HomeActivity", "Error loading Google profile picture", e)
-                                    }
-                                }
-                                
-                                // If Google profile picture fails or is not available, try server
-                                Log.d("HomeActivity", "Falling back to server profile picture")
+                                // First try to get profile picture from server (database)
+                                Log.d("HomeActivity", "Fetching profile picture from server")
                                 val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
                                 val request = Request.Builder()
                                     .url(url)
@@ -328,14 +272,70 @@ class HomeActivity : FragmentActivity() {
                                                     
                                                     withContext(Dispatchers.Main) {
                                                         profileImage = uri
-                                                        Log.d("HomeActivity", "Profile image URI set to: $uri")
+                                                        Log.d("HomeActivity", "Profile image URI set from server: $uri")
                                                     }
+                                                    return@launch
                                                 }
                                             } catch (e: Exception) {
                                                 Log.e("HomeActivity", "Error processing server profile picture", e)
                                                 e.printStackTrace()
                                             }
                                         }
+                                    }
+                                }
+                                
+                                // If server profile picture fails or is not available, try Google profile picture
+                                if (profilePictureUrl != null) {
+                                    Log.d("HomeActivity", "Falling back to Google profile picture from URL: $profilePictureUrl")
+                                    try {
+                                        val client = OkHttpClient.Builder()
+                                            .connectTimeout(30, TimeUnit.SECONDS)
+                                            .readTimeout(30, TimeUnit.SECONDS)
+                                            .writeTimeout(30, TimeUnit.SECONDS)
+                                            .build()
+                                        
+                                        val request = Request.Builder()
+                                            .url(profilePictureUrl)
+                                            .get()
+                                            .build()
+                                        
+                                        val response = client.newCall(request).execute()
+                                        Log.d("HomeActivity", "Google profile picture response code: ${response.code}")
+                                        
+                                        if (response.isSuccessful) {
+                                            val responseBody = response.body
+                                            if (responseBody != null) {
+                                                val imageBytes = responseBody.bytes()
+                                                Log.d("HomeActivity", "Google profile picture bytes size: ${imageBytes.size}")
+                                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                                Log.d("HomeActivity", "Google profile picture bitmap created: ${bitmap != null}")
+                                                
+                                                if (bitmap != null) {
+                                                    val cachePath = File(cacheDir, "images")
+                                                    cachePath.mkdirs()
+                                                    val file = File(cachePath, "profile_$userId.jpg")
+                                                    
+                                                    if (file.exists()) {
+                                                        file.delete()
+                                                    }
+                                                    
+                                                    file.createNewFile()
+                                                    val outputStream = FileOutputStream(file)
+                                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                                    outputStream.close()
+                                                    
+                                                    val uri = Uri.fromFile(file)
+                                                    Log.d("HomeActivity", "Google profile picture saved to: $uri")
+                                                    
+                                                    withContext(Dispatchers.Main) {
+                                                        profileImage = uri
+                                                        Log.d("HomeActivity", "Profile image URI set from Google: $uri")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("HomeActivity", "Error loading Google profile picture", e)
                                     }
                                 }
                             } catch (e: Exception) {
@@ -463,7 +463,11 @@ class HomeActivity : FragmentActivity() {
                                                 // Show the HomeScreen with the updated profile image
                                                 HomeScreen(
                                                     userName = userName,
-                                                    initialProfileImage = newProfileUri
+                                                    initialProfileImage = newProfileUri,
+                                                    onProfileImageChanged = { uri ->
+                                                        // This will be called by the ProfileTab to update its image
+                                                        Log.d("HomeActivity", "Profile image updated in ProfileTab: $uri")
+                                                    }
                                                 )
                                             }
                                         }
@@ -629,7 +633,7 @@ class HomeActivity : FragmentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
+fun HomeScreen(userName: String, initialProfileImage: Uri? = null, onProfileImageChanged: (Uri?) -> Unit = {}) {
     var selectedTab by remember { mutableStateOf(0) }
     var showHomeTab by remember { mutableStateOf(true) }
     var showProfileTab by remember { mutableStateOf(false) }
@@ -640,6 +644,14 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
     val userId = sharedPreferences.getLong("user_id", -1)
     var isDarkMode by remember { 
         mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) 
+    }
+
+    // Update profile image when initialProfileImage changes
+    LaunchedEffect(initialProfileImage) {
+        if (initialProfileImage != null) {
+            profileImage = initialProfileImage
+            Log.d("HomeScreen", "Profile image updated from initialProfileImage: $initialProfileImage")
+        }
     }
 
     // Fetch profile picture when component is created
@@ -653,6 +665,8 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
         
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // First try to get profile picture from server (database)
+                Log.d("HomeScreen", "Fetching profile picture from server")
                 val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
                 android.util.Log.d("HomeScreen", "Fetching profile picture from: $url")
                 
@@ -698,20 +712,75 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                                     outputStream.close()
                                     
                                     withContext(Dispatchers.Main) {
-                                        profileImage = Uri.fromFile(file)
+                                        val newUri = Uri.fromFile(file)
+                                        profileImage = newUri
+                                        onProfileImageChanged(newUri)
+                                        Log.d("HomeScreen", "Profile image updated from server: $newUri")
                                     }
+                                    return@launch
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(
-                                        context,
-                                        "Error processing profile picture: ${e.message}",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                Log.e("HomeScreen", "Error processing server profile picture: ${e.message}")
+                            }
+                        }
+                    }
+                }
+                
+                // If server profile picture fails or is not available, try Google profile picture
+                val profilePictureUrl = sharedPreferences.getString("profile_picture_url", null)
+                if (profilePictureUrl != null) {
+                    Log.d("HomeScreen", "Falling back to Google profile picture from URL: $profilePictureUrl")
+                    try {
+                        val client = OkHttpClient.Builder()
+                            .connectTimeout(30, TimeUnit.SECONDS)
+                            .readTimeout(30, TimeUnit.SECONDS)
+                            .writeTimeout(30, TimeUnit.SECONDS)
+                            .build()
+                        
+                        val request = Request.Builder()
+                            .url(profilePictureUrl)
+                            .get()
+                            .build()
+                        
+                        val response = client.newCall(request).execute()
+                        Log.d("HomeScreen", "Google profile picture response code: ${response.code}")
+                        
+                        if (response.isSuccessful) {
+                            val responseBody = response.body
+                            if (responseBody != null) {
+                                val imageBytes = responseBody.bytes()
+                                Log.d("HomeScreen", "Google profile picture bytes size: ${imageBytes.size}")
+                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                Log.d("HomeScreen", "Google profile picture bitmap created: ${bitmap != null}")
+                                
+                                if (bitmap != null) {
+                                    val cachePath = File(context.cacheDir, "images")
+                                    cachePath.mkdirs()
+                                    val file = File(cachePath, "profile_$userId.jpg")
+                                    
+                                    if (file.exists()) {
+                                        file.delete()
+                                    }
+                                    
+                                    file.createNewFile()
+                                    val outputStream = FileOutputStream(file)
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                    outputStream.close()
+                                    
+                                    val uri = Uri.fromFile(file)
+                                    Log.d("HomeScreen", "Google profile picture saved to: $uri")
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        profileImage = uri
+                                        onProfileImageChanged(uri)
+                                        Log.d("HomeScreen", "Profile image updated from Google: $uri")
+                                    }
                                 }
                             }
                         }
+                    } catch (e: Exception) {
+                        Log.e("HomeScreen", "Error loading Google profile picture", e)
                     }
                 }
             } catch (e: Exception) {
@@ -863,6 +932,8 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                 showProfileTab -> ProfileTab(
                     onProfileImageChanged = { newImage ->
                         profileImage = newImage
+                        onProfileImageChanged(newImage)
+                        Log.d("HomeScreen", "Profile image updated from ProfileTab: $newImage")
                     },
                     onUsernameChanged = { newUsername ->
                         currentUserName = newUsername
@@ -917,9 +988,94 @@ fun ProfileTab(
         
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // First try to use Google profile picture if available
+                // First try to get profile picture from server (database)
+                Log.d("ProfileTab", "Fetching profile picture from server")
+                val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
+                android.util.Log.d("ProfileTab", "Fetching profile picture from: $url")
+                android.util.Log.d("ProfileTab", "User ID: $userId")
+                
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .build()
+                
+                val request = Request.Builder()
+                    .url(url)
+                    .get()
+                    .build()
+                
+                val response = client.newCall(request).execute()
+                android.util.Log.d("ProfileTab", "Response code: ${response.code}")
+                android.util.Log.d("ProfileTab", "Response message: ${response.message}")
+                
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    android.util.Log.d("ProfileTab", "Response body: $responseBody")
+                    
+                    val jsonObject = JSONObject(responseBody)
+                    val status = jsonObject.getString("status")
+                    android.util.Log.d("ProfileTab", "Status: $status")
+                    
+                    if (status == "success") {
+                        val profilePicture = jsonObject.optString("profilePicture", "")
+                        android.util.Log.d("ProfileTab", "Profile picture length: ${profilePicture.length}")
+                        
+                        if (profilePicture.isNotEmpty()) {
+                            try {
+                                // Convert base64 to bitmap
+                                val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
+                                android.util.Log.d("ProfileTab", "Image bytes length: ${imageBytes.size}")
+                                
+                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                android.util.Log.d("ProfileTab", "Bitmap created: ${bitmap != null}")
+                                
+                                if (bitmap != null) {
+                                    // Save bitmap to cache and get URI
+                                    val cachePath = File(context.cacheDir, "images")
+                                    cachePath.mkdirs()
+                                    val file = File(cachePath, "profile_$userId.jpg")
+                                    
+                                    // Delete existing file if it exists
+                                    if (file.exists()) {
+                                        file.delete()
+                                    }
+                                    
+                                    file.createNewFile()
+                                    val outputStream = FileOutputStream(file)
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                    outputStream.close()
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        val newUri = Uri.fromFile(file)
+                                        profileImage = newUri
+                                        onProfileImageChanged(newUri)
+                                        android.util.Log.d("ProfileTab", "Profile image URI set from server: $newUri")
+                                        android.util.Log.d("ProfileTab", "File exists: ${file.exists()}")
+                                        android.util.Log.d("ProfileTab", "File size: ${file.length()}")
+                                    }
+                                    return@launch
+                                } else {
+                                    android.util.Log.e("ProfileTab", "Failed to decode bitmap from base64")
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("ProfileTab", "Error processing server profile picture: ${e.message}")
+                                e.printStackTrace()
+                            }
+                        } else {
+                            android.util.Log.d("ProfileTab", "No profile picture found in server response")
+                        }
+                    } else {
+                        val message = jsonObject.optString("message", "Failed to load profile picture")
+                        android.util.Log.e("ProfileTab", "Error status: $message")
+                    }
+                } else {
+                    android.util.Log.e("ProfileTab", "Unsuccessful response: ${response.code}")
+                }
+                
+                // If server profile picture fails or is not available, try Google profile picture
                 if (profilePictureUrl != null) {
-                    Log.d("ProfileTab", "Attempting to load Google profile picture from URL: $profilePictureUrl")
+                    Log.d("ProfileTab", "Falling back to Google profile picture from URL: $profilePictureUrl")
                     try {
                         val client = OkHttpClient.Builder()
                             .connectTimeout(30, TimeUnit.SECONDS)
@@ -963,134 +1119,13 @@ fun ProfileTab(
                                     withContext(Dispatchers.Main) {
                                         profileImage = uri
                                         onProfileImageChanged(uri)
-                                        Log.d("ProfileTab", "Profile image URI set to: $uri")
+                                        Log.d("ProfileTab", "Profile image URI set from Google: $uri")
                                     }
-                                    return@launch
                                 }
                             }
                         }
                     } catch (e: Exception) {
                         Log.e("ProfileTab", "Error loading Google profile picture", e)
-                    }
-                }
-                
-                // If Google profile picture fails or is not available, try server
-                Log.d("ProfileTab", "Falling back to server profile picture")
-                val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
-                android.util.Log.d("ProfileTab", "Fetching profile picture from: $url")
-                android.util.Log.d("ProfileTab", "User ID: $userId")
-                
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(30, TimeUnit.SECONDS)
-                    .writeTimeout(30, TimeUnit.SECONDS)
-                    .build()
-                
-                val request = Request.Builder()
-                    .url(url)
-                    .get()
-                    .build()
-                
-                val response = client.newCall(request).execute()
-                android.util.Log.d("ProfileTab", "Response code: ${response.code}")
-                android.util.Log.d("ProfileTab", "Response message: ${response.message}")
-                
-                if (response.isSuccessful) {
-                    val responseBody = response.body?.string()
-                    android.util.Log.d("ProfileTab", "Response body: $responseBody")
-                    
-                    val jsonObject = JSONObject(responseBody)
-                    val status = jsonObject.getString("status")
-                    android.util.Log.d("ProfileTab", "Status: $status")
-                    
-                    if (status == "success") {
-                        val profilePicture = jsonObject.optString("profilePicture", "")
-                        android.util.Log.d("ProfileTab", "Profile picture length: ${profilePicture.length}")
-                        android.util.Log.d("ProfileTab", "Profile picture first 50 chars: ${profilePicture.take(50)}")
-                        
-                        if (profilePicture.isNotEmpty()) {
-                            try {
-                                // Convert base64 to bitmap
-                                val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
-                                android.util.Log.d("ProfileTab", "Image bytes length: ${imageBytes.size}")
-                                
-                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                                android.util.Log.d("ProfileTab", "Bitmap created: ${bitmap != null}")
-                                
-                                if (bitmap != null) {
-                                    // Save bitmap to cache and get URI
-                                    val cachePath = File(context.cacheDir, "images")
-                                    cachePath.mkdirs()
-                                    val file = File(cachePath, "profile_$userId.jpg")
-                                    
-                                    // Delete existing file if it exists
-                                    if (file.exists()) {
-                                        file.delete()
-                                    }
-                                    
-                                    file.createNewFile()
-                                    val outputStream = FileOutputStream(file)
-                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                    outputStream.close()
-                                    
-                                    withContext(Dispatchers.Main) {
-                                        val newUri = Uri.fromFile(file)
-                                        profileImage = newUri
-                                        onProfileImageChanged(newUri)
-                                        android.util.Log.d("ProfileTab", "Profile image URI set: $newUri")
-                                        android.util.Log.d("ProfileTab", "File exists: ${file.exists()}")
-                                        android.util.Log.d("ProfileTab", "File size: ${file.length()}")
-                                    }
-                                } else {
-                                    android.util.Log.e("ProfileTab", "Failed to decode bitmap from base64")
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(
-                                            context,
-                                            "Failed to decode profile picture",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                android.util.Log.e("ProfileTab", "Error processing profile picture: ${e.message}")
-                                e.printStackTrace()
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(
-                                        context,
-                                        "Error processing profile picture: ${e.message}",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                        } else {
-                            android.util.Log.d("ProfileTab", "No profile picture found in response")
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(
-                                    context,
-                                    "No profile picture found",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
-                    } else {
-                        val message = jsonObject.optString("message", "Failed to load profile picture")
-                        android.util.Log.e("ProfileTab", "Error status: $message")
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                context,
-                                message,
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                } else {
-                    android.util.Log.e("ProfileTab", "Unsuccessful response: ${response.code}")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            context,
-                            "Failed to load profile picture: ${response.code}",
-                            Toast.LENGTH_SHORT
-                        ).show()
                     }
                 }
             } catch (e: Exception) {
@@ -1121,6 +1156,7 @@ fun ProfileTab(
                                 type = "image/*"
                             }
                             (context as ComponentActivity).startActivityForResult(intent, 1)
+                            showImagePicker = false
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0))
@@ -1590,9 +1626,15 @@ fun ProfileTab(
                                         .post(requestBody.toRequestBody("application/json".toMediaType()))
                                         .build()
                                     
-                                    val response = client.newCall(request).execute()
-                                    val responseBody = response.body?.string()
-                                    val jsonResponse = JSONObject(responseBody ?: "{}")
+                                    // Execute the request on IO thread
+                                    val response = withContext(Dispatchers.IO) {
+                                        client.newCall(request).execute()
+                                    }
+                                    
+                                    // Read response body on IO thread
+                                    val responseBody = withContext(Dispatchers.IO) {
+                                        response.body?.string() ?: "{}"
+                                    }
                                     
                                     withContext(Dispatchers.Main) {
                                         if (response.isSuccessful) {
@@ -1601,15 +1643,23 @@ fun ProfileTab(
                                             newPassword = ""
                                             confirmPassword = ""
                                             showPasswordFields = false
+                                            
+                                            val jsonResponse = JSONObject(responseBody)
+                                            
+                                            // Update the stored password in SharedPreferences
+                                            sharedPreferences.edit()
+                                                .putString("user_password", newPassword)
+                                                .apply()
+                                            
                                             Toast.makeText(
                                                 context,
                                                 jsonResponse.optString("message", "Password changed successfully"),
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         } else {
-                                            val errorBody = response.body?.string()
-                                            Log.e("ProfileTab", "Failed to change password. Status: ${response.code}, Error: $errorBody")
-                                            passwordError = jsonResponse.optString("message", "Failed to change password")
+                                            val jsonError = JSONObject(responseBody)
+                                            Log.e("ProfileTab", "Failed to change password. Status: ${response.code}, Error: $responseBody")
+                                            passwordError = jsonError.optString("message", "Failed to change password")
                                         }
                                     }
                                 } catch (e: Exception) {

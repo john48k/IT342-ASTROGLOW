@@ -2,6 +2,7 @@ package edu.cit.astroglow
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.LinearEasing
@@ -53,6 +54,21 @@ import androidx.compose.foundation.rememberScrollState
 class CreateAccountActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Check if user is already logged in
+        val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
+        val isLoggedIn = sharedPreferences.getBoolean("is_logged_in", false)
+        val userId = sharedPreferences.getLong("user_id", -1)
+        
+        if (isLoggedIn && userId > 0) {
+            Log.d("CreateAccountActivity", "User already logged in, redirecting to HomeActivity")
+            val intent = Intent(this, HomeActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+            return
+        }
+        
         setContent {
             AstroglowTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
