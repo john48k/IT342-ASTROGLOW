@@ -89,8 +89,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.lint.kotlin.metadata.Visibility
 import coil.request.ImageRequest
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 
-class HomeActivity : ComponentActivity() {
+class HomeActivity : FragmentActivity() {
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
@@ -500,15 +504,6 @@ class HomeActivity : ComponentActivity() {
                                     ).show()
                                 }
                             }
-                        } else {
-                            Log.e("HomeActivity", "Failed to decode bitmap from URI: $uri")
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(
-                                    this@HomeActivity,
-                                    "Failed to process the selected image",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
                         }
                     } catch (e: Exception) {
                         Log.e("HomeActivity", "Error updating profile picture", e)
@@ -522,6 +517,112 @@ class HomeActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun showFingerprintLogin() {
+        val biometricManager = BiometricManager.from(this)
+        val canAuthenticate = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+
+        if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Login with Fingerprint")
+                .setSubtitle("Use your fingerprint to login")
+                .setNegativeButtonText("Cancel")
+                .build()
+
+            val biometricPrompt = BiometricPrompt(
+                this,
+                ContextCompat.getMainExecutor(this),
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        // Get user data from SharedPreferences
+                        val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
+                        val userId = sharedPreferences.getLong("user_id", -1)
+                        val userEmail = sharedPreferences.getString("user_email", "") ?: ""
+                        val userName = sharedPreferences.getString("user_name", "") ?: ""
+
+                        // Verify biometrics with backend
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val url = "${Constants.BASE_URL}/api/auth/verify-biometrics"
+                                val json = JSONObject().apply {
+                                    put("userId", userId)
+                                    put("email", userEmail)
+                                }
+
+                                val requestBody = json.toString().toRequestBody("application/json".toMediaType())
+                                val request = Request.Builder()
+                                    .url(url)
+                                    .post(requestBody)
+                                    .build()
+
+                                val response = client.newCall(request).execute()
+                                val responseBody = response.body?.string()
+                                val jsonResponse = JSONObject(responseBody)
+
+                                withContext(Dispatchers.Main) {
+                                    if (response.isSuccessful && jsonResponse.getString("status") == "success") {
+                                        // Update login status
+                                        sharedPreferences.edit().putBoolean("is_logged_in", true).apply()
+                                        
+                                        // Show success message
+                                        Toast.makeText(
+                                            this@HomeActivity,
+                                            "Login successful",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        
+                                        // Refresh the UI
+                                        recreate()
+                                    } else {
+                                        Toast.makeText(
+                                            this@HomeActivity,
+                                            "Login failed: ${jsonResponse.optString("message", "Unknown error")}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        this@HomeActivity,
+                                        "Error: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        super.onAuthenticationError(errorCode, errString)
+                        Toast.makeText(
+                            this@HomeActivity,
+                            "Authentication error: $errString",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    override fun onAuthenticationFailed() {
+                        super.onAuthenticationFailed()
+                        Toast.makeText(
+                            this@HomeActivity,
+                            "Authentication failed",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            )
+
+            biometricPrompt.authenticate(promptInfo)
+        } else {
+            Toast.makeText(
+                this,
+                "Fingerprint authentication is not available",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 }
@@ -2090,6 +2191,63 @@ fun SettingsTab(
     onDarkModeChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
+    val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+    val userId = sharedPreferences.getLong("user_id", -1)
+    var hasBiometrics by remember { mutableStateOf(false) }
+    var showBiometricDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
+    var isTogglingBiometrics by remember { mutableStateOf(false) }
+    
+    // Check if user has biometrics enabled
+    LaunchedEffect(userId) {
+        if (userId > 0) {
+            try {
+                withContext(Dispatchers.IO) {
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(30, TimeUnit.SECONDS)
+                        .readTimeout(30, TimeUnit.SECONDS)
+                        .writeTimeout(30, TimeUnit.SECONDS)
+                        .build()
+                    
+                    val request = Request.Builder()
+                        .url("${Constants.BASE_URL}/api/authentication/checkBiometrics/$userId")
+                        .get()
+                        .build()
+                    
+                    val response = client.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        val jsonObject = JSONObject(responseBody)
+                        withContext(Dispatchers.Main) {
+                            hasBiometrics = jsonObject.getBoolean("hasBiometrics")
+                            isLoading = false
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            isLoading = false
+                            Toast.makeText(
+                                context,
+                                "Failed to check biometrics status: ${response.code}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SettingsTab", "Error checking biometrics status", e)
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                    Toast.makeText(
+                        context,
+                        "Error checking biometrics status: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        } else {
+            isLoading = false
+        }
+    }
     
     Column(
         modifier = Modifier
@@ -2178,19 +2336,86 @@ fun SettingsTab(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Settings Items
-        SettingsListItem(
-            icon = Icons.Outlined.Fingerprint,
-            title = "BIOMETRICS",
-            description = "Enable fingerprint for account security and protect your library for a secure experience."
-        )
+        // Biometrics Settings Item
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFF8E24AA), Color(622790))
+                    )
+                )
+                .clickable { showBiometricDialog = true },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left side: Icon Box with gradient
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(100.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF42A5F5), Color(0xFF8E24AA))
+                        ),
+                        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Fingerprint,
+                    contentDescription = "Biometrics",
+                    tint = Color.White,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+            
+            // Right side: Text Box with gradient
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(1f)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF8E24AA), Color(0xFF42A5F5))
+                        ),
+                        shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                    )
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Column {
+                    Text(
+                        text = "BIOMETRICS",
+                        color = Color.White,
+                        fontFamily = interFontFamily,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = if (hasBiometrics) "Biometrics is enabled" else "Enable fingerprint for account security",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontFamily = interLightFontFamily,
+                            fontSize = 14.sp,
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
-        SettingsListItem(
-            icon = Icons.Outlined.Face,
-            title = "FACE ID",
-            description = "Register face id to unlock application faster and provide secure access to all your music."
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+
+        // Our Team Settings Item
         SettingsListItem(
             icon = Icons.Outlined.Info,
             title = "Our Team",
@@ -2198,6 +2423,224 @@ fun SettingsTab(
             onClick = { 
                 val intent = Intent(context, OurTeamActivity::class.java)
                 context.startActivity(intent)
+            }
+        )
+    }
+
+    // Biometrics Dialog
+    if (showBiometricDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                if (!isTogglingBiometrics) {
+                    showBiometricDialog = false 
+                }
+            },
+            title = {
+                Text(
+                    text = if (hasBiometrics) "Disable Biometrics" else "Enable Biometrics",
+                    fontFamily = interFontFamily,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    if (isTogglingBiometrics) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF9C27B0),
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = if (hasBiometrics) 
+                                "Are you sure you want to disable biometric authentication?" 
+                            else 
+                                "Enable fingerprint authentication for quick and secure access to your account.",
+                            fontFamily = interFontFamily,
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (isTogglingBiometrics) return@TextButton
+                        
+                        isTogglingBiometrics = true
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val client = OkHttpClient.Builder()
+                                    .connectTimeout(30, TimeUnit.SECONDS)
+                                    .readTimeout(30, TimeUnit.SECONDS)
+                                    .writeTimeout(30, TimeUnit.SECONDS)
+                                    .build()
+                                
+                                val requestBody = JSONObject().apply {
+                                    put("enable", !hasBiometrics)
+                                }.toString()
+                                
+                                Log.d("Biometrics", "Sending request to toggle biometrics: $requestBody")
+                                
+                                val request = Request.Builder()
+                                    .url("${Constants.BASE_URL}/api/authentication/toggleBiometrics/$userId")
+                                    .post(requestBody.toRequestBody("application/json".toMediaType()))
+                                    .build()
+                                
+                                val response = client.newCall(request).execute()
+                                val responseBody = response.body?.string()
+                                Log.d("Biometrics", "Response code: ${response.code}, Body: $responseBody")
+                                
+                                withContext(Dispatchers.Main) {
+                                    if (response.isSuccessful) {
+                                        try {
+                                            val jsonResponse = JSONObject(responseBody ?: "{}")
+                                            val success = jsonResponse.optBoolean("success", true)
+                                            
+                                            if (success) {
+                                                hasBiometrics = !hasBiometrics
+                                                Toast.makeText(
+                                                    context,
+                                                    if (hasBiometrics) "Biometrics enabled successfully" else "Biometrics disabled successfully",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                                
+                                                // If biometrics was just enabled, prompt for registration
+                                                if (hasBiometrics) {
+                                                    showBiometricDialog = false
+                                                    // Show fingerprint registration prompt
+                                                    val biometricManager = BiometricManager.from(context)
+                                                    when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
+                                                        BiometricManager.BIOMETRIC_SUCCESS -> {
+                                                            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                                                                .setTitle("Register Fingerprint")
+                                                                .setSubtitle("Place your finger on the sensor to register")
+                                                                .setNegativeButtonText("Cancel")
+                                                                .build()
+
+                                                            val biometricPrompt = BiometricPrompt(
+                                                                context as FragmentActivity,
+                                                                ContextCompat.getMainExecutor(context),
+                                                                object : BiometricPrompt.AuthenticationCallback() {
+                                                                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                                                                        super.onAuthenticationSucceeded(result)
+                                                                        Toast.makeText(
+                                                                            context,
+                                                                            "Fingerprint registered successfully",
+                                                                            Toast.LENGTH_SHORT
+                                                                        ).show()
+                                                                    }
+
+                                                                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                                                                        super.onAuthenticationError(errorCode, errString)
+                                                                        Toast.makeText(
+                                                                            context,
+                                                                            "Registration error: $errString",
+                                                                            Toast.LENGTH_SHORT
+                                                                        ).show()
+                                                                    }
+
+                                                                    override fun onAuthenticationFailed() {
+                                                                        super.onAuthenticationFailed()
+                                                                        Toast.makeText(
+                                                                            context,
+                                                                            "Registration failed",
+                                                                            Toast.LENGTH_SHORT
+                                                                        ).show()
+                                                                    }
+                                                                }
+                                                            )
+
+                                                            biometricPrompt.authenticate(promptInfo)
+                                                        }
+                                                        else -> {
+                                                            Toast.makeText(
+                                                                context,
+                                                                "Fingerprint authentication is not available",
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                val message = jsonResponse.optString("message", "Unknown error")
+                                                Toast.makeText(
+                                                    context,
+                                                    "Failed: $message",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e("Biometrics", "Error parsing response", e)
+                                            hasBiometrics = !hasBiometrics
+                                            Toast.makeText(
+                                                context,
+                                                if (hasBiometrics) "Biometrics enabled successfully" else "Biometrics disabled successfully",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    } else {
+                                        val errorMessage = try {
+                                            val jsonError = JSONObject(responseBody ?: "{}")
+                                            jsonError.optString("message", "Unknown error")
+                                        } catch (e: Exception) {
+                                            "Failed to ${if (hasBiometrics) "disable" else "enable"} biometrics (${response.code})"
+                                        }
+                                        
+                                        Toast.makeText(
+                                            context,
+                                            errorMessage,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                    isTogglingBiometrics = false
+                                    showBiometricDialog = false
+                                }
+                            } catch (e: Exception) {
+                                Log.e("Biometrics", "Error toggling biometrics", e)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        "Error: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    isTogglingBiometrics = false
+                                    showBiometricDialog = false
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isTogglingBiometrics
+                ) {
+                    Text(
+                        text = if (hasBiometrics) "Disable" else "Enable",
+                        fontFamily = interFontFamily,
+                        color = Color(0xFF9C27B0)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { 
+                        if (!isTogglingBiometrics) {
+                            showBiometricDialog = false 
+                        }
+                    },
+                    enabled = !isTogglingBiometrics
+                ) {
+                    Text(
+                        text = "Cancel",
+                        fontFamily = interFontFamily,
+                        color = Color.Gray
+                    )
+                }
             }
         )
     }
@@ -2254,7 +2697,7 @@ fun SettingsListItem(
                 .weight(1f)
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF8E24AA), Color(0xFF42A5F5)) // Gradient colors
+                        colors = listOf(Color(0xFF8E24AA), Color(0xFF42A5F5))
                     ),
                     shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
                 )
