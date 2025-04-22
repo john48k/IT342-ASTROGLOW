@@ -43,10 +43,12 @@ public class FavoritesService {
                 .orElseThrow(() -> new EntityNotFoundException("Favorite with ID " + id + " not found"));
     }
 
-    // Get favorites by user ID
+    // Get favorites by user ID - Ensure this method properly filters by user
     public List<FavoritesEntity> getFavoritesByUserId(int userId) {
         UserEntity user = userRepo.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User with ID " + userId + " not found"));
+        
+        // This query ensures we only get favorites for the specified user
         return favoritesRepo.findByUser(user);
     }
 
@@ -57,7 +59,7 @@ public class FavoritesService {
         return favoritesRepo.findByMusic(music);
     }
 
-    // Add a favorite
+    // Add a favorite - Make sure we check this is for the specific user
     @Transactional
     public FavoritesEntity addFavorite(int userId, int musicId) {
         // Check if the user exists
@@ -68,7 +70,7 @@ public class FavoritesService {
         MusicEntity music = musicRepo.findById(musicId)
                 .orElseThrow(() -> new EntityNotFoundException("Music with ID " + musicId + " not found"));
 
-        // Check if the favorite already exists
+        // Check if the favorite already exists for THIS USER
         if (favoritesRepo.existsByUserAndMusic(user, music)) {
             throw new IllegalStateException("This music is already in the user's favorites");
         }
@@ -92,7 +94,7 @@ public class FavoritesService {
         MusicEntity music = musicRepo.findById(favorite.getMusic().getMusicId())
                 .orElseThrow(() -> new EntityNotFoundException("Music with ID " + favorite.getMusic().getMusicId() + " not found"));
 
-        // Check if the favorite already exists
+        // Check if the favorite already exists for THIS USER
         if (favoritesRepo.existsByUserAndMusic(user, music)) {
             throw new IllegalStateException("This music is already in the user's favorites");
         }
@@ -155,7 +157,7 @@ public class FavoritesService {
         MusicEntity music = musicRepo.findById(musicId)
                 .orElseThrow(() -> new EntityNotFoundException("Music with ID " + musicId + " not found"));
 
-        // Find the favorite
+        // Find the favorite for THIS USER
         FavoritesEntity favorite = favoritesRepo.findByUserAndMusic(user, music)
                 .orElseThrow(() -> new EntityNotFoundException("This music is not in the user's favorites"));
 
@@ -175,6 +177,7 @@ public class FavoritesService {
         MusicEntity music = musicRepo.findById(musicId)
                 .orElseThrow(() -> new EntityNotFoundException("Music with ID " + musicId + " not found"));
 
+        // Check if this user has favorited this music
         return favoritesRepo.existsByUserAndMusic(user, music);
     }
 }
