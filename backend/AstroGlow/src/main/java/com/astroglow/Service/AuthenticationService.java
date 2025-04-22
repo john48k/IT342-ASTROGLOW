@@ -1,18 +1,24 @@
 package com.astroglow.Service;
 
 import com.astroglow.Entity.AuthenticationEntity;
+import com.astroglow.Entity.UserEntity;
 import com.astroglow.Repository.AuthenticationRepository;
+import com.astroglow.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.naming.NameNotFoundException;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Service
 public class AuthenticationService {
     @Autowired
     AuthenticationRepository authenticationRepository;
+    
+    @Autowired
+    UserRepository userRepository;
 
     public AuthenticationService() {
 
@@ -48,5 +54,77 @@ public class AuthenticationService {
             msg = id + " not found.";
         }
         return msg;
+    }
+    
+    /**
+     * Toggle biometrics authentication for a user
+     * @param userId The user ID
+     * @param enable Whether to enable or disable biometrics
+     * @return The updated AuthenticationEntity
+     * @throws Exception if the user doesn't exist
+     */
+    public AuthenticationEntity toggleBiometrics(Long userId, boolean enable) throws Exception {
+        // Find the user
+        Optional<UserEntity> userOptional = userRepository.findById(userId.intValue());
+        if (!userOptional.isPresent()) {
+            throw new Exception("User not found with ID: " + userId);
+        }
+        
+        UserEntity user = userOptional.get();
+        
+        // Check if the user already has biometrics
+        List<AuthenticationEntity> allAuths = authenticationRepository.findAll();
+        AuthenticationEntity existingAuth = null;
+        
+        for (AuthenticationEntity auth : allAuths) {
+            if (auth.getUser() != null && auth.getUser().getUserId() == userId.intValue()) {
+                existingAuth = auth;
+                break;
+            }
+        }
+        
+        if (enable) {
+            // Enable biometrics
+            if (existingAuth == null) {
+                // Create new authentication entry
+                AuthenticationEntity newAuth = new AuthenticationEntity();
+                newAuth.setUser(user);
+                return authenticationRepository.save(newAuth);
+            }
+            return existingAuth; // Already enabled
+        } else {
+            // Disable biometrics
+            if (existingAuth != null) {
+                authenticationRepository.delete(existingAuth);
+                return existingAuth;
+            }
+            // Already disabled
+            return null;
+        }
+    }
+    
+    /**
+     * Check if a user has biometrics enabled
+     * @param userId The user ID
+     * @return true if biometrics are enabled, false otherwise
+     * @throws Exception if the user doesn't exist
+     */
+    public boolean hasBiometrics(Long userId) throws Exception {
+        // Find the user
+        Optional<UserEntity> userOptional = userRepository.findById(userId.intValue());
+        if (!userOptional.isPresent()) {
+            throw new Exception("User not found with ID: " + userId);
+        }
+        
+        // Check if the user has biometrics
+        List<AuthenticationEntity> allAuths = authenticationRepository.findAll();
+        
+        for (AuthenticationEntity auth : allAuths) {
+            if (auth.getUser() != null && auth.getUser().getUserId() == userId.intValue()) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }
