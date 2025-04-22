@@ -81,4 +81,7 @@ dependencies {
     implementation(libs.fuel.android)
     implementation(libs.fuel.json)
     implementation(libs.fuel.coroutines)
+
+    // Biometric authentication
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
 }
