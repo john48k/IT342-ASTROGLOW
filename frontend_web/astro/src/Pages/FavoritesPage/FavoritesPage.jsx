@@ -331,9 +331,12 @@ export const FavoritesPage = () => {
       
       // Combine database favorites with Firebase favorites
       const databaseFavorites = Array.isArray(musicData) ? musicData : [];
+      
+      // Only get Firebase favorites for the current user
       const firebaseFavorites = favorites.filter(fav => 
         typeof fav.music?.filename === 'string' && 
-        fav.music.filename.startsWith('firebase-')
+        fav.music.filename.startsWith('firebase-') &&
+        fav.userId === user.userId // Only include favorites for this user
       ).map(fav => {
         // Use cached Firebase music if available
         const musicId = fav.music.filename;
@@ -346,7 +349,8 @@ export const FavoritesPage = () => {
             title: cachedItem.title || musicId.replace('firebase-', '').replace('.mp3', ''),
             artist: cachedItem.artist || 'Unknown Artist',
             genre: cachedItem.genre || 'Firebase Music',
-            audioUrl: cachedItem.audioUrl
+            audioUrl: cachedItem.audioUrl,
+            userId: user.userId // Tag with user ID to ensure it's user-specific
           };
         }
         
@@ -356,20 +360,28 @@ export const FavoritesPage = () => {
           title: musicId.replace('firebase-', '').replace('.mp3', ''),
           artist: 'Unknown Artist',
           genre: 'Firebase Music',
-          audioUrl: `https://firebasestorage.googleapis.com/v0/b/astroglowfirebase-d2411.appspot.com/o/audios%2F${encodeURIComponent(musicId.replace('firebase-', ''))}?alt=media`
+          audioUrl: `https://firebasestorage.googleapis.com/v0/b/astroglowfirebase-d2411.appspot.com/o/audios%2F${encodeURIComponent(musicId.replace('firebase-', ''))}?alt=media`,
+          userId: user.userId // Tag with user ID
         };
       });
 
-      const allFavorites = [...databaseFavorites, ...firebaseFavorites];
-      console.log(`Fetched ${allFavorites.length} favorite music items (${databaseFavorites.length} database, ${firebaseFavorites.length} Firebase)`);
+      // Tag database favorites with user ID
+      const taggedDatabaseFavorites = databaseFavorites.map(item => ({
+        ...item,
+        userId: user.userId
+      }));
+
+      const allFavorites = [...taggedDatabaseFavorites, ...firebaseFavorites];
+      console.log(`Fetched ${allFavorites.length} favorite music items (${databaseFavorites.length} database, ${firebaseFavorites.length} Firebase) for user ${user.userId}`);
       
-      // Save to localStorage with proper display indices
+      // Save to localStorage with proper display indices and user ID
       localStorage.setItem('favorites-music-list', JSON.stringify(
         allFavorites.map((item, index) => ({
           ...item,
           displayIndex: index,
           originalIndex: index,
-          category: 'favorites'
+          category: 'favorites',
+          userId: user.userId // Ensure user ID is included
         }))
       ));
       
@@ -497,11 +509,13 @@ export const FavoritesPage = () => {
   // Handle favorite button click
   const handleFavoriteClick = (e, musicId) => {
     e.stopPropagation();
+    console.log(`Toggling favorite for music ID: ${musicId} and user ID: ${user?.userId}`);
     toggleFavorite(musicId);
     
     // Immediately update the favoriteMusic state
+    // Only remove this specific music for the current user
     setFavoriteMusic(prevList => 
-      prevList.filter(music => music.musicId !== musicId)
+      prevList.filter(music => !(music.musicId === musicId && music.userId === user?.userId))
     );
   };
 
