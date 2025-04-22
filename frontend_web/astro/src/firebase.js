@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { getStorage, ref, deleteObject } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC1crIbnjmZ1uNlqZLH0T3_p4H7lWVJMyQ",
@@ -14,5 +14,18 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 // Initialize Cloud Storage and get a reference to the service
 const storage = getStorage(app);
+
+// Function to delete a file from Firebase Storage
+export const deleteFileFromStorage = async (filePath) => {
+  try {
+    const fileRef = ref(storage, filePath);
+    await deleteObject(fileRef);
+    console.log('File deleted successfully from Firebase Storage:', filePath);
+    return true;
+  } catch (error) {
+    console.error('Error deleting file from Firebase Storage:', error);
+    return false;
+  }
+};
 
 export { db, storage };

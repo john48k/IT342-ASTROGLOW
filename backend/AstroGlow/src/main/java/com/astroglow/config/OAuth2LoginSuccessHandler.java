@@ -77,33 +77,34 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                 UserEntity newUser = new UserEntity();
                 newUser.setUserEmail(email);
                 
-                // Generate username
-                String baseUsername;
+                // Store the OAuth ID
+                String oauthId = (String) attributes.get("sub");
+                newUser.setOauthId(oauthId);
+                
+                // Use name from OAuth or generate one based on email
                 if (name != null && !name.isEmpty()) {
-                    baseUsername = name;
+                    newUser.setUserName(name);
                 } else {
                     // Extract username from email (before @)
-                    baseUsername = email.split("@")[0];
+                    String username = email.split("@")[0];
+                    newUser.setUserName(username);
                 }
-                
-                // Check if username exists and append random number if it does
-                String finalUsername = baseUsername;
-                int attempt = 1;
-                while (userRepository.findByUserName(finalUsername) != null) {
-                    finalUsername = baseUsername + "_" + attempt;
-                    attempt++;
-                }
-                
-                newUser.setUserName(finalUsername);
                 
                 // Generate a secure random password for OAuth users
                 // They won't use this password but we need it for the database
                 String randomPassword = UUID.randomUUID().toString();
                 newUser.setUserPassword(passwordEncoder.encode(randomPassword));
                 
-                logger.info("Creating new user from OAuth2 login: {} with username: {}", email, finalUsername);
+                logger.info("Creating new user from OAuth2 login: {}", email);
                 userRepository.save(newUser);
             } else {
+                // Update existing user's OAuth ID if it's not set
+                if (existingUser.getOauthId() == null) {
+                    String oauthId = (String) attributes.get("sub");
+                    existingUser.setOauthId(oauthId);
+                    userRepository.save(existingUser);
+                    logger.info("Updated OAuth ID for existing user: {}", email);
+                }
                 logger.info("Existing user logged in via OAuth2: {}", email);
             }
         } else {

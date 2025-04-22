@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import com.astroglow.Entity.FavoritesEntity;
 import com.astroglow.Entity.MusicEntity;
 import com.astroglow.Service.FavoritesService;
+import com.astroglow.Entity.UserEntity;
+import com.astroglow.Service.UserService;
 
 import jakarta.persistence.EntityNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,6 +37,9 @@ public class FavoritesController {
 
     @Autowired
     private FavoritesService favoritesService;
+
+    @Autowired
+    private UserService userService;
 
     // Get music details for a favorite
     @GetMapping("/{favoriteId}/music")
@@ -74,9 +79,21 @@ public class FavoritesController {
 
     // Get favorites by user ID
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<FavoritesEntity>> getFavoritesByUserId(@PathVariable("userId") int userId) {
+    public ResponseEntity<List<FavoritesEntity>> getFavoritesByUserId(@PathVariable("userId") String userId) {
         try {
-            List<FavoritesEntity> favorites = favoritesService.getFavoritesByUserId(userId);
+            // First try to find user by OAuth ID
+            UserEntity user = userService.findByOauthId(userId);
+            if (user == null) {
+                // If not found by OAuth ID, try numeric user ID
+                try {
+                    int numericUserId = Integer.parseInt(userId);
+                    user = userService.findById(numericUserId);
+                } catch (NumberFormatException e) {
+                    return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                }
+            }
+            
+            List<FavoritesEntity> favorites = favoritesService.getFavoritesByUserId(user.getUserId());
             return new ResponseEntity<>(favorites, HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -94,16 +111,79 @@ public class FavoritesController {
         }
     }
 
+    // Check if a music is in a user's favorites
+    @GetMapping("/user/{userId}/music/{musicId}/check")
+    public ResponseEntity<Boolean> isFavorite(@PathVariable("userId") String userId, @PathVariable("musicId") String musicId) {
+        try {
+            // First try to find user by OAuth ID
+            UserEntity user = userService.findByOauthId(userId);
+            if (user == null) {
+                // If not found by OAuth ID, try numeric user ID
+                try {
+                    int numericUserId = Integer.parseInt(userId);
+                    user = userService.findById(numericUserId);
+                } catch (NumberFormatException e) {
+                    return new ResponseEntity<>(false, HttpStatus.OK);
+                }
+            }
+            
+            // Check if musicId is a Firebase ID
+            if (musicId.startsWith("firebase-")) {
+                // For Firebase music, we'll consider it not favorited since we don't store these in the database
+                return new ResponseEntity<>(false, HttpStatus.OK);
+            }
+            
+            // For database music, try to parse as integer
+            try {
+                int numericMusicId = Integer.parseInt(musicId);
+                boolean isFavorite = favoritesService.isFavorite(user.getUserId(), numericMusicId);
+                return new ResponseEntity<>(isFavorite, HttpStatus.OK);
+            } catch (NumberFormatException e) {
+                return new ResponseEntity<>(false, HttpStatus.OK);
+            }
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(false, HttpStatus.OK);
+        }
+    }
+
     // Add a favorite (using path variables)
     @PostMapping("/user/{userId}/music/{musicId}")
-    public ResponseEntity<?> addFavorite(@PathVariable("userId") int userId, @PathVariable("musicId") int musicId) {
+    public ResponseEntity<?> addFavorite(@PathVariable("userId") String userId, @PathVariable("musicId") String musicId) {
         try {
-            FavoritesEntity favorite = favoritesService.addFavorite(userId, musicId);
-            return new ResponseEntity<>(favorite, HttpStatus.CREATED);
+            // First try to find user by OAuth ID
+            UserEntity user = userService.findByOauthId(userId);
+            if (user == null) {
+                // If not found by OAuth ID, try numeric user ID
+                try {
+                    int numericUserId = Integer.parseInt(userId);
+                    user = userService.findById(numericUserId);
+                } catch (NumberFormatException e) {
+                    return new ResponseEntity<>("User not found with ID: " + userId, HttpStatus.NOT_FOUND);
+                }
+            }
+            
+            // Check if musicId is a Firebase ID
+            if (musicId.startsWith("firebase-")) {
+                // For Firebase music, we'll return a success response but not actually store it
+                return new ResponseEntity<>("Firebase music cannot be favorited", HttpStatus.OK);
+            }
+            
+            // For database music, try to parse as integer
+            try {
+                int numericMusicId = Integer.parseInt(musicId);
+                FavoritesEntity favorite = favoritesService.addFavorite(user.getUserId(), numericMusicId);
+                return new ResponseEntity<>(favorite, HttpStatus.CREATED);
+            } catch (NumberFormatException e) {
+                return new ResponseEntity<>("Invalid music ID: " + musicId, HttpStatus.BAD_REQUEST);
+            } catch (EntityNotFoundException e) {
+                return new ResponseEntity<>("Music not found with ID: " + musicId, HttpStatus.NOT_FOUND);
+            } catch (IllegalStateException e) {
+                return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+            }
         } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
-        } catch (IllegalStateException e) {
-            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+            return new ResponseEntity<>("User not found with ID: " + userId, HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>("An error occurred: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -143,31 +223,44 @@ public class FavoritesController {
 
     // Remove a music from a user's favorites
     @DeleteMapping("/user/{userId}/music/{musicId}")
-    public ResponseEntity<?> removeFromFavorites(@PathVariable("userId") int userId, @PathVariable("musicId") int musicId) {
+    public ResponseEntity<?> removeFromFavorites(@PathVariable("userId") String userId, @PathVariable("musicId") int musicId) {
         try {
-            String message = favoritesService.removeFromFavorites(userId, musicId);
+            // First try to find user by OAuth ID
+            UserEntity user = userService.findByOauthId(userId);
+            if (user == null) {
+                // If not found by OAuth ID, try numeric user ID
+                try {
+                    int numericUserId = Integer.parseInt(userId);
+                    user = userService.findById(numericUserId);
+                } catch (NumberFormatException e) {
+                    return new ResponseEntity<>("User not found", HttpStatus.NOT_FOUND);
+                }
+            }
+            
+            String message = favoritesService.removeFromFavorites(user.getUserId(), musicId);
             return new ResponseEntity<>(message, HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
 
-    // Check if a music is in a user's favorites
-    @GetMapping("/user/{userId}/music/{musicId}/check")
-    public ResponseEntity<Boolean> isFavorite(@PathVariable("userId") int userId, @PathVariable("musicId") int musicId) {
-        try {
-            boolean isFavorite = favoritesService.isFavorite(userId, musicId);
-            return new ResponseEntity<>(isFavorite, HttpStatus.OK);
-        } catch (EntityNotFoundException e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-    }
-
     // Get all favorite music details for a user
     @GetMapping("/user/{userId}/music-details")
-    public ResponseEntity<?> getFavoritesMusicByUserId(@PathVariable int userId) {
+    public ResponseEntity<?> getFavoritesMusicByUserId(@PathVariable String userId) {
         try {
-            List<FavoritesEntity> favorites = favoritesService.getFavoritesByUserId(userId);
+            // First try to find user by OAuth ID
+            UserEntity user = userService.findByOauthId(userId);
+            if (user == null) {
+                // If not found by OAuth ID, try numeric user ID
+                try {
+                    int numericUserId = Integer.parseInt(userId);
+                    user = userService.findById(numericUserId);
+                } catch (NumberFormatException e) {
+                    return ResponseEntity.notFound().build();
+                }
+            }
+            
+            List<FavoritesEntity> favorites = favoritesService.getFavoritesByUserId(user.getUserId());
 
             if (favorites.isEmpty()) {
                 return ResponseEntity.ok()

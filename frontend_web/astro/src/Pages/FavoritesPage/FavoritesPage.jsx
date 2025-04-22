@@ -7,6 +7,7 @@ import { useAudioPlayer } from "../../context/AudioPlayerContext";
 import { useFavorites } from "../../context/FavoritesContext";
 import { usePlaylist } from "../../context/PlaylistContext";
 import PlaylistModal from "../../components/PlaylistModal/PlaylistModal";
+import { registerHomePageNavHandlers, unregisterHomePageNavHandlers } from "../../components/NowPlayingBar/NowPlayingBar";
 import styles from "./FavoritesPage.module.css";
 
 // Helper function to check if a string is a data URI
@@ -29,20 +30,209 @@ export const FavoritesPage = () => {
     isPlaying, 
     playMusic, 
     togglePlayPause,
-    getImageUrl
+    getImageUrl,
+    setMusicCategory,
+    playNextSong,
+    playPreviousSong,
+    stopPlayback
   } = useAudioPlayer();
   
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isFavorite, toggleFavorite, favorites } = useFavorites();
   const { openPlaylistModal } = usePlaylist();
   
   const [favoriteMusic, setFavoriteMusic] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [imageUrls, setImageUrls] = useState({});
+  // Add state to store Firebase music cache
+  const [firebaseMusicCache, setFirebaseMusicCache] = useState({});
+  // Add albums state for playback functionality
+  const [albums, setAlbums] = useState([]);
+
+  // Register handlers for next/previous navigation
+  useEffect(() => {
+    // Register our handlers with the NowPlayingBar
+    registerHomePageNavHandlers(handleNextSong, handlePreviousSong);
+    
+    // Clean up on unmount
+    return () => {
+      unregisterHomePageNavHandlers();
+    };
+  }, [favoriteMusic, currentlyPlaying]);
+
+  // Load Firebase music cache from localStorage
+  useEffect(() => {
+    try {
+      const savedFirebaseMusic = localStorage.getItem('firebase-music-list');
+      if (savedFirebaseMusic) {
+        const parsedItems = JSON.parse(savedFirebaseMusic);
+        console.log(`[FavoritesPage] Loaded ${parsedItems.length} Firebase items from cache`);
+        
+        // Create a map for faster lookups
+        const cacheMap = {};
+        parsedItems.forEach(item => {
+          if (item.id && item.audioUrl) {
+            cacheMap[item.id] = item;
+          }
+        });
+        
+        setFirebaseMusicCache(cacheMap);
+      }
+    } catch (error) {
+      console.error('[FavoritesPage] Error loading Firebase music cache:', error);
+    }
+  }, []);
+
+  // Handler for next song button - navigates only within favorites
+  const handleNextSong = () => {
+    console.log("Next song requested in FavoritesPage");
+    
+    if (favoriteMusic && favoriteMusic.length > 0) {
+      // Make sure we're in favorites mode
+      setMusicCategory('favorites');
+      
+      // Add displayIndex to ensure proper order based on visual presentation
+      const favoritesWithIndex = favoriteMusic.map((item, index) => ({
+        ...item,
+        displayIndex: index,
+        originalIndex: index, // Add this for consistent sorting
+        category: 'favorites'
+      }));
+      
+      console.log(`Playing next song from favorites list with ${favoritesWithIndex.length} items`);
+      
+      // Find current playing index
+      const currentIndex = favoritesWithIndex.findIndex(item => {
+        const itemId = String(item.musicId || '');
+        return itemId === String(currentlyPlaying);
+      });
+      
+      console.log(`Current playing index: ${currentIndex}`);
+      
+      // Manual calculation of next track index
+      if (currentIndex !== -1 && currentIndex < favoritesWithIndex.length - 1) {
+        // There is a next track
+        const nextTrack = favoritesWithIndex[currentIndex + 1];
+        console.log(`Will play next track: ${nextTrack.title || 'Unknown'}`);
+        
+        // Store the ordered favorites for next/previous navigation
+        localStorage.setItem('favorites-music-list', JSON.stringify(favoritesWithIndex));
+        
+        // Stop current playback first to avoid overlapping audio
+        stopPlayback().then(() => {
+          // Play the next track directly
+          if (nextTrack.musicId.startsWith('firebase-') && nextTrack.audioUrl) {
+            playMusic(nextTrack.musicId, nextTrack.audioUrl, 'favorites');
+          } else {
+            playMusic(nextTrack.musicId, null, 'favorites');
+          }
+        });
+      } else if (currentIndex === favoritesWithIndex.length - 1) {
+        // Loop back to the first track
+        const firstTrack = favoritesWithIndex[0];
+        console.log(`Will loop back to first track: ${firstTrack.title || 'Unknown'}`);
+        
+        // Store the ordered favorites
+        localStorage.setItem('favorites-music-list', JSON.stringify(favoritesWithIndex));
+        
+        // Stop current playback first
+        stopPlayback().then(() => {
+          // Play the first track
+          if (firstTrack.musicId.startsWith('firebase-') && firstTrack.audioUrl) {
+            playMusic(firstTrack.musicId, firstTrack.audioUrl, 'favorites');
+          } else {
+            playMusic(firstTrack.musicId, null, 'favorites');
+          }
+        });
+      } else {
+        // Fall back to using playNextSong function
+        localStorage.setItem('favorites-music-list', JSON.stringify(favoritesWithIndex));
+        playNextSong(favoritesWithIndex, []);
+      }
+    } else {
+      console.log("No favorites available for next song");
+    }
+  };
+  
+  // Handler for previous song button - navigates only within favorites
+  const handlePreviousSong = () => {
+    console.log("Previous song requested in FavoritesPage");
+    
+    if (favoriteMusic && favoriteMusic.length > 0) {
+      // Make sure we're in favorites mode
+      setMusicCategory('favorites');
+      
+      // Add displayIndex to ensure proper order based on visual presentation
+      const favoritesWithIndex = favoriteMusic.map((item, index) => ({
+        ...item,
+        displayIndex: index,
+        originalIndex: index, // Add this for consistent sorting
+        category: 'favorites'
+      }));
+      
+      console.log(`Playing previous song from favorites list with ${favoritesWithIndex.length} items`);
+      
+      // Find current playing index
+      const currentIndex = favoritesWithIndex.findIndex(item => {
+        const itemId = String(item.musicId || '');
+        return itemId === String(currentlyPlaying);
+      });
+      
+      console.log(`Current playing index: ${currentIndex}`);
+      
+      // Manual calculation of previous track index
+      if (currentIndex > 0) {
+        // There is a previous track
+        const prevTrack = favoritesWithIndex[currentIndex - 1];
+        console.log(`Will play previous track: ${prevTrack.title || 'Unknown'}`);
+        
+        // Store the ordered favorites for next/previous navigation
+        localStorage.setItem('favorites-music-list', JSON.stringify(favoritesWithIndex));
+        
+        // Stop current playback first to avoid overlapping audio
+        stopPlayback().then(() => {
+          // Play the previous track directly
+          if (prevTrack.musicId.startsWith('firebase-') && prevTrack.audioUrl) {
+            playMusic(prevTrack.musicId, prevTrack.audioUrl, 'favorites');
+          } else {
+            playMusic(prevTrack.musicId, null, 'favorites');
+          }
+        });
+      } else if (currentIndex === 0) {
+        // Loop back to the last track
+        const lastTrack = favoritesWithIndex[favoritesWithIndex.length - 1];
+        console.log(`Will loop back to last track: ${lastTrack.title || 'Unknown'}`);
+        
+        // Store the ordered favorites
+        localStorage.setItem('favorites-music-list', JSON.stringify(favoritesWithIndex));
+        
+        // Stop current playback first
+        stopPlayback().then(() => {
+          // Play the last track
+          if (lastTrack.musicId.startsWith('firebase-') && lastTrack.audioUrl) {
+            playMusic(lastTrack.musicId, lastTrack.audioUrl, 'favorites');
+          } else {
+            playMusic(lastTrack.musicId, null, 'favorites');
+          }
+        });
+      } else {
+        // Fall back to using playPreviousSong function
+        localStorage.setItem('favorites-music-list', JSON.stringify(favoritesWithIndex));
+        playPreviousSong(favoritesWithIndex, []);
+      }
+    } else {
+      console.log("No favorites available for previous song");
+    }
+  };
 
   // Function to fetch image URL for a music item
   const fetchImageUrl = async (musicId) => {
     try {
+      // Skip image fetch for Firebase music
+      if (typeof musicId === 'string' && musicId.startsWith('firebase-')) {
+        return null;
+      }
+
       const response = await fetch(
         `http://localhost:8080/api/music/getMusic/${musicId}?includeAudioData=false`,
         {
@@ -139,12 +329,55 @@ export const FavoritesPage = () => {
         throw new Error(`Failed to parse JSON: ${parseError.message}`);
       }
       
-      console.log(`Fetched ${musicData.length} favorite music items for user ID: ${user.userId}`);
-      setFavoriteMusic(Array.isArray(musicData) ? musicData : []);
+      // Combine database favorites with Firebase favorites
+      const databaseFavorites = Array.isArray(musicData) ? musicData : [];
+      const firebaseFavorites = favorites.filter(fav => 
+        typeof fav.music?.filename === 'string' && 
+        fav.music.filename.startsWith('firebase-')
+      ).map(fav => {
+        // Use cached Firebase music if available
+        const musicId = fav.music.filename;
+        const cachedItem = firebaseMusicCache[musicId];
+        
+        if (cachedItem && cachedItem.audioUrl) {
+          console.log(`[FavoritesPage] Using cached Firebase URL for ${musicId}`);
+          return {
+            musicId: musicId,
+            title: cachedItem.title || musicId.replace('firebase-', '').replace('.mp3', ''),
+            artist: cachedItem.artist || 'Unknown Artist',
+            genre: cachedItem.genre || 'Firebase Music',
+            audioUrl: cachedItem.audioUrl
+          };
+        }
+        
+        // Fallback to constructed URL if not in cache
+        return {
+          musicId: musicId,
+          title: musicId.replace('firebase-', '').replace('.mp3', ''),
+          artist: 'Unknown Artist',
+          genre: 'Firebase Music',
+          audioUrl: `https://firebasestorage.googleapis.com/v0/b/astroglowfirebase-d2411.appspot.com/o/audios%2F${encodeURIComponent(musicId.replace('firebase-', ''))}?alt=media`
+        };
+      });
+
+      const allFavorites = [...databaseFavorites, ...firebaseFavorites];
+      console.log(`Fetched ${allFavorites.length} favorite music items (${databaseFavorites.length} database, ${firebaseFavorites.length} Firebase)`);
       
-      // Fetch image URLs separately
-      if (Array.isArray(musicData) && musicData.length > 0) {
-        fetchAllImageUrls(musicData);
+      // Save to localStorage with proper display indices
+      localStorage.setItem('favorites-music-list', JSON.stringify(
+        allFavorites.map((item, index) => ({
+          ...item,
+          displayIndex: index,
+          originalIndex: index,
+          category: 'favorites'
+        }))
+      ));
+      
+      setFavoriteMusic(allFavorites);
+      
+      // Fetch image URLs separately for database music only
+      if (databaseFavorites.length > 0) {
+        fetchAllImageUrls(databaseFavorites);
       }
       
       setIsLoading(false);
@@ -171,7 +404,17 @@ export const FavoritesPage = () => {
 
   useEffect(() => {
     fetchFavoriteMusic();
-  }, [user?.userId]);
+    
+    // Get albums from localStorage
+    try {
+      const savedAlbums = localStorage.getItem('albums');
+      if (savedAlbums) {
+        setAlbums(JSON.parse(savedAlbums));
+      }
+    } catch (error) {
+      console.error('Error fetching albums from localStorage:', error);
+    }
+  }, [user?.userId, firebaseMusicCache]);
 
   const handleRetry = () => {
     fetchFavoriteMusic();
@@ -181,12 +424,36 @@ export const FavoritesPage = () => {
   const handlePlayClick = (e, musicId) => {
     e.stopPropagation();
     
+    // Find the music item to get its URL if it's Firebase music
+    const musicItem = favoriteMusic.find(item => item.musicId === musicId);
+    
+    // Set category to favorites for proper navigation
+    setMusicCategory('favorites');
+    
+    // Save the ordered favorites list to localStorage with proper indices
+    const orderedFavorites = favoriteMusic.map((item, index) => ({
+      ...item,
+      displayIndex: index,
+      originalIndex: index,
+      category: 'favorites'
+    }));
+    localStorage.setItem('favorites-music-list', JSON.stringify(orderedFavorites));
+    console.log(`Stored ${orderedFavorites.length} favorites in order before playing`);
+    
     if (currentlyPlaying === musicId) {
       // If already playing this track, toggle play/pause
       togglePlayPause(musicId);
     } else {
       // If not playing this track, start playing it
-      playMusic(musicId);
+      if (musicItem && typeof musicId === 'string' && musicId.startsWith('firebase-') && musicItem.audioUrl) {
+        // For Firebase music, pass the direct URL and set category to 'favorites'
+        console.log(`Playing Firebase music with ID: ${musicId} and URL: ${musicItem.audioUrl}`);
+        playMusic(musicId, musicItem.audioUrl, 'favorites');
+      } else {
+        // For regular music, just pass the ID
+        console.log(`Playing regular music with ID: ${musicId}`);
+        playMusic(musicId, null, 'favorites');
+      }
     }
   };
 
@@ -194,12 +461,36 @@ export const FavoritesPage = () => {
   const handleMusicCardClick = (e, musicId) => {
     e.stopPropagation();
     
+    // Find the music item to get its URL if it's Firebase music
+    const musicItem = favoriteMusic.find(item => item.musicId === musicId);
+    
+    // Set category to favorites for proper navigation
+    setMusicCategory('favorites');
+    
+    // Save the ordered favorites list to localStorage with proper indices
+    const orderedFavorites = favoriteMusic.map((item, index) => ({
+      ...item,
+      displayIndex: index,
+      originalIndex: index,
+      category: 'favorites'
+    }));
+    localStorage.setItem('favorites-music-list', JSON.stringify(orderedFavorites));
+    console.log(`Stored ${orderedFavorites.length} favorites in order before playing`);
+    
     if (currentlyPlaying === musicId) {
       // If this is the current track, toggle play/pause
       togglePlayPause(musicId);
     } else {
       // If not the current track, start playing it
-      playMusic(musicId);
+      if (musicItem && typeof musicId === 'string' && musicId.startsWith('firebase-') && musicItem.audioUrl) {
+        // For Firebase music, pass the direct URL and set category to 'favorites'
+        console.log(`Playing Firebase music with ID: ${musicId} and URL: ${musicItem.audioUrl}`);
+        playMusic(musicId, musicItem.audioUrl, 'favorites');
+      } else {
+        // For regular music, just pass the ID
+        console.log(`Playing regular music with ID: ${musicId}`);
+        playMusic(musicId, null, 'favorites');
+      }
     }
   };
 
@@ -207,6 +498,11 @@ export const FavoritesPage = () => {
   const handleFavoriteClick = (e, musicId) => {
     e.stopPropagation();
     toggleFavorite(musicId);
+    
+    // Immediately update the favoriteMusic state
+    setFavoriteMusic(prevList => 
+      prevList.filter(music => music.musicId !== musicId)
+    );
   };
 
   // Handle add to playlist button click
@@ -245,14 +541,17 @@ export const FavoritesPage = () => {
             </div>
           ) : (
             <div className={styles.musicGrid}>
-              {favoriteMusic.map((music) => {
+              {favoriteMusic.map((music, index) => {
                 const imageUrl = getSafeImageUrl(imageUrls[music.musicId], getImageUrl);
                 const isCurrentlyPlaying = currentlyPlaying === music.musicId;
                 const isFavorited = isFavorite(music.musicId);
                 
+                // Generate a unique key by combining the music ID and index
+                const uniqueKey = `favorite-${music.musicId}-${index}`;
+                
                 return (
                   <div 
-                    key={`favorite-${music.musicId}`} 
+                    key={uniqueKey}
                     className={`${styles.musicCard} ${isCurrentlyPlaying ? 
                       (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
                     onClick={(e) => handleMusicCardClick(e, music.musicId)}

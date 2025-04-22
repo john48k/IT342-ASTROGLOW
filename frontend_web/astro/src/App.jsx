@@ -8,6 +8,7 @@ import LoginPage from "./Pages/LoginPage/LoginPage";
 import SignUpPage from "./Pages/SignUpPage/SignUpPage";
 import UserProfilePage from "./Pages/UserProfile/UserProfile";
 import { FavoritesPage } from "./Pages/FavoritesPage/FavoritesPage";
+import SearchPage from "./Pages/SearchPage/SearchPage";
 import OAuth2Redirect from "./components/OAuth2Redirect";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { UserProvider } from "./context/UserContext";
@@ -43,6 +44,11 @@ function App() {
               <Route path="/favorites" element={
                 <ProtectedRoute>
                   <FavoritesPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/search" element={
+                <ProtectedRoute>
+                  <SearchPage />
                 </ProtectedRoute>
               } />
             </Routes>

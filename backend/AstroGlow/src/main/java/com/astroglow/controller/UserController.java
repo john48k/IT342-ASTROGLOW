@@ -19,13 +19,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
-@CrossOrigin(origins = {
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://192.168.254.105:8080",
-    "astroglow://oauth/callback"
-}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:5174"}, allowCredentials = "true")
 public class UserController {
     @GetMapping
     public String index(){
@@ -40,30 +34,8 @@ public class UserController {
     }
 
     @GetMapping("/getAllUser")
-    public ResponseEntity<?> getAllUser() {
-        try {
-            List<UserEntity> users = userService.getAllUsers();
-            return ResponseEntity.ok(users);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving users: " + e.getMessage());
-        }
-    }
-
-    @GetMapping("/getUserByEmail/{email}")
-    public ResponseEntity<?> getUserByEmail(@PathVariable String email) {
-        try {
-            UserEntity user = userService.findByEmail(email);
-            if (user != null) {
-                return ResponseEntity.ok(user);
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("User not found with email: " + email);
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error retrieving user: " + e.getMessage());
-        }
+    public List<UserEntity> getAllUser(){
+        return userService.getAllUsers();
     }
 
     @PutMapping(value = "/putUser", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -212,7 +184,23 @@ public class UserController {
     @GetMapping("/user-info")
     public Map<String, Object> getUser(@AuthenticationPrincipal OAuth2User oAuth2User) {
         if (oAuth2User != null) {
-            return oAuth2User.getAttributes();
+            Map<String, Object> attributes = oAuth2User.getAttributes();
+            Map<String, Object> response = new HashMap<>();
+            
+            // Get the OAuth ID (sub) from the attributes
+            String oauthId = (String) attributes.get("sub");
+            if (oauthId != null) {
+                // Find user by OAuth ID
+                UserEntity user = userService.findByOauthId(oauthId);
+                if (user != null) {
+                    response.put("userId", user.getUserId());
+                    response.put("userName", user.getUserName());
+                    response.put("userEmail", user.getUserEmail());
+                    response.put("oauthId", user.getOauthId());
+                }
+            }
+            
+            return response;
         } else {
             return Collections.emptyMap();
         }
@@ -558,27 +546,5 @@ public class UserController {
             errorResponse.put("message", "An error occurred while retrieving the profile picture");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
-    }
-
-    @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> healthCheck() {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "Backend server is running");
-        response.put("timestamp", System.currentTimeMillis());
-        response.put("serverAddress", "192.168.254.105:8080");
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/mobile/health")
-    public ResponseEntity<Map<String, Object>> mobileHealthCheck(HttpServletRequest request) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "Backend server is running");
-        response.put("timestamp", System.currentTimeMillis());
-        response.put("serverAddress", "192.168.254.105:8080");
-        response.put("clientIp", request.getRemoteAddr());
-        response.put("userAgent", request.getHeader("User-Agent"));
-        return ResponseEntity.ok(response);
     }
 }
