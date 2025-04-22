@@ -13,7 +13,34 @@ export const PlaylistProvider = ({ children }) => {
 
   // Load playlists from backend when component mounts or user changes
   useEffect(() => {
-    refreshPlaylists();
+    const loadPlaylists = async () => {
+      if (user?.userId) {
+        try {
+          console.log(`Loading playlists for user ID: ${user.userId}`);
+          const response = await fetch(`${API_BASE_URL}/playlists/getAllPlaylist`, {
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            },
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log(`Loaded ${data.length} playlists for user ID: ${user.userId}`);
+            setPlaylists(data);
+          } else {
+            console.error(`Error loading playlists: ${response.status} ${response.statusText}`);
+          }
+        } catch (error) {
+          console.error('Error loading playlists:', error);
+        }
+      }
+    };
+    
+    loadPlaylists();
   }, [user?.userId]);
 
   // Memoize refreshPlaylists to prevent unnecessary re-renders
@@ -21,7 +48,7 @@ export const PlaylistProvider = ({ children }) => {
     if (user?.userId) {
       try {
         console.log(`Refreshing playlists for user ID: ${user.userId}`);
-        const response = await fetch(`${API_BASE_URL}/playlists/getPlaylist/user/${user.userId}`, {
+        const response = await fetch(`${API_BASE_URL}/playlists/getAllPlaylist`, {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -45,11 +72,11 @@ export const PlaylistProvider = ({ children }) => {
   }, [user?.userId]);
 
   // Check if a song is in a playlist
-  const checkSongInPlaylist = useCallback(async (playlistId, musicId) => {
-    if (!playlistId || !musicId) return false;
+  const checkSongInPlaylist = useCallback(async (musicId) => {
+    if (!user?.userId) return false;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/playlists/playlist/${playlistId}/music/${musicId}/check`, {
+      const response = await fetch(`${API_BASE_URL}/playlists/user/${user.userId}/music/${musicId}/check`, {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
@@ -65,14 +92,14 @@ export const PlaylistProvider = ({ children }) => {
       console.error('Error checking song in playlist:', error);
       return false;
     }
-  }, []);
+  }, [user?.userId]);
 
   // Create a new playlist
-  const createPlaylist = useCallback(async (playlistName = "New Playlist") => {
+  const createPlaylist = useCallback(async (playlistName) => {
     if (!user?.userId) return null;
 
     try {
-      console.log(`Creating new playlist: "${playlistName}"`);
+      console.log(`Creating new playlist`);
       const response = await fetch(`${API_BASE_URL}/playlists/postPlaylist`, {
         method: 'POST',
         headers: {
@@ -82,7 +109,6 @@ export const PlaylistProvider = ({ children }) => {
           'Pragma': 'no-cache'
         },
         body: JSON.stringify({
-          name: playlistName,
           user: {
             userId: parseInt(user.userId)
           }
@@ -92,7 +118,7 @@ export const PlaylistProvider = ({ children }) => {
 
       if (response.ok) {
         const newPlaylist = await response.json();
-        console.log(`Successfully created playlist: "${playlistName}" with ID: ${newPlaylist.playlistId}`);
+        console.log(`Successfully created playlist`);
         await refreshPlaylists();
         return newPlaylist;
       } else {
@@ -108,14 +134,11 @@ export const PlaylistProvider = ({ children }) => {
 
   // Add a song to a playlist
   const addSongToPlaylist = useCallback(async (playlistId, musicId) => {
-    if (!playlistId || !musicId) return false;
+    if (!user?.userId) return false;
 
     try {
       console.log(`Adding song ${musicId} to playlist ${playlistId}`);
-      
-      // Check if this is a Firebase music ID (starts with "firebase-")
-      let endpoint;
-      let options = {
+      const response = await fetch(`${API_BASE_URL}/playlists/user/${user.userId}/music/${musicId}`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -124,21 +147,10 @@ export const PlaylistProvider = ({ children }) => {
           'Pragma': 'no-cache'
         },
         credentials: 'include'
-      };
-      
-      if (typeof musicId === 'string' && musicId.startsWith('firebase-')) {
-        // Use the new endpoint for Firebase music files with query parameter
-        const encodedMusicId = encodeURIComponent(musicId);
-        endpoint = `${API_BASE_URL}/playlists/playlist/${playlistId}/music/firebase?musicId=${encodedMusicId}`;
-      } else {
-        // Use the original endpoint for numeric music IDs
-        endpoint = `${API_BASE_URL}/playlists/playlist/${playlistId}/music/${musicId}`;
-      }
-      
-      const response = await fetch(endpoint, options);
+      });
 
       if (response.ok) {
-        console.log(`Successfully added song ${musicId} to playlist ${playlistId}`);
+        console.log(`Successfully added song ${musicId} to playlist`);
         await refreshPlaylists();
         return true;
       } else {
@@ -150,14 +162,14 @@ export const PlaylistProvider = ({ children }) => {
       console.error('Error adding song to playlist:', error);
       return false;
     }
-  }, [refreshPlaylists]);
+  }, [user?.userId, refreshPlaylists]);
 
   // Remove a song from a playlist
-  const removeSongFromPlaylist = useCallback(async (playlistId, musicId) => {
-    if (!playlistId || !musicId) return false;
+  const removeSongFromPlaylist = useCallback(async (musicId) => {
+    if (!user?.userId) return false;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/playlists/playlist/${playlistId}/music/${musicId}`, {
+      const response = await fetch(`${API_BASE_URL}/playlists/deletePlaylist/user/${user.userId}/music/${musicId}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -167,7 +179,6 @@ export const PlaylistProvider = ({ children }) => {
       });
 
       if (response.ok) {
-        console.log(`Successfully removed song ${musicId} from playlist ${playlistId}`);
         await refreshPlaylists();
         return true;
       }
@@ -176,36 +187,7 @@ export const PlaylistProvider = ({ children }) => {
       console.error('Error removing song from playlist:', error);
       return false;
     }
-  }, [refreshPlaylists]);
-
-  // Delete an entire playlist
-  const deletePlaylist = useCallback(async (playlistId) => {
-    if (!playlistId) return false;
-
-    try {
-      console.log(`Deleting playlist ${playlistId}`);
-      const response = await fetch(`${API_BASE_URL}/playlists/deletePlaylist/${playlistId}`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        console.log(`Successfully deleted playlist ${playlistId}`);
-        await refreshPlaylists();
-        return true;
-      } else {
-        console.error(`Error deleting playlist: ${response.status}`);
-        return false;
-      }
-    } catch (error) {
-      console.error('Error deleting playlist:', error);
-      return false;
-    }
-  }, [refreshPlaylists]);
+  }, [user?.userId, refreshPlaylists]);
 
   // Open the playlist modal for a specific music
   const openPlaylistModal = useCallback((musicId) => {
@@ -220,18 +202,17 @@ export const PlaylistProvider = ({ children }) => {
   }, []);
 
   return (
-    <PlaylistContext.Provider value={{
-      playlists,
-      refreshPlaylists,
-      addSongToPlaylist,
+    <PlaylistContext.Provider value={{ 
+      playlists, 
+      addSongToPlaylist, 
       createPlaylist,
       removeSongFromPlaylist,
-      deletePlaylist,
       checkSongInPlaylist,
       isPlaylistModalOpen,
       openPlaylistModal,
       closePlaylistModal,
-      selectedMusicId
+      selectedMusicId,
+      refreshPlaylists
     }}>
       {children}
     </PlaylistContext.Provider>
@@ -239,11 +220,7 @@ export const PlaylistProvider = ({ children }) => {
 };
 
 export const usePlaylist = () => {
-  const context = useContext(PlaylistContext);
-  if (!context) {
-    throw new Error('usePlaylist must be used within a PlaylistProvider');
-  }
-  return context;
+  return useContext(PlaylistContext);
 };
 
 export default PlaylistContext; 

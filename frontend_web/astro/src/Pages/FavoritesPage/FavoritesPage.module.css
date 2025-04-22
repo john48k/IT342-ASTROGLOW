@@ -98,36 +98,43 @@ body {
 }
 
 .musicCard {
-  background-color: rgba(15, 15, 25, 0.7);
-  border-radius: 10px;
-  overflow: hidden;
+  background-color: rgba(30, 30, 45, 0.7);
+  border-radius: 8px;
+  padding: 16px;
   transition: all 0.3s ease;
-  position: relative;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
   cursor: pointer;
+  border: 1px solid rgba(80, 80, 120, 0.3);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
 }
 
 .musicCard:hover {
+  background-color: rgba(40, 40, 60, 0.8);
   transform: translateY(-5px);
-  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
 }
 
 .currentlyPlayingCard {
-  border: 2px solid #8b5cf6;
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+  background-color: rgba(60, 30, 80, 0.7);
+  border: 1px solid rgba(127, 90, 240, 0.5);
+  box-shadow: 0 0 15px rgba(127, 90, 240, 0.3);
 }
 
 .pausedCard {
-  border: 2px dashed #8b5cf6;
+  background-color: rgba(50, 30, 60, 0.7);
+  border: 1px solid rgba(127, 90, 240, 0.3);
+  box-shadow: 0 0 8px rgba(127, 90, 240, 0.2);
 }
 
 .musicImageContainer {
   position: relative;
   width: 100%;
-  padding-top: 100%; /* 1:1 Aspect Ratio */
-  overflow: hidden;
+  padding-bottom: 100%; /* 1:1 Aspect ratio */
+  margin-bottom: 16px;
   border-radius: 8px;
-  background-color: #f0f0f0;
+  overflow: hidden;
+  background-color: #333333;
 }
 
 .musicImage {
@@ -138,6 +145,7 @@ body {
   height: 100%;
   object-fit: cover;
   transition: transform 0.3s ease;
+  transform-origin: center;
 }
 
 .musicCard:hover .musicImage {
@@ -153,14 +161,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(45deg, #4f46e5, #c026d3);
-  color: white;
-  font-size: 2rem;
-  font-weight: bold;
-}
-
-.musicPlaceholder span {
-  opacity: 0.7;
+  background-color: #333333;
+  color: #b3b3b3;
+  font-size: 48px;
+  background: linear-gradient(45deg, #222233, #333355);
 }
 
 .musicOverlay {
@@ -169,71 +173,155 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 50%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  background-color: rgba(0, 0, 0, 0);
+  transition: background-color 0.3s ease;
+  z-index: 1;
 }
 
-.musicCard:hover .musicOverlay {
-  opacity: 1;
+.musicImageContainer:hover .musicOverlay {
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 .musicPlayButton {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
-  width: 36px;
-  height: 36px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: rgba(139, 92, 246, 0.8);
-  border: none;
+  background-color: #7f5af0;
   color: white;
-  font-size: 16px;
+  border: none;
+  font-size: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 10;
   opacity: 0;
-  transform: translateY(10px);
   transition: all 0.3s ease;
+  z-index: 2;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
-.musicCard:hover .musicPlayButton {
+.musicImageContainer:hover .musicPlayButton {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.musicPlayButton:hover {
+  background-color: #9775fa;
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* Special styling for currently playing card */
+.currentlyPlayingCard .musicPlayButton,
+.pausedCard .musicPlayButton {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.currentlyPlayingCard .musicPlayButton::after,
+.pausedCard .musicPlayButton::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  border-radius: 50%;
+  border: 2px solid #7f5af0;
+  animation: pulse-border 2s infinite ease-in-out;
+  z-index: -1;
+}
+
+@keyframes pulse-border {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.favoriteButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s ease, color 0.2s ease;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.musicImageContainer:hover .favoriteButton {
+  opacity: 1;
+}
+
+.favoriteButton:hover {
+  color: #ffdd55;
+}
+
+.favorited {
+  color: #ffdd55;
+  opacity: 1;
 }
 
 .musicInfo {
-  padding: 15px;
+  padding: 0 4px;
 }
 
 .musicTitle {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  margin: 0 0 5px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: white;
+  transition: color 0.3s ease;
+}
+
+.musicCard:hover .musicTitle {
+  color: #9775fa;
+}
+
+.musicArtist, .musicGenre, .uploadedBy {
+  font-size: 14px;
+  color: #b3b3b3;
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.3s ease;
 }
 
-.musicArtist {
+.musicCard:hover .musicArtist {
+  color: #d4c5ff;
+}
+
+.uploadedBy {
   font-size: 12px;
-  color: #9ca3af;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.musicGenre {
-  font-size: 11px;
-  color: #6b7280;
-  margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #8d8d8d;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
 }
 
 /* Sidebar styles */
@@ -632,30 +720,6 @@ body {
 
 .retryButton:hover {
   background: #dc2626;
-}
-
-.favoriteButton {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: none;
-  border: none;
-  font-size: 24px;
-  color: white;
-  cursor: pointer;
-  z-index: 2;
-  transition: transform 0.2s ease, color 0.3s ease;
-  padding: 0;
-  line-height: 1;
-}
-
-.favoriteButton:hover {
-  transform: scale(1.2);
-}
-
-.favoriteButton.favorited {
-  color: #ffd700;
-  text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
 }
 
 .addToPlaylistButton {

@@ -32,78 +32,65 @@ const LoginPage = () => {
     setLoading(true);
     setError("");
 
-    const loginData = {
-      userEmail: formData.userEmail,
-      userPassword: formData.userPassword,
-      rememberMe: true
-    };
-
-    // Use XMLHttpRequest instead of fetch for better control of Content-Type headers
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', 'http://localhost:8080/api/user/login-any', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.timeout = 10000; // 10 seconds timeout
-    xhr.withCredentials = true; // Include cookies
-
-    xhr.onload = function() {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const userData = JSON.parse(xhr.responseText);
-          console.log("Login response:", userData);
-
-          if (!userData || !userData.userEmail) {
-            setError("Invalid credentials");
-            setLoading(false);
-            return;
-          }
-
-          // Generate a session ID with timestamp to ensure uniqueness
-          const sessionId = btoa(userData.userEmail + ":" + new Date().getTime());
-
-          // Store a session cookie on the client side as well
-          document.cookie = `auth_session=${sessionId}; path=/; max-age=2592000`; // 30 days
-
-          // Call login with the user data and session ID
-          login(userData, sessionId);
-
-          // Check if we have a redirect location from the protected route
-          const from = location.state?.from || "/home";
-          navigate(from);
-        } catch (err) {
-          console.error("Error parsing response:", err);
-          setError("Error parsing login response");
-          setLoading(false);
-        }
-      } else {
-        let errorMessage = "Login failed";
-        try {
-          const errorData = JSON.parse(xhr.responseText);
-          errorMessage = errorData.message || errorMessage;
-        } catch (e) {
-          // If can't parse JSON, use the response text directly
-          errorMessage = xhr.responseText || errorMessage;
-        }
-        console.error("Login error:", errorMessage);
-        setError(errorMessage);
-        setLoading(false);
-      }
-    };
-
-    xhr.onerror = function() {
-      setError("Cannot connect to the server. Please ensure the backend is running at http://localhost:8080");
-      setLoading(false);
-    };
-
-    xhr.ontimeout = function() {
-      setError("Request timed out. Please check if the server is running.");
-      setLoading(false);
-    };
-
     try {
-      xhr.send(JSON.stringify(loginData));
-    } catch (err) {
-      console.error("Error sending request:", err);
-      setError("Error sending login request");
+      const loginData = {
+        userEmail: formData.userEmail,
+        userPassword: formData.userPassword,
+        rememberMe: true // Added to request persistent cookie
+      };
+
+      console.log("Attempting to connect to backend at http://localhost:8080/api/user/login");
+
+      const response = await fetch("http://localhost:8080/api/user/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(loginData),
+        credentials: 'include', // Include cookies in the request
+        // Add timeout to prevent long hangs
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Invalid email or password");
+        }
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to log in");
+      }
+
+      const userData = await response.json();
+      console.log("Login response:", userData);
+
+      if (!userData || !userData.userEmail) {
+        throw new Error("Invalid credentials");
+      }
+
+      // Generate a session ID with timestamp to ensure uniqueness
+      const sessionId = btoa(userData.userEmail + ":" + new Date().getTime());
+
+      // Store a session cookie on the client side as well
+      document.cookie = `auth_session=${sessionId}; path=/; max-age=2592000`; // 30 days
+
+      // Call login with the user data and session ID
+      login(userData, sessionId);
+
+      // Check if we have a redirect location from the protected route
+      const from = location.state?.from || "/home";
+      navigate(from);
+    } catch (error) {
+      console.error("Login error:", error);
+
+      // Provide more specific error messages based on the error type
+      if (error.name === 'AbortError') {
+        setError("Request timed out. Please check if the server is running.");
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        setError("Cannot connect to the server. Please ensure the backend is running at http://localhost:8080");
+      } else {
+        setError(error.message || "An error occurred during login");
+      }
+
       setLoading(false);
     }
   };
@@ -114,34 +101,6 @@ const LoginPage = () => {
 
   const handleGithubLogin = () => {
     window.location.href = "http://localhost:8080/oauth2/authorization/github";
-  };
-
-  // Function to test the content type issue
-  const testContentType = async () => {
-    try {
-      setError("Testing content type...");
-      const testData = { test: "data" };
-      
-      const response = await fetch("http://localhost:8080/api/user/test-content-type", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(testData),
-        credentials: 'include',
-        signal: AbortSignal.timeout(5000)
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setError("Content-Type test passed! Server accepted JSON.");
-        console.log("Content-Type test result:", data);
-      } else {
-        setError(`Content-Type test failed: ${response.status} ${response.statusText}`);
-      }
-    } catch (err) {
-      setError(`Content-Type test error: ${err.message}`);
-    }
   };
 
   // Function to check backend health
@@ -155,8 +114,6 @@ const LoginPage = () => {
 
       if (response.ok) {
         setError("Server is running but login failed. Check your credentials.");
-        // If server is up, let's test content type too
-        await testContentType();
       } else {
         setError("Server responded with an error: " + response.status);
       }
@@ -248,24 +205,14 @@ const LoginPage = () => {
             {error && (
               <div className={styles.errorContainer}>
                 <div className={styles.errorMessage}>{error}</div>
-                <div className={styles.errorActions}>
-                  {error.includes("Cannot connect") && (
-                    <button
-                      className={styles.checkServerButton}
-                      onClick={checkBackendStatus}
-                    >
-                      Check Server Status
-                    </button>
-                  )}
-                  {error.includes("Content-Type") && (
-                    <button
-                      className={styles.checkServerButton}
-                      onClick={testContentType}
-                    >
-                      Test Content Type
-                    </button>
-                  )}
-                </div>
+                {error.includes("Cannot connect") && (
+                  <button
+                    className={styles.checkServerButton}
+                    onClick={checkBackendStatus}
+                  >
+                    Check Server Status
+                  </button>
+                )}
               </div>
             )}
 

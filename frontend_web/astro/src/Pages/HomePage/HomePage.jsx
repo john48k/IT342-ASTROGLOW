@@ -5,12 +5,10 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import { useUser } from "../../context/UserContext";
 import { useFavorites } from "../../context/FavoritesContext";
 import { useAudioPlayer } from "../../context/AudioPlayerContext";
-import { usePlaylist } from "../../context/PlaylistContext";
 import styles from "./HomePage.module.css";
 import Modal from '../../components/Modal/Modal';
 import AudioUploader from "../../components/AudioUploader";
 import UploadModal from '../../components/UploadModal';
-import PlaylistModal from '../../components/PlaylistModal/PlaylistModal';
 import { registerHomePageNavHandlers, unregisterHomePageNavHandlers } from "../../components/NowPlayingBar/NowPlayingBar";
 
 // Helper function to check if a string is a data URI
@@ -106,7 +104,6 @@ export const HomePage = () => {
     musicCategory,
     setMusicCategory
   } = useAudioPlayer();
-  const { playlists, openPlaylistModal, deletePlaylist, refreshPlaylists } = usePlaylist();
 
   const userName = user?.userName || "Guest";
   const [musicList, setMusicList] = useState([]);
@@ -135,10 +132,6 @@ export const HomePage = () => {
   const [availableMusicList, setAvailableMusicList] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [musicToDelete, setMusicToDelete] = useState(null);
-  const [showDeletePlaylistModal, setShowDeletePlaylistModal] = useState(false);
-  const [playlistToDelete, setPlaylistToDelete] = useState(null);
-  const [isPlayingPlaylist, setIsPlayingPlaylist] = useState(false);
-  const [currentPlaylistId, setCurrentPlaylistId] = useState(null);
 
   // Add refs for tracking double clicks and click prevention
   const lastClickTimeRef = useRef({});
@@ -194,13 +187,6 @@ export const HomePage = () => {
       setMusicImageUrl(editingMusic.imageUrl || '');
     }
   }, [editingMusic]);
-
-  // Add this useEffect to refresh playlists when component mounts
-  useEffect(() => {
-    if (user?.userId) {
-      refreshPlaylists();
-    }
-  }, [user, refreshPlaylists]);
 
   // Function to fetch user's music from database
   const fetchUserMusic = async () => {
@@ -1207,95 +1193,6 @@ export const HomePage = () => {
     });
   };
 
-  // Function to handle adding a song to a playlist
-  const handleAddToPlaylistClick = (e, musicId) => {
-    e.stopPropagation();
-    openPlaylistModal(musicId);
-  };
-
-  // Function to handle playlist delete button click
-  const handleDeletePlaylistClick = (playlist, event) => {
-    event.stopPropagation(); // Prevent triggering card click
-    setPlaylistToDelete(playlist);
-    setShowDeletePlaylistModal(true);
-  };
-
-  // Function to confirm playlist deletion
-  const confirmDeletePlaylist = async () => {
-    if (!playlistToDelete) return;
-    
-    try {
-      const success = await deletePlaylist(playlistToDelete.playlistId);
-      if (success) {
-        console.log(`Playlist ${playlistToDelete.name} deleted successfully`);
-        // If this was the currently playing playlist, reset state
-        if (currentPlaylistId === playlistToDelete.playlistId) {
-          setIsPlayingPlaylist(false);
-          setCurrentPlaylistId(null);
-        }
-      } else {
-        console.error(`Failed to delete playlist ${playlistToDelete.name}`);
-      }
-    } catch (error) {
-      console.error('Error deleting playlist:', error);
-    } finally {
-      setShowDeletePlaylistModal(false);
-      setPlaylistToDelete(null);
-    }
-  };
-
-  // Function to cancel playlist deletion
-  const cancelDeletePlaylist = () => {
-    setShowDeletePlaylistModal(false);
-    setPlaylistToDelete(null);
-  };
-
-  // Function to play a playlist
-  const handlePlayPlaylist = async (e, playlist) => {
-    e.stopPropagation();
-    
-    // Ignore if there are no songs in the playlist
-    if (!playlist.music || playlist.music.length === 0) {
-      console.log('Playlist is empty');
-      return;
-    }
-    
-    try {
-      // If we're already playing this playlist and the first song is playing,
-      // then just toggle play/pause
-      if (isPlayingPlaylist && currentPlaylistId === playlist.playlistId && 
-          currentlyPlaying === playlist.music[0].musicId) {
-        togglePlayPause(currentlyPlaying);
-        return;
-      }
-      
-      // Otherwise, start playing the first song in the playlist
-      const firstSong = playlist.music[0];
-      
-      console.log(`Playing playlist: ${playlist.name}`);
-      setIsPlayingPlaylist(true);
-      setCurrentPlaylistId(playlist.playlistId);
-      
-      // Create a category indicating this is a playlist
-      const playlistCategory = `playlist-${playlist.playlistId}`;
-      setMusicCategory(playlistCategory);
-      
-      // Save the ordered playlist to localStorage for navigation
-      const orderedPlaylist = playlist.music.map((item, index) => ({
-        ...item,
-        displayIndex: index,
-        originalIndex: index,
-        category: playlistCategory
-      }));
-      localStorage.setItem(`${playlistCategory}-music-list`, JSON.stringify(orderedPlaylist));
-      
-      // Play the first song
-      await playMusic(String(firstSong.musicId), firstSong.audioUrl, playlistCategory);
-    } catch (error) {
-      console.error('Error playing playlist:', error);
-    }
-  };
-
   return (
     <div className={styles.homePage}>
       <NavBar />
@@ -1426,25 +1323,16 @@ export const HomePage = () => {
                       >
                         {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
                       </button>
-                      <div className={styles.musicCardActions}>
-                        <button
-                          className={`${styles.favoriteButton} ${isFavorited ? styles.favorited : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(music.id);
-                          }}
-                          title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-                        >
-                          {isFavorited ? '★' : '☆'}
-                        </button>
-                        <button
-                          className={styles.addToPlaylistButton}
-                          onClick={(e) => handleAddToPlaylistClick(e, music.id)}
-                          title="Add to playlist"
-                        >
-                          +
-                        </button>
-                      </div>
+                      <button
+                        className={`${styles.favoriteButton} ${isFavorited ? styles.favorited : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(music.id);
+                        }}
+                        title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                      >
+                        {isFavorited ? '★' : '☆'}
+                      </button>
                     </div>
                     <div className={styles.musicInfo}>
                       <h3 className={styles.musicTitle}>{music.title}</h3>
@@ -1458,64 +1346,24 @@ export const HomePage = () => {
             </div>
           </section>
 
-          {/* User's Playlists Section */}
-          {playlists && playlists.length > 0 && (
-            <section className={styles.playlistsSection}>
-              <h2 className={styles.sectionTitle}>{userName}'s Playlists</h2>
-              <div className={styles.playlistGrid}>
-                {playlists.map((playlist) => {
-                  // Get the first music item's image as the playlist cover, if available
-                  const coverMusic = playlist.music && playlist.music.length > 0 ? playlist.music[0] : null;
-                  const imageUrl = coverMusic ? getSafeImageUrl(coverMusic.imageUrl, getImageUrl) : null;
-                  const isCurrentlyPlaying = isPlayingPlaylist && currentPlaylistId === playlist.playlistId;
+          {/* Hero Section */}
+          {/* Your universe of sound section */}
+          {/* <section className={styles.heroSection}>
+            <div className={styles.purpleGlow}></div>
+            <div className={styles.pinkGlow}></div>
 
-                  return (
-                    <div
-                      key={playlist.playlistId}
-                      className={styles.playlistCard}
-                    >
-                      <div className={styles.playlistImageContainer}>
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={playlist.name}
-                            className={styles.playlistImage}
-                          />
-                        ) : (
-                          <div className={styles.playlistPlaceholder}>
-                            <span>{playlist.name ? playlist.name.charAt(0).toUpperCase() : '▶'}</span>
-                          </div>
-                        )}
-                        <div className={styles.playlistOverlay}></div>
-                        <button
-                          className={`${styles.playlistPlayButton} ${isCurrentlyPlaying && isPlaying ? styles.playing : ''}`}
-                          onClick={(e) => handlePlayPlaylist(e, playlist)}
-                          disabled={!playlist.music || playlist.music.length === 0}
-                        >
-                          {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
-                        </button>
-                        <div className={styles.playlistCardControls}>
-                          <button
-                            className={styles.playlistCardControlButton}
-                            onClick={(e) => handleDeletePlaylistClick(playlist, e)}
-                            title={`Delete "${playlist.name}" playlist`}
-                          >
-                            🗑
-                          </button>
-                        </div>
-                      </div>
-                      <div className={styles.playlistInfo}>
-                        <h3 className={styles.playlistTitle}>{playlist.name || 'Unnamed Playlist'}</h3>
-                        <p className={styles.playlistTracks}>
-                          {playlist.music?.length || 0} {playlist.music?.length === 1 ? 'track' : 'tracks'}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+            <div className={styles.heroContent}>
+              <h1 className={styles.heroTitle}>Your Universe of Sound</h1>
+              <p className={styles.heroSubtitle}>
+                Explore cosmic soundscapes and stellar rhythms that transcend
+                ordinary listening experiences.
+              </p>
+              <button className={styles.uploadButton} onClick={handleUploadClick}>
+                Upload Your Music
+                <span className={styles.arrowIcon}>→</span>
+              </button>
+            </div>
+          </section> */}
 
           {/* Featured Music Section */}
           <section className={styles.featuredSection}>
@@ -1615,9 +1463,6 @@ export const HomePage = () => {
         onClose={closeUploadModal}
         onUploadComplete={handleUploadComplete}
       />
-
-      {/* Add the PlaylistModal component */}
-      <PlaylistModal />
 
       {/* Edit Music Modal */}
       <Modal
@@ -1783,26 +1628,6 @@ export const HomePage = () => {
         }
         confirmText="Delete"
         onConfirm={confirmDelete}
-      />
-
-      {/* Delete Playlist Confirmation Modal */}
-      <Modal
-        isOpen={showDeletePlaylistModal}
-        onClose={cancelDeletePlaylist}
-        title="Confirm Delete Playlist"
-        message={
-          playlistToDelete ? 
-          <div>
-            <p>Are you sure you want to delete this playlist?</p>
-            <p className={styles.songDeleteInfo}>
-              <strong>{playlistToDelete.name}</strong> ({playlistToDelete.music?.length || 0} tracks)
-            </p>
-            <p>This action cannot be undone.</p>
-          </div> : 
-          <p>Are you sure you want to delete this playlist?</p>
-        }
-        confirmText="Delete"
-        onConfirm={confirmDeletePlaylist}
       />
     </div>
   );

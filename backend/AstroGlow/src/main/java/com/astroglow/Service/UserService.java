@@ -49,10 +49,6 @@ public class UserService {
         return userRepository.findAll();
     }
 
-    public UserEntity findByEmail(String email) {
-        return userRepository.findByUserEmail(email);
-    }
-
     public UserEntity putUser(int userId, UserEntity newUserDetails) {
         // First, check if the user exists
         UserEntity existingUser = userRepository.findById(userId)

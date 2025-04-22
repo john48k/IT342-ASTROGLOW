@@ -40,9 +40,12 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         String email = null;
         String name = null;
         
+        // Handle different OAuth providers
         if (attributes.containsKey("email")) {
+            // Google typically provides email directly
             email = (String) attributes.get("email");
         } else if (attributes.containsKey("emails")) {
+            // Some providers might put email in an array
             Object emails = attributes.get("emails");
             if (emails instanceof Iterable) {
                 for (Object item : (Iterable<?>) emails) {
@@ -57,46 +60,45 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             }
         }
         
+        // Get name from attributes
         if (attributes.containsKey("name")) {
             name = (String) attributes.get("name");
         } else if (attributes.containsKey("login")) {
+            // GitHub uses "login" for username
             name = (String) attributes.get("login");
         }
         
         if (email != null) {
+            // Check if user already exists
             UserEntity existingUser = userRepository.findByUserEmail(email);
             
             if (existingUser == null) {
+                // Create new user
                 UserEntity newUser = new UserEntity();
                 newUser.setUserEmail(email);
-
+                
                 // Store the OAuth ID
                 String oauthId = (String) attributes.get("sub");
                 newUser.setOauthId(oauthId);
                 
                 // Use name from OAuth or generate one based on email
-                String baseUsername;
                 if (name != null && !name.isEmpty()) {
-                    baseUsername = name;
+                    newUser.setUserName(name);
                 } else {
-                    baseUsername = email.split("@")[0];
+                    // Extract username from email (before @)
+                    String username = email.split("@")[0];
+                    newUser.setUserName(username);
                 }
-
-                String finalUsername = baseUsername;
-                int attempt = 1;
-                while (userRepository.findByUserName(finalUsername) != null) {
-                    finalUsername = baseUsername + "_" + attempt;
-                    attempt++;
-                }
-
-                newUser.setUserName(finalUsername);
-
+                
+                // Generate a secure random password for OAuth users
+                // They won't use this password but we need it for the database
                 String randomPassword = UUID.randomUUID().toString();
                 newUser.setUserPassword(passwordEncoder.encode(randomPassword));
                 
-                logger.info("Creating new user from OAuth2 login: {} with username: {}", email, finalUsername);
+                logger.info("Creating new user from OAuth2 login: {}", email);
                 userRepository.save(newUser);
             } else {
+                // Update existing user's OAuth ID if it's not set
                 if (existingUser.getOauthId() == null) {
                     String oauthId = (String) attributes.get("sub");
                     existingUser.setOauthId(oauthId);
@@ -109,6 +111,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             logger.warn("Could not extract email from OAuth2 attributes");
         }
         
+        // Redirect to our frontend OAuth2 redirect component
         response.sendRedirect("http://localhost:5173/oauth2/redirect");
     }
-}
+} 

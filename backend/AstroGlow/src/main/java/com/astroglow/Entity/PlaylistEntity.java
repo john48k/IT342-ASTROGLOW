@@ -1,17 +1,10 @@
 package com.astroglow.Entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "PLAYLIST")
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "playlistId")
 public class PlaylistEntity {
 
     @Id
@@ -19,30 +12,23 @@ public class PlaylistEntity {
     @Column(name = "playlist_id")
     private int playlistId;
 
-    @Column(name = "name")
-    private String name;
-
     @JsonBackReference(value = "user-playlist")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "userId", nullable = false)
     private UserEntity user;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-        name = "PLAYLIST_MUSIC",
-        joinColumns = @JoinColumn(name = "playlist_id"),
-        inverseJoinColumns = @JoinColumn(name = "music_id")
-    )
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private List<MusicEntity> music = new ArrayList<>();
+    @JsonBackReference(value = "music-playlist")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "music_id", referencedColumnName = "musicId")
+    private MusicEntity music;
 
     public PlaylistEntity() {
     }
 
-    public PlaylistEntity(int playlistId, String name, UserEntity user) {
+    public PlaylistEntity(int playlistId, UserEntity user, MusicEntity music) {
         this.playlistId = playlistId;
-        this.name = name;
         this.user = user;
+        this.music = music;
     }
 
     public int getPlaylistId() {
@@ -53,14 +39,6 @@ public class PlaylistEntity {
         this.playlistId = playlistId;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public UserEntity getUser() {
         return user;
     }
@@ -69,19 +47,11 @@ public class PlaylistEntity {
         this.user = user;
     }
 
-    public List<MusicEntity> getMusic() {
+    public MusicEntity getMusic() {
         return music;
     }
 
-    public void setMusic(List<MusicEntity> music) {
+    public void setMusic(MusicEntity music) {
         this.music = music;
-    }
-    
-    public void addMusic(MusicEntity music) {
-        this.music.add(music);
-    }
-    
-    public void removeMusic(MusicEntity music) {
-        this.music.remove(music);
     }
 }
