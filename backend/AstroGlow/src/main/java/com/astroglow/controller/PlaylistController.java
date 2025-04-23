@@ -85,7 +85,8 @@ public class PlaylistController {
         try {
             List<PlaylistEntity> playlists = playlistService.getPlaylistsByUserId(userId);
             List<Integer> songIds = playlists.stream()
-                .map(playlist -> playlist.getMusic().getMusicId())
+                .flatMap(playlist -> playlist.getMusic().stream())
+                .map(music -> music.getMusicId())
                 .distinct()
                 .collect(Collectors.toList());
             return new ResponseEntity<>(songIds, HttpStatus.OK);
@@ -199,6 +200,43 @@ public class PlaylistController {
         }
     }
 
+    // Add a music to a user's default playlist (without specifying playlistId)
+    @PostMapping("/postPlaylist/user/{userId}/music/{musicId}")
+    public ResponseEntity<?> addToUserDefaultPlaylist(
+            @PathVariable("userId") int userId,
+            @PathVariable("musicId") int musicId) {
+        logger.info("POST /postPlaylist/user/" + userId + "/music/" + musicId + " - Adding music to user's default playlist");
+        try {
+            // Get user's playlists
+            List<PlaylistEntity> playlists = playlistService.getPlaylistsByUserId(userId);
+            
+            if (playlists.isEmpty()) {
+                // Create a default playlist if user has none
+                PlaylistEntity defaultPlaylist = playlistService.createPlaylist(userId, "My Playlist");
+                playlists.add(defaultPlaylist);
+            }
+            
+            // Use the first playlist (or the newly created default playlist)
+            PlaylistEntity playlist = playlists.get(0);
+            int playlistId = playlist.getPlaylistId();
+            
+            // Add the music to the playlist
+            PlaylistEntity updatedPlaylist = playlistService.addToPlaylist(userId, musicId, playlistId);
+            logger.info("Successfully added music ID: " + musicId + " to default playlist ID: " + playlistId + " for user ID: " + userId);
+            return new ResponseEntity<>(updatedPlaylist, HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            logger.warning("Entity not found: " + e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (IllegalStateException e) {
+            logger.warning("Illegal state: " + e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        } catch (Exception e) {
+            logger.severe("Error adding music to user's default playlist: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     // Remove a music from a playlist
     @DeleteMapping("/playlist/{playlistId}/music/{musicId}")
     public ResponseEntity<?> removeMusicFromPlaylist(
@@ -217,6 +255,51 @@ public class PlaylistController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
         } catch (Exception e) {
             logger.severe("Error removing music from playlist: " + e.getMessage());
+            e.printStackTrace();
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Remove a music from a user's default playlist (without specifying playlistId)
+    @DeleteMapping("/deletePlaylist/user/{userId}/music/{musicId}")
+    public ResponseEntity<?> removeFromUserDefaultPlaylist(
+            @PathVariable("userId") int userId,
+            @PathVariable("musicId") int musicId) {
+        logger.info("DELETE /deletePlaylist/user/" + userId + "/music/" + musicId + " - Removing music from user's default playlist");
+        try {
+            // Get user's playlists
+            List<PlaylistEntity> playlists = playlistService.getPlaylistsByUserId(userId);
+            
+            if (playlists.isEmpty()) {
+                logger.warning("User has no playlists");
+                return new ResponseEntity<>("User has no playlists", HttpStatus.NOT_FOUND);
+            }
+            
+            // Find all playlists containing this music
+            List<PlaylistEntity> playlistsWithMusic = playlists.stream()
+                .filter(playlist -> playlist.getMusic().stream().anyMatch(music -> music.getMusicId() == musicId))
+                .collect(Collectors.toList());
+            
+            if (playlistsWithMusic.isEmpty()) {
+                logger.warning("Music not found in any of user's playlists");
+                return new ResponseEntity<>("Music not found in any of user's playlists", HttpStatus.NOT_FOUND);
+            }
+            
+            // Remove from all playlists that contain this music
+            for (PlaylistEntity playlist : playlistsWithMusic) {
+                playlistService.removeFromPlaylist(playlist.getPlaylistId(), musicId);
+                logger.info("Removed music ID: " + musicId + " from playlist ID: " + playlist.getPlaylistId());
+            }
+            
+            return new ResponseEntity<>("Music removed from all user playlists", HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            logger.warning("Entity not found: " + e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (IllegalStateException e) {
+            logger.warning("Illegal state: " + e.getMessage());
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+        } catch (Exception e) {
+            logger.severe("Error removing music from user's playlists: " + e.getMessage());
             e.printStackTrace();
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
