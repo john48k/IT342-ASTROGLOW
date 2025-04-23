@@ -651,7 +651,8 @@ public class MusicController {
         }
     }
 
-    // Delete a favorite
+    // Delete a favorite - REMOVE THIS METHOD
+    /*
     @DeleteMapping("/favorites/{userId}/{musicId}")
     public ResponseEntity<Void> deleteFavorite(@PathVariable int userId, @PathVariable int musicId) {
         try {
@@ -668,4 +669,5 @@ public class MusicController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+    */
 }

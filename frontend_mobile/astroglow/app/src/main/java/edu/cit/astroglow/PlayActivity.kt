@@ -322,7 +322,7 @@ fun PlayScreen(
                              // --- Remove Favorite (DELETE) --- 
                             Log.d("PlayScreen", "Attempting to REMOVE favorite: User $userId, Song $songId")
                             // Correct DELETE endpoint from FavoritesController
-                            val deleteUrl = "${Constants.BASE_URL}/api/favorites/user/$userId/music/$songId" 
+                            val deleteUrl = "${Constants.BASE_URL}/api/favorites/user/$userId/music/$songId"
                             
                             val request = Request.Builder().url(deleteUrl).delete().build()
                             val response = client.newCall(request).execute()
