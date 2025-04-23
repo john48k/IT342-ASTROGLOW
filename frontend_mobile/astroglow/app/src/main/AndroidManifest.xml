@@ -68,6 +68,11 @@
             android:exported="false"
             android:label="GitHub Login"
             android:theme="@style/Theme.Astroglow" />
+        <activity
+            android:name=".PlayActivity"
+            android:exported="false"
+            android:label="Now Playing"
+            android:theme="@style/Theme.Astroglow" />
     </application>
 
 </manifest>
