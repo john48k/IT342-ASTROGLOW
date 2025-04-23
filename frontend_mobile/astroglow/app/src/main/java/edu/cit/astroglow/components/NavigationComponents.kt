@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Settings
@@ -34,7 +35,7 @@ import edu.cit.astroglow.interLightFontFamily
  * Shared bottom navigation bar used across the app
  */
 @Composable
-fun BottomNavBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
+fun BottomNavBar(selectedTab: Int, onTabSelected: (Int) -> Unit, showUploadTab: Boolean = false) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -77,6 +78,16 @@ fun BottomNavBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
                 isSelected = selectedTab == 3,
                 onClick = { onTabSelected(3) }
             )
+
+            // Fifth tab is Upload (only shown if showUploadTab is true)
+            if (showUploadTab) {
+                NavBarItem(
+                    icon = Icons.Filled.Upload,
+                    label = "Upload",
+                    isSelected = selectedTab == 4,
+                    onClick = { onTabSelected(4) }
+                )
+            }
         }
     }
 }

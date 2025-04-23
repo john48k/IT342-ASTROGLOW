@@ -93,6 +93,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import edu.cit.astroglow.components.UploadTab
 
 class HomeActivity : FragmentActivity() {
     private val client = OkHttpClient.Builder()
@@ -905,7 +906,8 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null, onProfileImag
                     onTabSelected = {
                         selectedTab = it
                         showHomeTab = true
-                    }
+                    },
+                    showUploadTab = userId == 1L
                 )
             }
         }
@@ -952,6 +954,7 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null, onProfileImag
                                 sharedPreferences.edit().putBoolean("dark_mode", newDarkMode).apply()
                             }
                         )
+                        4 -> if (userId == 1L) UploadTab()
                     }
                 }
             }

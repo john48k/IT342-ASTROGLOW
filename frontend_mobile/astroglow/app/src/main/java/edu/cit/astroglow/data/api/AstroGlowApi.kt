@@ -43,6 +43,9 @@ interface AstroGlowApi {
 
     @GET("/api/user/getUserByEmail/{email}")
     suspend fun getUserByEmail(@Path("email") email: String): Response<UserEntity>
+
+    @POST("api/music/postMusic")
+    suspend fun uploadMusic(@Body music: MusicUploadRequest): Response<Music>
 }
 
 data class Music(
@@ -60,4 +63,16 @@ data class Playlist(
     val description: String? = null,
     val userId: Long,
     val musicList: List<Music> = emptyList()
+)
+
+data class MusicUploadRequest(
+    val title: String,
+    val artist: String,
+    val genre: String,
+    val time: Int,
+    val audioUrl: String? = null,
+    val imageUrl: String? = null,
+    val playlists: List<Long> = emptyList(),
+    val offlineLibraries: List<Long> = emptyList(),
+    val favorites: List<Long> = emptyList()
 ) 
