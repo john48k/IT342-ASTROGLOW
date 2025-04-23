@@ -106,6 +106,20 @@ class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Check if user is already logged in
+        val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
+        val isLoggedIn = sharedPreferences.getBoolean("is_logged_in", false)
+        val userId = sharedPreferences.getLong("user_id", -1)
+        
+        if (isLoggedIn && userId > 0) {
+            Log.d(TAG, "User already logged in, redirecting to HomeActivity")
+            val intent = Intent(this, HomeActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+            return
+        }
+        
         // Configure Google Sign In
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
@@ -318,7 +332,7 @@ class LoginActivity : ComponentActivity() {
                                                         .putLong("user_id", user.id ?: -1)
                                                         .putString("user_email", user.userEmail)
                                                         .putString("user_name", user.userName)
-                                                        .putString("user_password", user.userPassword)
+                                                        .putString("user_password", password)
                                                         .putBoolean("is_logged_in", true)
                                                         .apply()
                                                     
@@ -341,6 +355,7 @@ class LoginActivity : ComponentActivity() {
                                                     } else {
                                                         when (response.code()) {
                                                             401 -> "Invalid email or password"
+                                                            403 -> "Account locked or password expired. Please reset your password."
                                                             else -> errorBody ?: "Login failed"
                                                         }
                                                     }

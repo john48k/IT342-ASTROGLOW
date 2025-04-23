@@ -89,8 +89,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.lint.kotlin.metadata.Visibility
 import coil.request.ImageRequest
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import edu.cit.astroglow.components.UploadTab
+import edu.cit.astroglow.components.SongGrid
+import edu.cit.astroglow.components.RecommendationsSection
+import edu.cit.astroglow.components.FavoritesSection
+import edu.cit.astroglow.components.FavoritesTab
+import edu.cit.astroglow.components.PlaylistTab
 
-class HomeActivity : ComponentActivity() {
+class HomeActivity : FragmentActivity() {
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
@@ -221,64 +231,8 @@ class HomeActivity : ComponentActivity() {
                     if (userId != -1L) {
                         CoroutineScope(Dispatchers.IO).launch {
                             try {
-                                // First try to use Google profile picture if available
-                                if (profilePictureUrl != null) {
-                                    Log.d("HomeActivity", "Attempting to load Google profile picture from URL: $profilePictureUrl")
-                                    try {
-                                        val client = OkHttpClient.Builder()
-                                            .connectTimeout(30, TimeUnit.SECONDS)
-                                            .readTimeout(30, TimeUnit.SECONDS)
-                                            .writeTimeout(30, TimeUnit.SECONDS)
-                                            .build()
-                                        
-                                        val request = Request.Builder()
-                                            .url(profilePictureUrl)
-                                            .get()
-                                            .build()
-                                        
-                                        val response = client.newCall(request).execute()
-                                        Log.d("HomeActivity", "Google profile picture response code: ${response.code}")
-                                        
-                                        if (response.isSuccessful) {
-                                            val responseBody = response.body
-                                            if (responseBody != null) {
-                                                val imageBytes = responseBody.bytes()
-                                                Log.d("HomeActivity", "Google profile picture bytes size: ${imageBytes.size}")
-                                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                                                Log.d("HomeActivity", "Google profile picture bitmap created: ${bitmap != null}")
-                                                
-                                                if (bitmap != null) {
-                                                    val cachePath = File(cacheDir, "images")
-                                                    cachePath.mkdirs()
-                                                    val file = File(cachePath, "profile_$userId.jpg")
-                                                    
-                                                    if (file.exists()) {
-                                                        file.delete()
-                                                    }
-                                                    
-                                                    file.createNewFile()
-                                                    val outputStream = FileOutputStream(file)
-                                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                                    outputStream.close()
-                                                    
-                                                    val uri = Uri.fromFile(file)
-                                                    Log.d("HomeActivity", "Google profile picture saved to: $uri")
-                                                    
-                                                    withContext(Dispatchers.Main) {
-                                                        profileImage = uri
-                                                        Log.d("HomeActivity", "Profile image URI set to: $uri")
-                                                    }
-                                                    return@launch
-                                                }
-                                            }
-                                        }
-                                    } catch (e: Exception) {
-                                        Log.e("HomeActivity", "Error loading Google profile picture", e)
-                                    }
-                                }
-                                
-                                // If Google profile picture fails or is not available, try server
-                                Log.d("HomeActivity", "Falling back to server profile picture")
+                                // First try to get profile picture from server (database)
+                                Log.d("HomeActivity", "Fetching profile picture from server")
                                 val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
                                 val request = Request.Builder()
                                     .url(url)
@@ -324,14 +278,70 @@ class HomeActivity : ComponentActivity() {
                                                     
                                                     withContext(Dispatchers.Main) {
                                                         profileImage = uri
-                                                        Log.d("HomeActivity", "Profile image URI set to: $uri")
+                                                        Log.d("HomeActivity", "Profile image URI set from server: $uri")
                                                     }
+                                                    return@launch
                                                 }
                                             } catch (e: Exception) {
                                                 Log.e("HomeActivity", "Error processing server profile picture", e)
                                                 e.printStackTrace()
                                             }
                                         }
+                                    }
+                                }
+                                
+                                // If server profile picture fails or is not available, try Google profile picture
+                                if (profilePictureUrl != null) {
+                                    Log.d("HomeActivity", "Falling back to Google profile picture from URL: $profilePictureUrl")
+                                    try {
+                                        val client = OkHttpClient.Builder()
+                                            .connectTimeout(30, TimeUnit.SECONDS)
+                                            .readTimeout(30, TimeUnit.SECONDS)
+                                            .writeTimeout(30, TimeUnit.SECONDS)
+                                            .build()
+                                        
+                                        val request = Request.Builder()
+                                            .url(profilePictureUrl)
+                                            .get()
+                                            .build()
+                                        
+                                        val response = client.newCall(request).execute()
+                                        Log.d("HomeActivity", "Google profile picture response code: ${response.code}")
+                                        
+                                        if (response.isSuccessful) {
+                                            val responseBody = response.body
+                                            if (responseBody != null) {
+                                                val imageBytes = responseBody.bytes()
+                                                Log.d("HomeActivity", "Google profile picture bytes size: ${imageBytes.size}")
+                                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                                Log.d("HomeActivity", "Google profile picture bitmap created: ${bitmap != null}")
+                                                
+                                                if (bitmap != null) {
+                                                    val cachePath = File(cacheDir, "images")
+                                                    cachePath.mkdirs()
+                                                    val file = File(cachePath, "profile_$userId.jpg")
+                                                    
+                                                    if (file.exists()) {
+                                                        file.delete()
+                                                    }
+                                                    
+                                                    file.createNewFile()
+                                                    val outputStream = FileOutputStream(file)
+                                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                                    outputStream.close()
+                                                    
+                                                    val uri = Uri.fromFile(file)
+                                                    Log.d("HomeActivity", "Google profile picture saved to: $uri")
+                                                    
+                                                    withContext(Dispatchers.Main) {
+                                                        profileImage = uri
+                                                        Log.d("HomeActivity", "Profile image URI set from Google: $uri")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("HomeActivity", "Error loading Google profile picture", e)
                                     }
                                 }
                             } catch (e: Exception) {
@@ -459,7 +469,11 @@ class HomeActivity : ComponentActivity() {
                                                 // Show the HomeScreen with the updated profile image
                                                 HomeScreen(
                                                     userName = userName,
-                                                    initialProfileImage = newProfileUri
+                                                    initialProfileImage = newProfileUri,
+                                                    onProfileImageChanged = { uri ->
+                                                        // This will be called by the ProfileTab to update its image
+                                                        Log.d("HomeActivity", "Profile image updated in ProfileTab: $uri")
+                                                    }
                                                 )
                                             }
                                         }
@@ -500,15 +514,6 @@ class HomeActivity : ComponentActivity() {
                                     ).show()
                                 }
                             }
-                        } else {
-                            Log.e("HomeActivity", "Failed to decode bitmap from URI: $uri")
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(
-                                    this@HomeActivity,
-                                    "Failed to process the selected image",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
                         }
                     } catch (e: Exception) {
                         Log.e("HomeActivity", "Error updating profile picture", e)
@@ -524,11 +529,117 @@ class HomeActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun showFingerprintLogin() {
+        val biometricManager = BiometricManager.from(this)
+        val canAuthenticate = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+
+        if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Login with Fingerprint")
+                .setSubtitle("Use your fingerprint to login")
+                .setNegativeButtonText("Cancel")
+                .build()
+
+            val biometricPrompt = BiometricPrompt(
+                this,
+                ContextCompat.getMainExecutor(this),
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        // Get user data from SharedPreferences
+                        val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
+                        val userId = sharedPreferences.getLong("user_id", -1)
+                        val userEmail = sharedPreferences.getString("user_email", "") ?: ""
+                        val userName = sharedPreferences.getString("user_name", "") ?: ""
+
+                        // Verify biometrics with backend
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val url = "${Constants.BASE_URL}/api/auth/verify-biometrics"
+                                val json = JSONObject().apply {
+                                    put("userId", userId)
+                                    put("email", userEmail)
+                                }
+
+                                val requestBody = json.toString().toRequestBody("application/json".toMediaType())
+                                val request = Request.Builder()
+                                    .url(url)
+                                    .post(requestBody)
+                                    .build()
+
+                                val response = client.newCall(request).execute()
+                                val responseBody = response.body?.string()
+                                val jsonResponse = JSONObject(responseBody)
+
+                                withContext(Dispatchers.Main) {
+                                    if (response.isSuccessful && jsonResponse.getString("status") == "success") {
+                                        // Update login status
+                                        sharedPreferences.edit().putBoolean("is_logged_in", true).apply()
+                                        
+                                        // Show success message
+                                        Toast.makeText(
+                                            this@HomeActivity,
+                                            "Login successful",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        
+                                        // Refresh the UI
+                                        recreate()
+                                    } else {
+                                        Toast.makeText(
+                                            this@HomeActivity,
+                                            "Login failed: ${jsonResponse.optString("message", "Unknown error")}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        this@HomeActivity,
+                                        "Error: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        super.onAuthenticationError(errorCode, errString)
+                        Toast.makeText(
+                            this@HomeActivity,
+                            "Authentication error: $errString",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    override fun onAuthenticationFailed() {
+                        super.onAuthenticationFailed()
+                        Toast.makeText(
+                            this@HomeActivity,
+                            "Authentication failed",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            )
+
+            biometricPrompt.authenticate(promptInfo)
+        } else {
+            Toast.makeText(
+                this,
+                "Fingerprint authentication is not available",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
+fun HomeScreen(userName: String, initialProfileImage: Uri? = null, onProfileImageChanged: (Uri?) -> Unit = {}) {
     var selectedTab by remember { mutableStateOf(0) }
     var showHomeTab by remember { mutableStateOf(true) }
     var showProfileTab by remember { mutableStateOf(false) }
@@ -539,6 +650,14 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
     val userId = sharedPreferences.getLong("user_id", -1)
     var isDarkMode by remember { 
         mutableStateOf(sharedPreferences.getBoolean("dark_mode", false)) 
+    }
+
+    // Update profile image when initialProfileImage changes
+    LaunchedEffect(initialProfileImage) {
+        if (initialProfileImage != null) {
+            profileImage = initialProfileImage
+            Log.d("HomeScreen", "Profile image updated from initialProfileImage: $initialProfileImage")
+        }
     }
 
     // Fetch profile picture when component is created
@@ -552,6 +671,8 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
         
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // First try to get profile picture from server (database)
+                Log.d("HomeScreen", "Fetching profile picture from server")
                 val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
                 android.util.Log.d("HomeScreen", "Fetching profile picture from: $url")
                 
@@ -597,20 +718,75 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                                     outputStream.close()
                                     
                                     withContext(Dispatchers.Main) {
-                                        profileImage = Uri.fromFile(file)
+                                        val newUri = Uri.fromFile(file)
+                                        profileImage = newUri
+                                        onProfileImageChanged(newUri)
+                                        Log.d("HomeScreen", "Profile image updated from server: $newUri")
                                     }
+                                    return@launch
                                 }
                             } catch (e: Exception) {
                                 e.printStackTrace()
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(
-                                        context,
-                                        "Error processing profile picture: ${e.message}",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                Log.e("HomeScreen", "Error processing server profile picture: ${e.message}")
+                            }
+                        }
+                    }
+                }
+                
+                // If server profile picture fails or is not available, try Google profile picture
+                val profilePictureUrl = sharedPreferences.getString("profile_picture_url", null)
+                if (profilePictureUrl != null) {
+                    Log.d("HomeScreen", "Falling back to Google profile picture from URL: $profilePictureUrl")
+                    try {
+                        val client = OkHttpClient.Builder()
+                            .connectTimeout(30, TimeUnit.SECONDS)
+                            .readTimeout(30, TimeUnit.SECONDS)
+                            .writeTimeout(30, TimeUnit.SECONDS)
+                            .build()
+                        
+                        val request = Request.Builder()
+                            .url(profilePictureUrl)
+                            .get()
+                            .build()
+                        
+                        val response = client.newCall(request).execute()
+                        Log.d("HomeScreen", "Google profile picture response code: ${response.code}")
+                        
+                        if (response.isSuccessful) {
+                            val responseBody = response.body
+                            if (responseBody != null) {
+                                val imageBytes = responseBody.bytes()
+                                Log.d("HomeScreen", "Google profile picture bytes size: ${imageBytes.size}")
+                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                Log.d("HomeScreen", "Google profile picture bitmap created: ${bitmap != null}")
+                                
+                                if (bitmap != null) {
+                                    val cachePath = File(context.cacheDir, "images")
+                                    cachePath.mkdirs()
+                                    val file = File(cachePath, "profile_$userId.jpg")
+                                    
+                                    if (file.exists()) {
+                                        file.delete()
+                                    }
+                                    
+                                    file.createNewFile()
+                                    val outputStream = FileOutputStream(file)
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                    outputStream.close()
+                                    
+                                    val uri = Uri.fromFile(file)
+                                    Log.d("HomeScreen", "Google profile picture saved to: $uri")
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        profileImage = uri
+                                        onProfileImageChanged(uri)
+                                        Log.d("HomeScreen", "Profile image updated from Google: $uri")
+                                    }
                                 }
                             }
                         }
+                    } catch (e: Exception) {
+                        Log.e("HomeScreen", "Error loading Google profile picture", e)
                     }
                 }
             } catch (e: Exception) {
@@ -735,7 +911,8 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                     onTabSelected = {
                         selectedTab = it
                         showHomeTab = true
-                    }
+                    },
+                    showUploadTab = userId == 1L
                 )
             }
         }
@@ -762,6 +939,8 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                 showProfileTab -> ProfileTab(
                     onProfileImageChanged = { newImage ->
                         profileImage = newImage
+                        onProfileImageChanged(newImage)
+                        Log.d("HomeScreen", "Profile image updated from ProfileTab: $newImage")
                     },
                     onUsernameChanged = { newUsername ->
                         currentUserName = newUsername
@@ -780,6 +959,7 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null) {
                                 sharedPreferences.edit().putBoolean("dark_mode", newDarkMode).apply()
                             }
                         )
+                        4 -> if (userId == 1L) UploadTab()
                     }
                 }
             }
@@ -816,9 +996,94 @@ fun ProfileTab(
         
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // First try to use Google profile picture if available
+                // First try to get profile picture from server (database)
+                Log.d("ProfileTab", "Fetching profile picture from server")
+                val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
+                android.util.Log.d("ProfileTab", "Fetching profile picture from: $url")
+                android.util.Log.d("ProfileTab", "User ID: $userId")
+                
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .build()
+                
+                val request = Request.Builder()
+                    .url(url)
+                    .get()
+                    .build()
+                
+                val response = client.newCall(request).execute()
+                android.util.Log.d("ProfileTab", "Response code: ${response.code}")
+                android.util.Log.d("ProfileTab", "Response message: ${response.message}")
+                
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string()
+                    android.util.Log.d("ProfileTab", "Response body: $responseBody")
+                    
+                    val jsonObject = JSONObject(responseBody)
+                    val status = jsonObject.getString("status")
+                    android.util.Log.d("ProfileTab", "Status: $status")
+                    
+                    if (status == "success") {
+                        val profilePicture = jsonObject.optString("profilePicture", "")
+                        android.util.Log.d("ProfileTab", "Profile picture length: ${profilePicture.length}")
+                        
+                        if (profilePicture.isNotEmpty()) {
+                            try {
+                                // Convert base64 to bitmap
+                                val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
+                                android.util.Log.d("ProfileTab", "Image bytes length: ${imageBytes.size}")
+                                
+                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                                android.util.Log.d("ProfileTab", "Bitmap created: ${bitmap != null}")
+                                
+                                if (bitmap != null) {
+                                    // Save bitmap to cache and get URI
+                                    val cachePath = File(context.cacheDir, "images")
+                                    cachePath.mkdirs()
+                                    val file = File(cachePath, "profile_$userId.jpg")
+                                    
+                                    // Delete existing file if it exists
+                                    if (file.exists()) {
+                                        file.delete()
+                                    }
+                                    
+                                    file.createNewFile()
+                                    val outputStream = FileOutputStream(file)
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                    outputStream.close()
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        val newUri = Uri.fromFile(file)
+                                        profileImage = newUri
+                                        onProfileImageChanged(newUri)
+                                        android.util.Log.d("ProfileTab", "Profile image URI set from server: $newUri")
+                                        android.util.Log.d("ProfileTab", "File exists: ${file.exists()}")
+                                        android.util.Log.d("ProfileTab", "File size: ${file.length()}")
+                                    }
+                                    return@launch
+                                } else {
+                                    android.util.Log.e("ProfileTab", "Failed to decode bitmap from base64")
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("ProfileTab", "Error processing server profile picture: ${e.message}")
+                                e.printStackTrace()
+                            }
+                        } else {
+                            android.util.Log.d("ProfileTab", "No profile picture found in server response")
+                        }
+                    } else {
+                        val message = jsonObject.optString("message", "Failed to load profile picture")
+                        android.util.Log.e("ProfileTab", "Error status: $message")
+                    }
+                } else {
+                    android.util.Log.e("ProfileTab", "Unsuccessful response: ${response.code}")
+                }
+                
+                // If server profile picture fails or is not available, try Google profile picture
                 if (profilePictureUrl != null) {
-                    Log.d("ProfileTab", "Attempting to load Google profile picture from URL: $profilePictureUrl")
+                    Log.d("ProfileTab", "Falling back to Google profile picture from URL: $profilePictureUrl")
                     try {
                         val client = OkHttpClient.Builder()
                             .connectTimeout(30, TimeUnit.SECONDS)
@@ -862,134 +1127,13 @@ fun ProfileTab(
                                     withContext(Dispatchers.Main) {
                                         profileImage = uri
                                         onProfileImageChanged(uri)
-                                        Log.d("ProfileTab", "Profile image URI set to: $uri")
+                                        Log.d("ProfileTab", "Profile image URI set from Google: $uri")
                                     }
-                                    return@launch
                                 }
                             }
                         }
                     } catch (e: Exception) {
                         Log.e("ProfileTab", "Error loading Google profile picture", e)
-                    }
-                }
-                
-                // If Google profile picture fails or is not available, try server
-                Log.d("ProfileTab", "Falling back to server profile picture")
-                val url = "${Constants.BASE_URL}/api/user/profile-picture/$userId"
-                android.util.Log.d("ProfileTab", "Fetching profile picture from: $url")
-                android.util.Log.d("ProfileTab", "User ID: $userId")
-                
-                val client = OkHttpClient.Builder()
-                    .connectTimeout(30, TimeUnit.SECONDS)
-                    .readTimeout(30, TimeUnit.SECONDS)
-                    .writeTimeout(30, TimeUnit.SECONDS)
-                    .build()
-                
-                val request = Request.Builder()
-                    .url(url)
-                    .get()
-                    .build()
-                
-                val response = client.newCall(request).execute()
-                android.util.Log.d("ProfileTab", "Response code: ${response.code}")
-                android.util.Log.d("ProfileTab", "Response message: ${response.message}")
-                
-                if (response.isSuccessful) {
-                    val responseBody = response.body?.string()
-                    android.util.Log.d("ProfileTab", "Response body: $responseBody")
-                    
-                    val jsonObject = JSONObject(responseBody)
-                    val status = jsonObject.getString("status")
-                    android.util.Log.d("ProfileTab", "Status: $status")
-                    
-                    if (status == "success") {
-                        val profilePicture = jsonObject.optString("profilePicture", "")
-                        android.util.Log.d("ProfileTab", "Profile picture length: ${profilePicture.length}")
-                        android.util.Log.d("ProfileTab", "Profile picture first 50 chars: ${profilePicture.take(50)}")
-                        
-                        if (profilePicture.isNotEmpty()) {
-                            try {
-                                // Convert base64 to bitmap
-                                val imageBytes = Base64.decode(profilePicture, Base64.DEFAULT)
-                                android.util.Log.d("ProfileTab", "Image bytes length: ${imageBytes.size}")
-                                
-                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                                android.util.Log.d("ProfileTab", "Bitmap created: ${bitmap != null}")
-                                
-                                if (bitmap != null) {
-                                    // Save bitmap to cache and get URI
-                                    val cachePath = File(context.cacheDir, "images")
-                                    cachePath.mkdirs()
-                                    val file = File(cachePath, "profile_$userId.jpg")
-                                    
-                                    // Delete existing file if it exists
-                                    if (file.exists()) {
-                                        file.delete()
-                                    }
-                                    
-                                    file.createNewFile()
-                                    val outputStream = FileOutputStream(file)
-                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                    outputStream.close()
-                                    
-                                    withContext(Dispatchers.Main) {
-                                        val newUri = Uri.fromFile(file)
-                                        profileImage = newUri
-                                        onProfileImageChanged(newUri)
-                                        android.util.Log.d("ProfileTab", "Profile image URI set: $newUri")
-                                        android.util.Log.d("ProfileTab", "File exists: ${file.exists()}")
-                                        android.util.Log.d("ProfileTab", "File size: ${file.length()}")
-                                    }
-                                } else {
-                                    android.util.Log.e("ProfileTab", "Failed to decode bitmap from base64")
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(
-                                            context,
-                                            "Failed to decode profile picture",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                android.util.Log.e("ProfileTab", "Error processing profile picture: ${e.message}")
-                                e.printStackTrace()
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(
-                                        context,
-                                        "Error processing profile picture: ${e.message}",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                        } else {
-                            android.util.Log.d("ProfileTab", "No profile picture found in response")
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(
-                                    context,
-                                    "No profile picture found",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        }
-                    } else {
-                        val message = jsonObject.optString("message", "Failed to load profile picture")
-                        android.util.Log.e("ProfileTab", "Error status: $message")
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                context,
-                                message,
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }
-                } else {
-                    android.util.Log.e("ProfileTab", "Unsuccessful response: ${response.code}")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            context,
-                            "Failed to load profile picture: ${response.code}",
-                            Toast.LENGTH_SHORT
-                        ).show()
                     }
                 }
             } catch (e: Exception) {
@@ -1020,6 +1164,7 @@ fun ProfileTab(
                                 type = "image/*"
                             }
                             (context as ComponentActivity).startActivityForResult(intent, 1)
+                            showImagePicker = false
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0))
@@ -1489,9 +1634,15 @@ fun ProfileTab(
                                         .post(requestBody.toRequestBody("application/json".toMediaType()))
                                         .build()
                                     
-                                    val response = client.newCall(request).execute()
-                                    val responseBody = response.body?.string()
-                                    val jsonResponse = JSONObject(responseBody ?: "{}")
+                                    // Execute the request on IO thread
+                                    val response = withContext(Dispatchers.IO) {
+                                        client.newCall(request).execute()
+                                    }
+                                    
+                                    // Read response body on IO thread
+                                    val responseBody = withContext(Dispatchers.IO) {
+                                        response.body?.string() ?: "{}"
+                                    }
                                     
                                     withContext(Dispatchers.Main) {
                                         if (response.isSuccessful) {
@@ -1500,15 +1651,23 @@ fun ProfileTab(
                                             newPassword = ""
                                             confirmPassword = ""
                                             showPasswordFields = false
+                                            
+                                            val jsonResponse = JSONObject(responseBody)
+                                            
+                                            // Update the stored password in SharedPreferences
+                                            sharedPreferences.edit()
+                                                .putString("user_password", newPassword)
+                                                .apply()
+                                            
                                             Toast.makeText(
                                                 context,
                                                 jsonResponse.optString("message", "Password changed successfully"),
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         } else {
-                                            val errorBody = response.body?.string()
-                                            Log.e("ProfileTab", "Failed to change password. Status: ${response.code}, Error: $errorBody")
-                                            passwordError = jsonResponse.optString("message", "Failed to change password")
+                                            val jsonError = JSONObject(responseBody)
+                                            Log.e("ProfileTab", "Failed to change password. Status: ${response.code}, Error: $responseBody")
+                                            passwordError = jsonError.optString("message", "Failed to change password")
                                         }
                                     }
                                 } catch (e: Exception) {
@@ -1736,264 +1895,13 @@ fun HomeTabWithSearch(userName: String) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Recommendations section with label and arrow side by side - positioned LEFT
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Title and arrow side by side
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Recommendations",
-                    fontFamily = interFontFamily,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Icon(
-                    imageVector = Icons.Default.ArrowForward,
-                    contentDescription = "See more",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .padding(start = 8.dp)
-                        .size(24.dp)
-                )
-            }
-        }
-
-        // Recommendations carousel with gradient background matching app theme
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .padding(vertical = 8.dp)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF9C27B0).copy(alpha = 0.85f),  // Purple
-                            Color(0xFF0050D0).copy(alpha = 0.85f)   // Blue
-                        )
-                    ),
-                    shape = RoundedCornerShape(20.dp)
-                )
-        ) {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(3) { index ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                    Box(
-                        modifier = Modifier
-                            .width(160.dp)
-                            .height(140.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(160.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(
-                                            Color(0xFF9C27B0).copy(alpha = 0.6f),
-                                            Color(0xFF0050D0).copy(alpha = 0.6f)
-                                        )
-                                    )
-                                )
-                                .padding(vertical = 4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Song ${index + 1}",
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontFamily = interFontFamily,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.width(160.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        // Use the new RecommendationsSection component
+        RecommendationsSection()
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Favorites section with title and different arrow - positioned RIGHT
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Title and star icon for favorites
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Favorites",
-                    fontFamily = interFontFamily,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                // Changed to favorite/star icon
-                Icon(
-                    imageVector = Icons.Outlined.Favorite,
-                    contentDescription = "Favorites",
-                    tint = Color.White,
-                    modifier = Modifier
-                        .padding(start = 8.dp)
-                        .size(24.dp)
-                )
-            }
-        }
-
-        // Favorites carousel with gradient background matching app theme (reversed gradient)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .padding(vertical = 8.dp)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF0050D0).copy(alpha = 0.85f),  // Blue
-                            Color(0xFFE81EDE).copy(alpha = 0.85f)   // Pink
-                        )
-                    ),
-                    shape = RoundedCornerShape(20.dp)
-                )
-        ) {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(3) { index ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(160.dp)
-                                .height(140.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color.White)
-                        )
-                Box(
-                    modifier = Modifier
-                                .width(160.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    brush = Brush.linearGradient(
-                                        colors = listOf(
-                                            Color(0xFF0050D0).copy(alpha = 0.6f),
-                                            Color(0xFFE81EDE).copy(alpha = 0.6f)
-                                        )
-                                    )
-                                )
-                                .padding(vertical = 4.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                                text = "Favorite ${index + 1}",
-                                color = Color.White,
-                        fontSize = 14.sp,
-                                fontFamily = interFontFamily,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.width(160.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SongGrid() {
-    Column {
-        // Row 1
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-        ) {
-            SongItem(title = "Song 1", modifier = Modifier.weight(1f))
-            SongItem(title = "Song 2", modifier = Modifier.weight(1f))
-        }
-
-        // Row 2
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-        ) {
-            SongItem(title = "Song 3", modifier = Modifier.weight(1f))
-            SongItem(title = "Song 4", modifier = Modifier.weight(1f))
-        }
-
-        // Row 3
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-        ) {
-            SongItem(title = "Song 5", modifier = Modifier.weight(1f))
-            SongItem(title = "Song 6", modifier = Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-fun SongItem(title: String, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .height(48.dp)
-            .padding(end = 8.dp)
-    ) {
-        // Gray thumbnail
-        Box(
-            modifier = Modifier
-                .width(48.dp)
-                .height(48.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.LightGray)
-        )
-
-        // Song info with black background
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .weight(1f)
-                .clip(RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp))
-                .background(Color.Black),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            Text(
-                text = title,
-                color = Color.White,
-                fontFamily = interLightFontFamily,
-                modifier = Modifier.padding(start = 12.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
+        // Use the new FavoritesSection component
+        FavoritesSection()
     }
 }
 
@@ -2090,6 +1998,63 @@ fun SettingsTab(
     onDarkModeChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
+    val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+    val userId = sharedPreferences.getLong("user_id", -1)
+    var hasBiometrics by remember { mutableStateOf(false) }
+    var showBiometricDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
+    var isTogglingBiometrics by remember { mutableStateOf(false) }
+    
+    // Check if user has biometrics enabled
+    LaunchedEffect(userId) {
+        if (userId > 0) {
+            try {
+                withContext(Dispatchers.IO) {
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(30, TimeUnit.SECONDS)
+                        .readTimeout(30, TimeUnit.SECONDS)
+                        .writeTimeout(30, TimeUnit.SECONDS)
+                        .build()
+                    
+                    val request = Request.Builder()
+                        .url("${Constants.BASE_URL}/api/authentication/checkBiometrics/$userId")
+                        .get()
+                        .build()
+                    
+                    val response = client.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        val jsonObject = JSONObject(responseBody)
+                        withContext(Dispatchers.Main) {
+                            hasBiometrics = jsonObject.getBoolean("hasBiometrics")
+                            isLoading = false
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            isLoading = false
+                            Toast.makeText(
+                                context,
+                                "Failed to check biometrics status: ${response.code}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SettingsTab", "Error checking biometrics status", e)
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                    Toast.makeText(
+                        context,
+                        "Error checking biometrics status: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        } else {
+            isLoading = false
+        }
+    }
     
     Column(
         modifier = Modifier
@@ -2178,19 +2143,86 @@ fun SettingsTab(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Settings Items
-        SettingsListItem(
-            icon = Icons.Outlined.Fingerprint,
-            title = "BIOMETRICS",
-            description = "Enable fingerprint for account security and protect your library for a secure experience."
-        )
+        // Biometrics Settings Item
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFF8E24AA), Color(622790))
+                    )
+                )
+                .clickable { showBiometricDialog = true },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left side: Icon Box with gradient
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(100.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF42A5F5), Color(0xFF8E24AA))
+                        ),
+                        shape = RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Fingerprint,
+                    contentDescription = "Biometrics",
+                    tint = Color.White,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+            
+            // Right side: Text Box with gradient
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .weight(1f)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF8E24AA), Color(0xFF42A5F5))
+                        ),
+                        shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                    )
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Column {
+                    Text(
+                        text = "BIOMETRICS",
+                        color = Color.White,
+                        fontFamily = interFontFamily,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = if (hasBiometrics) "Biometrics is enabled" else "Enable fingerprint for account security",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontFamily = interLightFontFamily,
+                            fontSize = 14.sp,
+                            lineHeight = 18.sp
+                        )
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
-        SettingsListItem(
-            icon = Icons.Outlined.Face,
-            title = "FACE ID",
-            description = "Register face id to unlock application faster and provide secure access to all your music."
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+
+        // Our Team Settings Item
         SettingsListItem(
             icon = Icons.Outlined.Info,
             title = "Our Team",
@@ -2198,6 +2230,224 @@ fun SettingsTab(
             onClick = { 
                 val intent = Intent(context, OurTeamActivity::class.java)
                 context.startActivity(intent)
+            }
+        )
+    }
+
+    // Biometrics Dialog
+    if (showBiometricDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                if (!isTogglingBiometrics) {
+                    showBiometricDialog = false 
+                }
+            },
+            title = {
+                Text(
+                    text = if (hasBiometrics) "Disable Biometrics" else "Enable Biometrics",
+                    fontFamily = interFontFamily,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    if (isTogglingBiometrics) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color(0xFF9C27B0),
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = if (hasBiometrics) 
+                                "Are you sure you want to disable biometric authentication?" 
+                            else 
+                                "Enable fingerprint authentication for quick and secure access to your account.",
+                            fontFamily = interFontFamily,
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (isTogglingBiometrics) return@TextButton
+                        
+                        isTogglingBiometrics = true
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val client = OkHttpClient.Builder()
+                                    .connectTimeout(30, TimeUnit.SECONDS)
+                                    .readTimeout(30, TimeUnit.SECONDS)
+                                    .writeTimeout(30, TimeUnit.SECONDS)
+                                    .build()
+                                
+                                val requestBody = JSONObject().apply {
+                                    put("enable", !hasBiometrics)
+                                }.toString()
+                                
+                                Log.d("Biometrics", "Sending request to toggle biometrics: $requestBody")
+                                
+                                val request = Request.Builder()
+                                    .url("${Constants.BASE_URL}/api/authentication/toggleBiometrics/$userId")
+                                    .post(requestBody.toRequestBody("application/json".toMediaType()))
+                                    .build()
+                                
+                                val response = client.newCall(request).execute()
+                                val responseBody = response.body?.string()
+                                Log.d("Biometrics", "Response code: ${response.code}, Body: $responseBody")
+                                
+                                withContext(Dispatchers.Main) {
+                                    if (response.isSuccessful) {
+                                        try {
+                                            val jsonResponse = JSONObject(responseBody ?: "{}")
+                                            val success = jsonResponse.optBoolean("success", true)
+                                            
+                                            if (success) {
+                                                hasBiometrics = !hasBiometrics
+                                                Toast.makeText(
+                                                    context,
+                                                    if (hasBiometrics) "Biometrics enabled successfully" else "Biometrics disabled successfully",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                                
+                                                // If biometrics was just enabled, prompt for registration
+                                                if (hasBiometrics) {
+                                                    showBiometricDialog = false
+                                                    // Show fingerprint registration prompt
+                                                    val biometricManager = BiometricManager.from(context)
+                                                    when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
+                                                        BiometricManager.BIOMETRIC_SUCCESS -> {
+                                                            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                                                                .setTitle("Register Fingerprint")
+                                                                .setSubtitle("Place your finger on the sensor to register")
+                                                                .setNegativeButtonText("Cancel")
+                                                                .build()
+
+                                                            val biometricPrompt = BiometricPrompt(
+                                                                context as FragmentActivity,
+                                                                ContextCompat.getMainExecutor(context),
+                                                                object : BiometricPrompt.AuthenticationCallback() {
+                                                                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                                                                        super.onAuthenticationSucceeded(result)
+                                                                        Toast.makeText(
+                                                                            context,
+                                                                            "Fingerprint registered successfully",
+                                                                            Toast.LENGTH_SHORT
+                                                                        ).show()
+                                                                    }
+
+                                                                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                                                                        super.onAuthenticationError(errorCode, errString)
+                                                                        Toast.makeText(
+                                                                            context,
+                                                                            "Registration error: $errString",
+                                                                            Toast.LENGTH_SHORT
+                                                                        ).show()
+                                                                    }
+
+                                                                    override fun onAuthenticationFailed() {
+                                                                        super.onAuthenticationFailed()
+                                                                        Toast.makeText(
+                                                                            context,
+                                                                            "Registration failed",
+                                                                            Toast.LENGTH_SHORT
+                                                                        ).show()
+                                                                    }
+                                                                }
+                                                            )
+
+                                                            biometricPrompt.authenticate(promptInfo)
+                                                        }
+                                                        else -> {
+                                                            Toast.makeText(
+                                                                context,
+                                                                "Fingerprint authentication is not available",
+                                                                Toast.LENGTH_SHORT
+                                                            ).show()
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                val message = jsonResponse.optString("message", "Unknown error")
+                                                Toast.makeText(
+                                                    context,
+                                                    "Failed: $message",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e("Biometrics", "Error parsing response", e)
+                                            hasBiometrics = !hasBiometrics
+                                            Toast.makeText(
+                                                context,
+                                                if (hasBiometrics) "Biometrics enabled successfully" else "Biometrics disabled successfully",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    } else {
+                                        val errorMessage = try {
+                                            val jsonError = JSONObject(responseBody ?: "{}")
+                                            jsonError.optString("message", "Unknown error")
+                                        } catch (e: Exception) {
+                                            "Failed to ${if (hasBiometrics) "disable" else "enable"} biometrics (${response.code})"
+                                        }
+                                        
+                                        Toast.makeText(
+                                            context,
+                                            errorMessage,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                    isTogglingBiometrics = false
+                                    showBiometricDialog = false
+                                }
+                            } catch (e: Exception) {
+                                Log.e("Biometrics", "Error toggling biometrics", e)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        "Error: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    isTogglingBiometrics = false
+                                    showBiometricDialog = false
+                                }
+                            }
+                        }
+                    },
+                    enabled = !isTogglingBiometrics
+                ) {
+                    Text(
+                        text = if (hasBiometrics) "Disable" else "Enable",
+                        fontFamily = interFontFamily,
+                        color = Color(0xFF9C27B0)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { 
+                        if (!isTogglingBiometrics) {
+                            showBiometricDialog = false 
+                        }
+                    },
+                    enabled = !isTogglingBiometrics
+                ) {
+                    Text(
+                        text = "Cancel",
+                        fontFamily = interFontFamily,
+                        color = Color.Gray
+                    )
+                }
             }
         )
     }
@@ -2254,7 +2504,7 @@ fun SettingsListItem(
                 .weight(1f)
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF8E24AA), Color(0xFF42A5F5)) // Gradient colors
+                        colors = listOf(Color(0xFF8E24AA), Color(0xFF42A5F5))
                     ),
                     shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
                 )

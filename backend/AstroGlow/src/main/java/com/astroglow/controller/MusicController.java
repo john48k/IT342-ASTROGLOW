@@ -29,7 +29,7 @@ import com.astroglow.Entity.MusicEntity;
 import com.astroglow.Entity.UserEntity;
 import com.astroglow.Repository.UserRepository;
 import com.astroglow.Service.MusicService;
-
+import com.astroglow.Service.FavoritesService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -40,11 +40,13 @@ public class MusicController {
 
     private final MusicService musicService;
     private final UserRepository userRepository;
+    private final FavoritesService favoritesService;
 
     @Autowired
-    public MusicController(MusicService musicService, UserRepository userRepository) {
+    public MusicController(MusicService musicService, UserRepository userRepository, FavoritesService favoritesService) {
         this.musicService = musicService;
         this.userRepository = userRepository;
+        this.favoritesService = favoritesService;
     }
 
     // Create new music
@@ -633,4 +635,39 @@ public class MusicController {
         
         return imageData;
     }
+
+    // Add the new favorite endpoints:
+
+    // Check if a song is favorited by a user
+    @GetMapping("/favorites/isFavorite/{userId}/{musicId}")
+    public ResponseEntity<Boolean> isFavorite(@PathVariable int userId, @PathVariable int musicId) {
+        try {
+            // Assume favoritesService has this method
+            boolean isFav = favoritesService.isFavorite(userId, musicId); 
+            return ResponseEntity.ok(isFav);
+        } catch (Exception e) {
+            System.err.println("Error checking favorite status for user " + userId + ", music " + musicId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(false);
+        }
+    }
+
+    // Delete a favorite - REMOVE THIS METHOD
+    /*
+    @DeleteMapping("/favorites/{userId}/{musicId}")
+    public ResponseEntity<Void> deleteFavorite(@PathVariable int userId, @PathVariable int musicId) {
+        try {
+             // Assume favoritesService has this method
+            boolean deleted = favoritesService.deleteFavorite(userId, musicId);
+            if (deleted) {
+                return ResponseEntity.ok().build(); // Successfully deleted
+            } else {
+                // Favorite might not have existed
+                return ResponseEntity.notFound().build(); 
+            }
+        } catch (Exception e) {
+             System.err.println("Error deleting favorite for user " + userId + ", music " + musicId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    */
 }

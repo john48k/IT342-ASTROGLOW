@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,6 +46,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import edu.cit.astroglow.R
 import edu.cit.astroglow.ui.theme.AstroglowTheme
 import androidx.compose.ui.graphics.graphicsLayer
@@ -52,8 +59,32 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
+import android.util.Log
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.foundation.layout.width
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -101,12 +132,12 @@ class MainActivity : ComponentActivity() {
                     // Title animation - vertical hover
                     val titleOffset by infiniteTransition.animateFloat(
                         initialValue = 0f,
-                        targetValue = -10f, // Move up by 10dp
+                        targetValue = -10f,
                         animationSpec = infiniteRepeatable(
                             animation = tween(
                                 durationMillis = 1500, 
                                 easing = LinearEasing,
-                                delayMillis = 500 // Delay to create sequence
+                                delayMillis = 500
                             ),
                             repeatMode = RepeatMode.Reverse
                         )
@@ -115,12 +146,12 @@ class MainActivity : ComponentActivity() {
                     // Subtitle animation - vertical hover with same timing as title
                     val subtitleOffset by infiniteTransition.animateFloat(
                         initialValue = 0f,
-                        targetValue = -8f, // Move up by 8dp
+                        targetValue = -8f,
                         animationSpec = infiniteRepeatable(
                             animation = tween(
-                                durationMillis = 1500, // Same duration as title
+                                durationMillis = 1500,
                                 easing = LinearEasing,
-                                delayMillis = 500 // Same delay as title
+                                delayMillis = 500
                             ),
                             repeatMode = RepeatMode.Reverse
                         )
@@ -189,6 +220,8 @@ class MainActivity : ComponentActivity() {
                                     )
                             )
                             
+                            Spacer(modifier = Modifier.height(32.dp))
+                            
                             Spacer(modifier = Modifier.height(bottomMargin))
                             
                             Spacer(modifier = Modifier.weight(1f))
@@ -213,9 +246,248 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.size(24.dp)
                             )
                         }
+                        
+                        // Biometric login button at bottom left
+                        IconButton(
+                            onClick = { showFingerprintLogin() },
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(16.dp)
+                                .padding(bottom = 32.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Fingerprint,
+                                contentDescription = "Login with Fingerprint",
+                                tint = Color(0xFF9C27B0),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             }
+        }
+    }
+
+    private fun showFingerprintSetup() {
+        val biometricManager = BiometricManager.from(this)
+        val canAuthenticate = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+
+        if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Setup Fingerprint")
+                .setSubtitle("Place your finger on the sensor to register")
+                .setNegativeButtonText("Cancel")
+                .build()
+
+            val biometricPrompt = BiometricPrompt(
+                this,
+                ContextCompat.getMainExecutor(this),
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        // Enable biometrics in the backend
+                        enableBiometrics()
+                    }
+
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        super.onAuthenticationError(errorCode, errString)
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Authentication error: $errString",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    override fun onAuthenticationFailed() {
+                        super.onAuthenticationFailed()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Authentication failed",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            )
+
+            biometricPrompt.authenticate(promptInfo)
+        } else {
+            Toast.makeText(
+                this,
+                "Fingerprint authentication is not available",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun enableBiometrics() {
+        val sharedPreferences = getSharedPreferences("auth", Context.MODE_PRIVATE)
+        val userId = sharedPreferences.getLong("user_id", -1)
+
+        if (userId <= 0) {
+            Toast.makeText(
+                this,
+                "Please log in first to enable biometrics",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val requestBody = JSONObject().apply {
+                    put("enable", true)
+                }.toString()
+
+                val request = Request.Builder()
+                    .url("${Constants.BASE_URL}/api/authentication/toggleBiometrics/$userId")
+                    .post(requestBody.toRequestBody("application/json".toMediaType()))
+                    .build()
+
+                val response = client.newCall(request).execute()
+                val responseBody = response.body?.string()
+
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Fingerprint authentication enabled successfully",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Failed to enable fingerprint authentication",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Error enabling biometrics", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+
+    private fun showFingerprintLogin() {
+        val biometricManager = BiometricManager.from(this)
+        val canAuthenticate = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+
+        if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
+            val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Login with Fingerprint")
+                .setSubtitle("Use your fingerprint to login")
+                .setNegativeButtonText("Cancel")
+                .build()
+
+            val biometricPrompt = BiometricPrompt(
+                this,
+                ContextCompat.getMainExecutor(this),
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        // Get user data from SharedPreferences
+                        val sharedPreferences = getSharedPreferences("auth", MODE_PRIVATE)
+                        val userId = sharedPreferences.getLong("user_id", -1)
+                        val userEmail = sharedPreferences.getString("user_email", "") ?: ""
+                        val userName = sharedPreferences.getString("user_name", "") ?: ""
+
+                        if (userId <= 0 || userEmail.isEmpty() || userName.isEmpty()) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Please log in first to use fingerprint login",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return
+                        }
+
+                        // Verify biometrics with backend
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val url = "${Constants.BASE_URL}/api/authentication/checkBiometrics/$userId"
+                                val request = Request.Builder()
+                                    .url(url)
+                                    .get()
+                                    .build()
+
+                                val response = client.newCall(request).execute()
+                                val responseBody = response.body?.string()
+                                val jsonResponse = JSONObject(responseBody)
+
+                                withContext(Dispatchers.Main) {
+                                    if (response.isSuccessful) {
+                                        val hasBiometrics = jsonResponse.optBoolean("hasBiometrics", false)
+                                        
+                                        if (hasBiometrics) {
+                                            // Update login status
+                                            sharedPreferences.edit().putBoolean("is_logged_in", true).apply()
+                                            
+                                            // Navigate to HomeActivity
+                                            val intent = Intent(this@MainActivity, HomeActivity::class.java)
+                                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                            startActivity(intent)
+                                            finish()
+                                        } else {
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                "Fingerprint not registered. Please enable it in Settings.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    } else {
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            "Login failed: ${jsonResponse.optString("message", "Unknown error")}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        this@MainActivity,
+                                        "Error: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
+                    }
+
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        super.onAuthenticationError(errorCode, errString)
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Authentication error: $errString",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+
+                    override fun onAuthenticationFailed() {
+                        super.onAuthenticationFailed()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Authentication failed",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            )
+
+            biometricPrompt.authenticate(promptInfo)
+        } else {
+            Toast.makeText(
+                this,
+                "Fingerprint authentication is not available",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 }
