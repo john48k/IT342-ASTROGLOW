@@ -46,6 +46,9 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 import androidx.compose.runtime.produceState
 import androidx.compose.material.icons.filled.BrokenImage
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 // Data class to hold favorite song details (adjust fields based on actual API response)
 data class FavoriteSong(
@@ -58,17 +61,30 @@ data class FavoriteSong(
     // Add other relevant fields if needed, e.g., audioUrl
 )
 
+// Define a refresh trigger
+object FavoritesRefreshManager {
+    private val _refreshTrigger = MutableStateFlow(0)
+    val refreshTrigger: StateFlow<Int> = _refreshTrigger.asStateFlow()
+
+    fun triggerRefresh() {
+        _refreshTrigger.value += 1
+    }
+}
+
 @Composable
 fun FavoritesSection() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
     val userId = sharedPreferences.getLong("user_id", -1)
+    
+    // Observe the refresh trigger
+    val refreshState = FavoritesRefreshManager.refreshTrigger.collectAsState()
 
     var favoriteSongs by remember { mutableStateOf<List<FavoriteSong>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(userId) {
+    LaunchedEffect(userId, refreshState.value) {
         if (userId == -1L) {
             error = "User not logged in"
             isLoading = false
@@ -77,7 +93,7 @@ fun FavoritesSection() {
 
         isLoading = true
         error = null
-        Log.d("FavoritesSection", "Fetching favorites for user: $userId")
+        Log.d("FavoritesSection", "Fetching favorites for user: $userId, refresh: ${refreshState.value}")
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -275,8 +291,8 @@ fun FavoriteSongItem(song: FavoriteSong) {
                  putExtra("SONG_ID", song.musicId)
                  putExtra("SONG_TITLE", song.title)
                  putExtra("SONG_ARTIST", song.artist)
-                 // Don't pass fetched URL, let PlayActivity handle its own image
-                 // putExtra("SONG_IMAGE_URL", finalImageUrl ?: song.imageUrl) 
+                 // Pass the final determined image URL (can still be null if fetch failed)
+                 putExtra("SONG_IMAGE_URL", finalImageUrl?.takeIf { it != "error" })
              }
              context.startActivity(intent)
          }

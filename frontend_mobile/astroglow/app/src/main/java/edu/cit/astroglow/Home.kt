@@ -2496,7 +2496,7 @@ fun SettingsListItem(
                 modifier = Modifier.size(40.dp)
             )
         }
-        
+
         // Right side: Text Box with gradient
         Box(
             modifier = Modifier

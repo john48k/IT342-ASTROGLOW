@@ -49,19 +49,23 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 import androidx.compose.runtime.produceState
+import edu.cit.astroglow.components.FavoritesRefreshManager
 
 @Composable
 fun FavoritesTab() {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
     val userId = sharedPreferences.getLong("user_id", -1)
+    
+    // Observe the refresh trigger
+    val refreshState = FavoritesRefreshManager.refreshTrigger.collectAsState()
 
     var favoriteSongs by remember { mutableStateOf<List<FavoriteSong>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
     // Fetch favorites when the tab is composed or userId changes
-    LaunchedEffect(userId) {
+    LaunchedEffect(userId, refreshState.value) {
         if (userId == -1L) {
             error = "User not logged in"
             isLoading = false
@@ -70,7 +74,7 @@ fun FavoritesTab() {
 
         isLoading = true
         error = null
-        Log.d("FavoritesTab", "Fetching favorites for user: $userId")
+        Log.d("FavoritesTab", "Fetching favorites for user: $userId, refresh: ${refreshState.value}")
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -257,10 +261,8 @@ fun FavoriteGridItem(song: FavoriteSong) {
                      putExtra("SONG_ID", song.musicId)
                      putExtra("SONG_TITLE", song.title)
                      putExtra("SONG_ARTIST", song.artist)
-                     // Pass the potentially fetched URL if available, otherwise the original might be needed?
-                     // For simplicity, let PlayActivity handle fetching its own image if needed.
-                     // We only pass the basic info needed to identify the song.
-                     // putExtra("SONG_IMAGE_URL", finalImageUrl ?: song.imageUrl) // Be careful passing fetched URL
+                     // Pass the final determined image URL (can still be null if fetch failed)
+                     putExtra("SONG_IMAGE_URL", finalImageUrl?.takeIf { it != "error" })
                  }
                  context.startActivity(intent)
              }

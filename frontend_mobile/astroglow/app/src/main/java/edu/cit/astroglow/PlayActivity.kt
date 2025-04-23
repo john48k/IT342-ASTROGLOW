@@ -40,6 +40,11 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.compose.runtime.DisposableEffect
+import kotlinx.coroutines.delay
 
 class PlayActivity : ComponentActivity() {
 
@@ -96,38 +101,159 @@ fun PlayScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    var isPlaying by remember { mutableStateOf(false) }
+
+    // --- ExoPlayer State ---
+    // Remember the ExoPlayer instance
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build()
+    }
+    var isPlayerReady by remember { mutableStateOf(false) }
+    var audioUrl by remember { mutableStateOf<String?>(null) }
+    var fetchError by remember { mutableStateOf<String?>(null) }
+
+    // --- UI State (some controlled by ExoPlayer now) ---
+    var isPlaying by remember { mutableStateOf(exoPlayer.isPlaying) }
     var isFavorite by remember { mutableStateOf(false) }
     var isLoadingFavorite by remember { mutableStateOf(true) }
-    var currentPosition by remember { mutableStateOf(0f) }
-    var totalDuration by remember { mutableStateOf(224L) }
+    var totalDurationMillis by remember { mutableStateOf(0L) }
+    var currentPositionMillis by remember { mutableStateOf(0L) }
     var shuffleEnabled by remember { mutableStateOf(false) }
     var repeatMode by remember { mutableStateOf(RepeatMode.Off) }
 
+    // Update current position periodically while playing
+    LaunchedEffect(isPlaying, isPlayerReady) {
+        while (isPlaying && isPlayerReady) {
+            currentPositionMillis = exoPlayer.currentPosition
+            delay(1000) // Update every second
+        }
+    }
+
+    // --- Fetch Audio URL ---
+    LaunchedEffect(songId) {
+        Log.d("PlayScreen", "Fetching audio URL for songId: $songId")
+        isPlayerReady = false // Reset ready state
+        fetchError = null
+        audioUrl = null // Clear previous URL
+        if (songId != -1) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val request = Request.Builder()
+                        .url("${Constants.BASE_URL}/api/music/getMusic/$songId") // Fetch full music details
+                        .get()
+                        .build()
+                    val response = client.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        if (responseBody != null) {
+                            val jsonObject = JSONObject(responseBody)
+                            val url = jsonObject.optString("audioUrl", null) // Get audioUrl
+                            Log.d("PlayScreen", "Fetched audioUrl: $url")
+                            withContext(Dispatchers.Main) {
+                                audioUrl = url
+                                if (url == null) {
+                                    fetchError = "Audio URL not found"
+                                }
+                            }
+                        } else {
+                             withContext(Dispatchers.Main) { fetchError = "Empty response body" }
+                        }
+                    } else {
+                         Log.e("PlayScreen", "Failed to fetch music details: ${response.code}")
+                         withContext(Dispatchers.Main) { fetchError = "Failed to load audio details" }
+                    }
+                } catch (e: Exception) {
+                    Log.e("PlayScreen", "Error fetching audio URL", e)
+                    withContext(Dispatchers.Main) { fetchError = "Error loading audio" }
+                }
+            }
+        } else {
+             fetchError = "Invalid Song ID"
+        }
+    }
+
+    // --- ExoPlayer Setup & Lifecycle ---
+    DisposableEffect(audioUrl) { // Re-run when audioUrl changes
+        var listener: Player.Listener? = null // Define listener here
+        if (audioUrl != null) {
+            Log.d("PlayScreen", "Setting up ExoPlayer with URL: $audioUrl")
+            val mediaItem = MediaItem.fromUri(audioUrl!!)
+            exoPlayer.setMediaItem(mediaItem)
+            exoPlayer.prepare()
+
+            // Assign to the listener variable
+            listener = object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_READY) {
+                         Log.d("PlayScreen", "ExoPlayer State: READY")
+                         isPlayerReady = true
+                         totalDurationMillis = exoPlayer.duration.coerceAtLeast(0L)
+                    } else if (playbackState == Player.STATE_ENDED) {
+                         Log.d("PlayScreen", "ExoPlayer State: ENDED")
+                         exoPlayer.seekTo(0)
+                         exoPlayer.playWhenReady = false
+                    } else {
+                         isPlayerReady = false
+                    }
+                }
+
+                override fun onIsPlayingChanged(isPlayingNow: Boolean) {
+                     Log.d("PlayScreen", "ExoPlayer isPlaying changed: $isPlayingNow")
+                     isPlaying = isPlayingNow
+                     if(isPlayerReady) currentPositionMillis = exoPlayer.currentPosition
+                }
+
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    Log.e("PlayScreen", "ExoPlayer Error: ${error.message}", error)
+                    Toast.makeText(context, "Playback Error: ${error.message}", Toast.LENGTH_LONG).show()
+                     fetchError = "Playback Error"
+                     isPlayerReady = false
+                }
+            }
+            exoPlayer.addListener(listener)
+
+        } else {
+            // If audioUrl becomes null, stop player and clear items
+             exoPlayer.stop()
+             exoPlayer.clearMediaItems()
+             isPlayerReady = false
+        }
+
+        // Return the onDispose lambda as the result of the DisposableEffect
+        onDispose {
+             Log.d("PlayScreen", "Disposing ExoPlayer listener (if added)")
+             listener?.let { exoPlayer.removeListener(it) } // Safely remove the listener
+             // We don't release the player here; it's handled by the other DisposableEffect
+        }
+    }
+    
+    // Separate DisposableEffect for releasing the player when the composable leaves composition
+    // This ensures release even if audioUrl was never set or became null.
+     DisposableEffect(Unit) {
+        onDispose {
+            Log.d("PlayScreen", "Releasing ExoPlayer instance.")
+            exoPlayer.release()
+        }
+    }
+
+    // --- Favorite Status Check (Keep existing logic) ---
     LaunchedEffect(key1 = songId, key2 = userId) {
-        Log.d("PlayScreen", "LaunchedEffect: Checking favorite status for song $songId, user $userId")
+         Log.d("PlayScreen", "LaunchedEffect: Checking favorite status for song $songId, user $userId")
         if (userId != -1L && songId != -1) {
             isLoadingFavorite = true
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val checkUrl = "${Constants.BASE_URL}/api/favorites/user/$userId/music/$songId/check"
                     val request = Request.Builder().url(checkUrl).get().build()
-                    
                     val response = client.newCall(request).execute()
                     Log.d("PlayScreen", "isFavorite check response code: ${response.code}")
-                    
                     if (response.isSuccessful) {
                         val responseBody = response.body?.string()
                         val isFav = responseBody?.toBooleanStrictOrNull() ?: false
                         Log.d("PlayScreen", "isFavorite check result: $isFav")
-                        withContext(Dispatchers.Main) {
-                            isFavorite = isFav
-                        }
+                        withContext(Dispatchers.Main) { isFavorite = isFav }
                     } else {
                          Log.w("PlayScreen", "Failed to check favorite status (assuming false): ${response.code}")
-                         withContext(Dispatchers.Main) {
-                            isFavorite = false
-                         }
+                         withContext(Dispatchers.Main) { isFavorite = false }
                     }
                 } catch (e: Exception) {
                     Log.e("PlayScreen", "Error checking favorite status", e)
@@ -136,9 +262,7 @@ fun PlayScreen(
                         Toast.makeText(context, "Error checking favorite status", Toast.LENGTH_SHORT).show()
                     }
                 } finally {
-                    withContext(Dispatchers.Main) {
-                        isLoadingFavorite = false
-                    }
+                    withContext(Dispatchers.Main) { isLoadingFavorite = false }
                 }
             }
         } else {
@@ -147,56 +271,46 @@ fun PlayScreen(
         }
     }
 
-    val formattedCurrentTime = formatTime( (currentPosition * totalDuration).toLong() )
-    val formattedTotalTime = formatTime(totalDuration)
+    // --- UI Calculations ---
+    // Calculate progress for the Slider (0.0 to 1.0)
+    val sliderPosition = remember(currentPositionMillis, totalDurationMillis) {
+        if (totalDurationMillis > 0) {
+            (currentPositionMillis.toFloat() / totalDurationMillis.toFloat()).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+    }
+    val formattedCurrentTime = remember(currentPositionMillis) { formatTimeMillis(currentPositionMillis) }
+    val formattedTotalTime = remember(totalDurationMillis) { formatTimeMillis(totalDurationMillis) }
 
-    // Example gradient background matching the provided image
     val backgroundBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xFF6A1B9A), Color(0xFF283593)) // Purple to Dark Blue
+        colors = listOf(Color(0xFF6A1B9A), Color(0xFF283593))
     )
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundBrush)
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().background(backgroundBrush).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween // Pushes controls to bottom
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Top Bar (Optional - simple back button)
+        // Top Bar (No changes)
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start
         ) {
             IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White
-                )
+                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
             }
-            // Spacer to push potential title or actions to the right if needed
             Spacer(modifier = Modifier.weight(1f))
-            // IconButton for Share (optional)
-             IconButton(onClick = { /* TODO: Implement Share */ }) {
-                Icon(
-                    imageVector = Icons.Default.Share,
-                    contentDescription = "Share",
-                    tint = Color.White
-                )
+            IconButton(onClick = { /* TODO: Implement Share */ }) {
+                Icon(Icons.Default.Share, "Share", tint = Color.White)
             }
         }
 
-        // Song Artwork Area
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f) // Square aspect ratio
-                .clip(RoundedCornerShape(16.dp))
-                .background(Color.DarkGray.copy(alpha = 0.5f)), // Placeholder background
+        // Song Artwork Area (No changes)
+         Box(
+             modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(16.dp))
+                 .background(Color.DarkGray.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center
         ) {
             if (songImageUrl != null) {
@@ -228,17 +342,40 @@ fun PlayScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+         // Show fetch error if any
+        if (fetchError != null) {
+            Text(
+                text = fetchError!!,
+                color = Color.Red,
+                modifier = Modifier.padding(vertical = 8.dp),
+                textAlign = TextAlign.Center
+            )
+        } else {
+            Spacer(modifier = Modifier.height(24.dp)) // Keep spacing consistent
+        }
 
         // Progress Bar and Time
         Column(modifier = Modifier.fillMaxWidth()) {
             Slider(
-                value = currentPosition,
-                onValueChange = { currentPosition = it },
+                value = sliderPosition,
+                enabled = isPlayerReady,
+                onValueChange = { newSliderValue ->
+                    // Update the displayed time and slider position immediately during drag
+                    if (isPlayerReady && totalDurationMillis > 0) {
+                        currentPositionMillis = (newSliderValue * totalDurationMillis).toLong()
+                    }
+                },
+                 onValueChangeFinished = { // Seek when user finishes dragging
+                    if (isPlayerReady) {
+                        // Use the final position reflected in currentPositionMillis
+                        exoPlayer.seekTo(currentPositionMillis)
+                         Log.d("PlayScreen", "Slider seek finished: Seeking to $currentPositionMillis ms")
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = SliderDefaults.colors(
                     thumbColor = Color.White,
-                    activeTrackColor = Color(0xFFE91E63), // Pink accent
+                    activeTrackColor = Color(0xFFE91E63),
                     inactiveTrackColor = Color.White.copy(alpha = 0.3f)
                 )
             )
@@ -246,18 +383,8 @@ fun PlayScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = formattedCurrentTime,
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 12.sp,
-                    fontFamily = interLightFontFamily
-                )
-                Text(
-                    text = formattedTotalTime,
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 12.sp,
-                    fontFamily = interLightFontFamily
-                )
+                Text(formattedCurrentTime, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = interLightFontFamily)
+                Text(formattedTotalTime, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = interLightFontFamily)
             }
         }
 
@@ -293,7 +420,7 @@ fun PlayScreen(
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         if (targetFavoriteState) {
-                            // --- Add Favorite (POST) --- 
+                            // POST to add
                             Log.d("PlayScreen", "Attempting to ADD favorite: User $userId, Song $songId")
                             val addUrl = "${Constants.BASE_URL}/api/favorites/postFavorites"
                             val jsonBody = JSONObject().apply {
@@ -302,11 +429,8 @@ fun PlayScreen(
                             }.toString()
                             val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
                             val request = Request.Builder().url(addUrl).post(requestBody).build()
-                            
                             val response = client.newCall(request).execute()
-                            Log.d("PlayScreen", "Add favorite response code: ${response.code}")
-
-                            if (response.isSuccessful || response.code == 409) { // Success or Already Exists
+                            if (response.isSuccessful || response.code == 409) {
                                 Log.i("PlayScreen", "Successfully added favorite (or it already existed)")
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(context, "Added to favorites", Toast.LENGTH_SHORT).show()
@@ -319,16 +443,12 @@ fun PlayScreen(
                                 }
                             }
                         } else {
-                             // --- Remove Favorite (DELETE) --- 
+                            // DELETE to remove
                             Log.d("PlayScreen", "Attempting to REMOVE favorite: User $userId, Song $songId")
-                            // Correct DELETE endpoint from FavoritesController
                             val deleteUrl = "${Constants.BASE_URL}/api/favorites/user/$userId/music/$songId"
-                            
                             val request = Request.Builder().url(deleteUrl).delete().build()
                             val response = client.newCall(request).execute()
-                            Log.d("PlayScreen", "Remove favorite response code: ${response.code}")
-
-                            if (response.isSuccessful || response.code == 404) { // Success or Not Found
+                            if (response.isSuccessful || response.code == 404) {
                                 Log.i("PlayScreen", "Successfully removed favorite (or it was already gone)")
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(context, "Removed from favorites", Toast.LENGTH_SHORT).show()
@@ -342,7 +462,7 @@ fun PlayScreen(
                             }
                         }
                     } catch (e: Exception) {
-                         Log.e("PlayScreen", "Error toggling favorite status", e)
+                        Log.e("PlayScreen", "Error toggling favorite status", e)
                         withContext(Dispatchers.Main) {
                             isFavorite = !targetFavoriteState // Revert
                             Toast.makeText(context, "Error updating favorite", Toast.LENGTH_SHORT).show()
@@ -365,53 +485,46 @@ fun PlayScreen(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceAround // Distribute controls evenly
+            horizontalArrangement = Arrangement.SpaceAround
         ) {
-            // Shuffle Button
-            IconButton(onClick = { shuffleEnabled = !shuffleEnabled }) {
-                Icon(
-                    imageVector = Icons.Default.Shuffle,
-                    contentDescription = "Shuffle",
-                    tint = if (shuffleEnabled) Color(0xFFE91E63) else Color.White // Pink accent when active
-                )
+            IconButton(onClick = { /* TODO: Shuffle */ }) {
+                Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) Color(0xFFE91E63) else Color.White)
             }
-
-            // Previous Button
-            IconButton(onClick = { /* TODO: Implement Previous Track */ }) {
-                Icon(
-                    imageVector = Icons.Default.SkipPrevious,
-                    contentDescription = "Previous",
-                    tint = Color.White,
-                    modifier = Modifier.size(40.dp)
-                )
+            IconButton(onClick = { /* TODO: Previous */ }) {
+                Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(40.dp))
             }
-
-            // Play/Pause Button (Larger)
             IconButton(
-                onClick = { isPlaying = !isPlaying },
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(Color.White, shape = RoundedCornerShape(36.dp))
+                onClick = {
+                     if (isPlayerReady) { // Only allow play/pause if player is ready
+                        if (exoPlayer.isPlaying) {
+                            exoPlayer.pause()
+                        } else {
+                            exoPlayer.play()
+                        }
+                    } else if (audioUrl != null && fetchError == null) {
+                         // If not ready but URL is available, try preparing again? Or just wait?
+                         Log.w("PlayScreen", "Play clicked but player not ready yet.")
+                         // Maybe trigger prepare again? exoPlayer.prepare()
+                         // Or show a loading indicator on the button?
+                    } else {
+                        Log.e("PlayScreen", "Play clicked but no audio URL or fetch error occurred.")
+                         Toast.makeText(context, fetchError ?: "Audio not loaded", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                 modifier = Modifier.size(72.dp).background(Color.White, shape = RoundedCornerShape(36.dp)),
+                 enabled = fetchError == null // Disable play if there was an error loading audio
             ) {
+                // Show progress indicator on button if preparing but not ready? (Optional)
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = Color(0xFF6A1B9A), // Purple icon color
+                    tint = if (fetchError == null) Color(0xFF6A1B9A) else Color.Gray, // Gray out if error
                     modifier = Modifier.size(48.dp)
                 )
             }
-
-            // Next Button
-            IconButton(onClick = { /* TODO: Implement Next Track */ }) {
-                Icon(
-                    imageVector = Icons.Default.SkipNext,
-                    contentDescription = "Next",
-                    tint = Color.White,
-                    modifier = Modifier.size(40.dp)
-                )
+            IconButton(onClick = { /* TODO: Next */ }) {
+                Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(40.dp))
             }
-
-            // Repeat Button
             IconButton(onClick = {
                 repeatMode = when (repeatMode) {
                     RepeatMode.Off -> RepeatMode.All
@@ -430,8 +543,7 @@ fun PlayScreen(
                 )
             }
         }
-
-         Spacer(modifier = Modifier.height(24.dp)) // Add some padding at the bottom
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -439,10 +551,11 @@ enum class RepeatMode {
     Off, One, All
 }
 
-// Helper function to format time in seconds to MM:SS
-fun formatTime(seconds: Long): String {
-    val minutes = TimeUnit.SECONDS.toMinutes(seconds)
-    val remainingSeconds = seconds - TimeUnit.MINUTES.toSeconds(minutes)
+// Update formatTime to accept milliseconds
+fun formatTimeMillis(millis: Long): String {
+    val totalSeconds = TimeUnit.MILLISECONDS.toSeconds(millis)
+    val minutes = TimeUnit.SECONDS.toMinutes(totalSeconds)
+    val remainingSeconds = totalSeconds - TimeUnit.MINUTES.toSeconds(minutes)
     return String.format("%02d:%02d", minutes, remainingSeconds)
 }
 
