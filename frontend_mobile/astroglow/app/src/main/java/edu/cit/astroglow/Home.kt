@@ -97,6 +97,8 @@ import edu.cit.astroglow.components.UploadTab
 import edu.cit.astroglow.components.SongGrid
 import edu.cit.astroglow.components.RecommendationsSection
 import edu.cit.astroglow.components.FavoritesSection
+import edu.cit.astroglow.components.FavoritesTab
+import edu.cit.astroglow.components.PlaylistTab
 
 class HomeActivity : FragmentActivity() {
     private val client = OkHttpClient.Builder()
