@@ -153,6 +153,52 @@ fun PlayScreen(
             isLoadingQueue = false
         }
     }
+    
+    // Add an additional check when the activity is first created
+    LaunchedEffect(Unit) {
+        // This will run once when the composable is first created
+        if (userId != -1L && songId != -1) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val checkUrl = "${Constants.BASE_URL}/api/playlists/user/$userId/music/$songId/check"
+                    val request = Request.Builder().url(checkUrl).get().build()
+                    val response = client.newCall(request).execute()
+                    Log.d("PlayScreen", "Initial isInQueue check response code: ${response.code}")
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        val inQueue = responseBody?.toBooleanStrictOrNull() ?: false
+                        Log.d("PlayScreen", "Initial isInQueue check result: $inQueue")
+                        withContext(Dispatchers.Main) { isInQueue = inQueue }
+                    }
+                } catch (e: Exception) {
+                    Log.e("PlayScreen", "Error in initial queue check", e)
+                }
+            }
+        }
+    }
+
+    // Add a periodic check to ensure queue status is always up-to-date
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5000) // Check every 5 seconds
+            if (userId != -1L && songId != -1) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val checkUrl = "${Constants.BASE_URL}/api/playlists/user/$userId/music/$songId/check"
+                        val request = Request.Builder().url(checkUrl).get().build()
+                        val response = client.newCall(request).execute()
+                        if (response.isSuccessful) {
+                            val responseBody = response.body?.string()
+                            val inQueue = responseBody?.toBooleanStrictOrNull() ?: false
+                            withContext(Dispatchers.Main) { isInQueue = inQueue }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("PlayScreen", "Error in periodic queue check", e)
+                    }
+                }
+            }
+        }
+    }
 
     // --- Fetch Audio URL ---
     LaunchedEffect(songId) {
@@ -406,9 +452,10 @@ fun PlayScreen(
                 enabled = !isLoadingQueue && songId != -1
             ) {
                 Icon(
-                    imageVector = if (isInQueue) Icons.Default.QueueMusic else Icons.Default.QueueMusic,
+                    imageVector = Icons.Default.QueueMusic,
                     contentDescription = if (isInQueue) "Remove from Queue" else "Add to Queue",
-                    tint = if (isLoadingQueue) Color.Gray else if (isInQueue) Color(0xFFE91E63) else Color.White
+                    tint = if (isLoadingQueue) Color.Gray else if (isInQueue) Color(0xFFE91E63) else Color.White,
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }
@@ -528,13 +575,8 @@ fun PlayScreen(
                         if (targetFavoriteState) {
                             // POST to add
                             Log.d("PlayScreen", "Attempting to ADD favorite: User $userId, Song $songId")
-                            val addUrl = "${Constants.BASE_URL}/api/favorites/postFavorites"
-                            val jsonBody = JSONObject().apply {
-                                put("user", JSONObject().put("userId", userId))
-                                put("music", JSONObject().put("musicId", songId))
-                            }.toString()
-                            val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
-                            val request = Request.Builder().url(addUrl).post(requestBody).build()
+                            val addUrl = "${Constants.BASE_URL}/api/favorites/user/$userId/music/$songId"
+                            val request = Request.Builder().url(addUrl).post("".toRequestBody("application/json".toMediaType())).build()
                             val response = client.newCall(request).execute()
                             if (response.isSuccessful || response.code == 409) {
                                 Log.i("PlayScreen", "Successfully added favorite (or it already existed)")

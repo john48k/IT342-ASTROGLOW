@@ -11,9 +11,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,8 +41,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
@@ -49,6 +53,9 @@ import androidx.compose.material.icons.filled.BrokenImage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import android.widget.Toast
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 // Data class to hold favorite song details (adjust fields based on actual API response)
 data class FavoriteSong(
@@ -247,6 +254,10 @@ fun FavoritesSection() {
 @Composable
 fun FavoriteSongItem(song: FavoriteSong) {
     val context = LocalContext.current
+    val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+    val userId = sharedPreferences.getLong("user_id", -1)
+    
+    var isAddingToPlaylist by remember { mutableStateOf(false) }
 
     // State to hold the final image URL, potentially fetched in a secondary request
     val finalImageUrl by produceState<String?>(initialValue = song.imageUrl, key1 = song.musicId) {
@@ -278,6 +289,56 @@ fun FavoriteSongItem(song: FavoriteSong) {
                 } catch (e: Exception) {
                     Log.e("FavoriteSongItem", "Error fetching music details for ${song.musicId}", e)
                     value = "error"
+                }
+            }
+        }
+    }
+    
+    // Function to add song to playlist
+    fun addToPlaylist() {
+        if (userId <= 0) {
+            Toast.makeText(context, "Error: Invalid user ID", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        isAddingToPlaylist = true
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .build()
+                
+                val url = "${Constants.BASE_URL}/api/playlists/postPlaylist/user/$userId/music/${song.musicId}"
+                val request = Request.Builder()
+                    .url(url)
+                    .post("".toRequestBody("application/json".toMediaType()))
+                    .build()
+                
+                val response = client.newCall(request).execute()
+                
+                withContext(Dispatchers.Main) {
+                    isAddingToPlaylist = false
+                    
+                    if (response.isSuccessful) {
+                        Toast.makeText(context, "Added to playlist", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val responseBody = response.body?.string() ?: "Unknown error"
+                        
+                        // Check if the error is because the song is already in the playlist
+                        if (response.code == 409 && responseBody.contains("already in the playlist")) {
+                            Toast.makeText(context, "Song is already in your playlist", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Failed to add to playlist: ${response.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    isAddingToPlaylist = false
+                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -342,7 +403,7 @@ fun FavoriteSongItem(song: FavoriteSong) {
                     brush = Brush.linearGradient(
                         colors = listOf(
                              Color(0xFF0050D0).copy(alpha = 0.6f),
-                             Color(0xFFE81EDE).copy(alpha = 0.6f)
+                            Color(0xFFE81EDE).copy(alpha = 0.6f)
                         )
                     )
                 )
@@ -372,6 +433,28 @@ fun FavoriteSongItem(song: FavoriteSong) {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(150.dp)
                 )
+                
+                // Add to playlist button
+                IconButton(
+                    onClick = { addToPlaylist() },
+                    enabled = !isAddingToPlaylist,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    if (isAddingToPlaylist) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.PlaylistAdd,
+                            contentDescription = "Add to Playlist",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
     }

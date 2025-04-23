@@ -37,6 +37,9 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
+    }
 }
 
 dependencies {
@@ -90,4 +93,19 @@ dependencies {
     // ExoPlayer for music playback
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1") // Optional for UI components
+    
+    // Additional Compose dependencies
+    implementation("androidx.compose.foundation:foundation:1.6.1")
+    implementation("androidx.compose.material:material:1.6.1")
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.1")
+    implementation("androidx.compose.runtime:runtime-rxjava2:1.6.1")
+    implementation("androidx.compose.ui:ui-util:1.6.1")
+    
+    // Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.7.6")
+    
+    // Accompanist for additional UI components
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+    implementation("com.google.accompanist:accompanist-systemuicontroller:0.32.0")
+    implementation("com.google.accompanist:accompanist-navigation-animation:0.32.0")
 }

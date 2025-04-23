@@ -13,8 +13,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,12 +40,18 @@ import edu.cit.astroglow.interFontFamily
 import edu.cit.astroglow.interLightFontFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import android.widget.Toast
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 data class RecommendationSong(
@@ -215,8 +223,14 @@ fun RecommendationsSection() {
 @Composable
 fun RecommendationItem(song: RecommendationSong) {
     val context = LocalContext.current
-
-     // Use produceState for potential secondary image fetch (similar to favorites)
+    val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
+    val userId = sharedPreferences.getLong("user_id", -1)
+    
+    var isAddingToPlaylist by remember { mutableStateOf(false) }
+    var isInQueue by remember { mutableStateOf(false) }
+    var isLoadingQueue by remember { mutableStateOf(true) }
+    
+    // Use produceState for potential secondary image fetch (similar to favorites)
     val finalImageUrl by produceState<String?>(initialValue = song.imageUrl, key1 = song.id) {
         if (value == null) {
             Log.d("RecommendationItem", "Initial imageUrl is null for song ID ${song.id} ('${song.title}'), fetching details...")
@@ -240,23 +254,164 @@ fun RecommendationItem(song: RecommendationSong) {
                             value = fetchedUrl // Update state
                         } else {
                             fetchStatus += ", Body was null"
-                             value = null // Keep null if body is null
+                            value = null // Keep null if body is null
                         }
                     } else {
                         fetchStatus += ", Fetch failed"
                         value = "error" // Set error state
                     }
                 } catch (e: Exception) {
-                     Log.e("RecommendationItem", "Exception fetching image details for ${song.id}", e)
-                     fetchStatus = "Exception: ${e.message}"
-                     value = "error" // Set error state
+                    Log.e("RecommendationItem", "Exception fetching image details for ${song.id}", e)
+                    fetchStatus = "Exception: ${e.message}"
+                    value = "error" // Set error state
+                }
+                Log.d("RecommendationItem", "Secondary fetch for song ID ${song.id} finished. Status: $fetchStatus. Final state: $value")
+            }
+        } else {
+            Log.d("RecommendationItem", "Using initial imageUrl for song ID ${song.id}: ${value?.take(50)}...")
+            // Initial value was not null, state is already set
+        }
+    }
+    
+    // Check if song is in queue
+    LaunchedEffect(key1 = song.id, key2 = userId) {
+        if (userId != -1L && song.id != -1) {
+            isLoadingQueue = true
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val client = OkHttpClient.Builder()
+                        .connectTimeout(30, TimeUnit.SECONDS)
+                        .readTimeout(30, TimeUnit.SECONDS)
+                        .writeTimeout(30, TimeUnit.SECONDS)
+                        .build()
+                    
+                    val checkUrl = "${Constants.BASE_URL}/api/playlists/user/$userId/music/${song.id}/check"
+                    val request = Request.Builder().url(checkUrl).get().build()
+                    val response = client.newCall(request).execute()
+                    Log.d("RecommendationItem", "isInQueue check response code: ${response.code}")
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        val inQueue = responseBody?.toBooleanStrictOrNull() ?: false
+                        Log.d("RecommendationItem", "isInQueue check result: $inQueue")
+                        withContext(Dispatchers.Main) { isInQueue = inQueue }
+                    } else {
+                        Log.w("RecommendationItem", "Failed to check queue status (assuming false): ${response.code}")
+                        withContext(Dispatchers.Main) { isInQueue = false }
+                    }
+                } catch (e: Exception) {
+                    Log.e("RecommendationItem", "Error checking queue status", e)
+                    withContext(Dispatchers.Main) { isInQueue = false }
                 } finally {
-                     Log.d("RecommendationItem", "Secondary fetch for song ID ${song.id} finished. Status: $fetchStatus. Final state: $value")
+                    withContext(Dispatchers.Main) { isLoadingQueue = false }
                 }
             }
         } else {
-             Log.d("RecommendationItem", "Using initial imageUrl for song ID ${song.id}: ${value?.take(50)}...")
-             // Initial value was not null, state is already set
+            Log.w("RecommendationItem", "Skipping queue check due to invalid IDs (User: $userId, Song: ${song.id})")
+            isLoadingQueue = false
+        }
+    }
+    
+    // Add a periodic check to ensure queue status is always up-to-date
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(5000) // Check every 5 seconds
+            if (userId != -1L && song.id != -1) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val client = OkHttpClient.Builder()
+                            .connectTimeout(30, TimeUnit.SECONDS)
+                            .readTimeout(30, TimeUnit.SECONDS)
+                            .writeTimeout(30, TimeUnit.SECONDS)
+                            .build()
+                        
+                        val checkUrl = "${Constants.BASE_URL}/api/playlists/user/$userId/music/${song.id}/check"
+                        val request = Request.Builder().url(checkUrl).get().build()
+                        val response = client.newCall(request).execute()
+                        if (response.isSuccessful) {
+                            val responseBody = response.body?.string()
+                            val inQueue = responseBody?.toBooleanStrictOrNull() ?: false
+                            withContext(Dispatchers.Main) { isInQueue = inQueue }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("RecommendationItem", "Error in periodic queue check", e)
+                    }
+                }
+            }
+        }
+    }
+    
+    // Function to add/remove song from queue
+    fun toggleQueue() {
+        if (userId <= 0) {
+            Toast.makeText(context, "Error: Invalid user ID", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        isAddingToPlaylist = true
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(30, TimeUnit.SECONDS)
+                    .writeTimeout(30, TimeUnit.SECONDS)
+                    .build()
+                
+                if (!isInQueue) {
+                    // Add to queue
+                    val url = "${Constants.BASE_URL}/api/playlists/postPlaylist/user/$userId/music/${song.id}"
+                    val request = Request.Builder()
+                        .url(url)
+                        .post("".toRequestBody("application/json".toMediaType()))
+                        .build()
+                    
+                    val response = client.newCall(request).execute()
+                    
+                    withContext(Dispatchers.Main) {
+                        isAddingToPlaylist = false
+                        
+                        if (response.isSuccessful) {
+                            isInQueue = true
+                            Toast.makeText(context, "Added to queue", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val responseBody = response.body?.string() ?: "Unknown error"
+                            
+                            // Check if the error is because the song is already in the playlist
+                            if (response.code == 409 && responseBody.contains("already in the playlist")) {
+                                isInQueue = true
+                                Toast.makeText(context, "Song is already in your queue", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Failed to add to queue: ${response.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                } else {
+                    // Remove from queue
+                    val url = "${Constants.BASE_URL}/api/playlists/deletePlaylist/user/$userId/music/${song.id}"
+                    val request = Request.Builder()
+                        .url(url)
+                        .delete()
+                        .build()
+                    
+                    val response = client.newCall(request).execute()
+                    
+                    withContext(Dispatchers.Main) {
+                        isAddingToPlaylist = false
+                        
+                        if (response.isSuccessful) {
+                            isInQueue = false
+                            Toast.makeText(context, "Removed from queue", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Failed to remove from queue: ${response.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    isAddingToPlaylist = false
+                    Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -335,6 +490,28 @@ fun RecommendationItem(song: RecommendationSong) {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.width(150.dp)
                 )
+                
+                // Add to playlist button
+                IconButton(
+                    onClick = { toggleQueue() },
+                    enabled = !isAddingToPlaylist && !isLoadingQueue,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    if (isAddingToPlaylist) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.PlaylistAdd,
+                            contentDescription = if (isInQueue) "Remove from Queue" else "Add to Queue",
+                            tint = if (isLoadingQueue) Color.Gray else if (isInQueue) Color(0xFFE91E63) else Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
     }

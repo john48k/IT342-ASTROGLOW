@@ -64,6 +64,11 @@
             android:label="Search"
             android:theme="@style/Theme.Astroglow" />
         <activity
+            android:name=".SearchResultsActivity"
+            android:exported="false"
+            android:label="Search Results"
+            android:theme="@style/Theme.Astroglow" />
+        <activity
             android:name=".GitHubLoginActivity"
             android:exported="false"
             android:label="GitHub Login"

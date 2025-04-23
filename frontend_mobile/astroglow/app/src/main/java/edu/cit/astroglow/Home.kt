@@ -100,6 +100,11 @@ import edu.cit.astroglow.components.RecommendationsSection
 import edu.cit.astroglow.components.FavoritesSection
 import edu.cit.astroglow.components.FavoritesTab
 import edu.cit.astroglow.components.PlayerTab
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.graphicsLayer
 
 /**
  * Shared bottom navigation bar used across the app
@@ -1885,6 +1890,7 @@ fun ProfileDetailItem(
 @Composable
 fun HomeTabWithSearch(userName: String) {
     var searchQuery by remember { mutableStateOf("") }
+    var selectedSearchType by remember { mutableStateOf("title") }
     val context = LocalContext.current
     
     Column(
@@ -1927,13 +1933,55 @@ fun HomeTabWithSearch(userName: String) {
             )
         }
 
+        // Search type selector
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = selectedSearchType == "title",
+                onClick = { selectedSearchType = "title" },
+                label = { Text("Title", fontFamily = interFontFamily) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Color(0xFF9C27B0),
+                    selectedLabelColor = Color.White,
+                    containerColor = Color.White.copy(alpha = 0.1f),
+                    labelColor = Color.White
+                )
+            )
+            FilterChip(
+                selected = selectedSearchType == "artist",
+                onClick = { selectedSearchType = "artist" },
+                label = { Text("Artist", fontFamily = interFontFamily) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Color(0xFF9C27B0),
+                    selectedLabelColor = Color.White,
+                    containerColor = Color.White.copy(alpha = 0.1f),
+                    labelColor = Color.White
+                )
+            )
+            FilterChip(
+                selected = selectedSearchType == "genre",
+                onClick = { selectedSearchType = "genre" },
+                label = { Text("Genre", fontFamily = interFontFamily) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Color(0xFF9C27B0),
+                    selectedLabelColor = Color.White,
+                    containerColor = Color.White.copy(alpha = 0.1f),
+                    labelColor = Color.White
+                )
+            )
+        }
+
         // Search bar with adjusted spacing
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
             placeholder = { 
                 Text(
-                    "Enter a song",
+                    "Search by ${selectedSearchType.capitalize()}",
                     color = Color.Gray,
                     fontFamily = interLightFontFamily
                 )
@@ -1951,23 +1999,20 @@ fun HomeTabWithSearch(userName: String) {
                     contentDescription = "Search",
                     tint = Color.Gray,
                     modifier = Modifier.clickable {
-                        val intent = Intent(context, SearchActivity::class.java).apply {
-                            putExtra("search_query", searchQuery)
+                        if (searchQuery.isNotEmpty()) {
+                            val intent = Intent(context, SearchResultsActivity::class.java).apply {
+                                putExtra("SEARCH_TYPE", selectedSearchType)
+                                putExtra("SEARCH_QUERY", searchQuery)
+                            }
+                            context.startActivity(intent)
                         }
-                        context.startActivity(intent)
                     }
                 )
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 32.dp)
-                .height(56.dp)
-                .clickable {
-                    val intent = Intent(context, SearchActivity::class.java).apply {
-                        putExtra("search_query", searchQuery)
-                    }
-                    context.startActivity(intent)
-                },
+                .height(56.dp),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color.White,
@@ -1978,10 +2023,25 @@ fun HomeTabWithSearch(userName: String) {
                 unfocusedTextColor = Color.DarkGray
             ),
             textStyle = androidx.compose.ui.text.TextStyle(
-                fontFamily = interFontFamily,
-                fontSize = 16.sp
+                fontFamily = interLightFontFamily,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Normal
             ),
-            singleLine = true
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Search
+            ),
+            keyboardActions = KeyboardActions(
+                onSearch = {
+                    if (searchQuery.isNotEmpty()) {
+                        val intent = Intent(context, SearchResultsActivity::class.java).apply {
+                            putExtra("SEARCH_TYPE", selectedSearchType)
+                            putExtra("SEARCH_QUERY", searchQuery)
+                        }
+                        context.startActivity(intent)
+                    }
+                }
+            )
         )
 
         // Sample song list

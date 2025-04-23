@@ -535,4 +535,23 @@ public class PlaylistController {
             return ResponseEntity.badRequest().build();
         }
     }
+
+    // Check if a song is in any of a user's playlists
+    @GetMapping("/user/{userId}/music/{musicId}/check")
+    public ResponseEntity<Boolean> isInUserPlaylists(
+            @PathVariable("userId") int userId,
+            @PathVariable("musicId") int musicId) {
+        logger.info("GET /user/" + userId + "/music/" + musicId + "/check - Checking if song is in user's playlists");
+        try {
+            List<PlaylistEntity> playlists = playlistService.getPlaylistsByUserId(userId);
+            boolean isInPlaylists = playlists.stream()
+                .anyMatch(playlist -> playlist.getMusic().stream()
+                    .anyMatch(music -> music.getMusicId() == musicId));
+            logger.info("Song " + musicId + " is" + (isInPlaylists ? "" : " not") + " in user " + userId + "'s playlists");
+            return new ResponseEntity<>(isInPlaylists, HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            logger.warning("User not found with ID: " + userId);
+            return new ResponseEntity<>(false, HttpStatus.NOT_FOUND);
+        }
+    }
 }
