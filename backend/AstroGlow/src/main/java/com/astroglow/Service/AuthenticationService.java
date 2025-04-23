@@ -6,8 +6,6 @@ import com.astroglow.Repository.AuthenticationRepository;
 import com.astroglow.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.naming.NameNotFoundException;
 import java.util.List;
@@ -16,8 +14,6 @@ import java.util.Optional;
 
 @Service
 public class AuthenticationService {
-    private static final Logger logger = LoggerFactory.getLogger(AuthenticationService.class);
-    
     @Autowired
     AuthenticationRepository authenticationRepository;
     
@@ -31,7 +27,6 @@ public class AuthenticationService {
     public AuthenticationEntity postAuthentication(AuthenticationEntity authentication) {
         return authenticationRepository.save(authentication);
     }
-
     public List<AuthenticationEntity> getAllAuthentication() {
         return authenticationRepository.findAll();
     }
@@ -43,8 +38,6 @@ public class AuthenticationService {
             authentication = authenticationRepository.findById(id).get();
             authentication.setUser(newAuthentication.getUser());
             authentication.setUserBiometricId(newAuthentication.getUserBiometricId());
-            authentication.setBiometricEnabled(newAuthentication.isBiometricEnabled());
-            logger.info("Updated authentication record for ID {} with biometric_enabled={}", id, newAuthentication.isBiometricEnabled());
         } catch (NoSuchElementException nex) {
             throw new NameNotFoundException("Authentication is " + id + " not found!");
         } finally {
@@ -62,66 +55,76 @@ public class AuthenticationService {
         }
         return msg;
     }
-
-    public AuthenticationEntity toggleBiometrics(Long userId, boolean enable) {
-        logger.info("Toggling biometrics for user {} to {}", userId, enable);
+    
+    /**
+     * Toggle biometrics authentication for a user
+     * @param userId The user ID
+     * @param enable Whether to enable or disable biometrics
+     * @return The updated AuthenticationEntity
+     * @throws Exception if the user doesn't exist
+     */
+    public AuthenticationEntity toggleBiometrics(Long userId, boolean enable) throws Exception {
+        // Find the user
+        Optional<UserEntity> userOptional = userRepository.findById(userId.intValue());
+        if (!userOptional.isPresent()) {
+            throw new Exception("User not found with ID: " + userId);
+        }
         
-        // Find the user by converting Long to Integer
-        Optional<UserEntity> userOptional = userRepository.findAll().stream()
-                .filter(u -> u.getUserId() == userId.intValue())
-                .findFirst();
+        UserEntity user = userOptional.get();
         
-        UserEntity user = userOptional
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-
-        // Check if authentication record exists
-        Optional<AuthenticationEntity> existingAuth = authenticationRepository.findAll().stream()
-                .filter(auth -> auth.getUser().getUserId() == userId.intValue())
-                .findFirst();
-
+        // Check if the user already has biometrics
+        List<AuthenticationEntity> allAuths = authenticationRepository.findAll();
+        AuthenticationEntity existingAuth = null;
+        
+        for (AuthenticationEntity auth : allAuths) {
+            if (auth.getUser() != null && auth.getUser().getUserId() == userId.intValue()) {
+                existingAuth = auth;
+                break;
+            }
+        }
+        
         if (enable) {
             // Enable biometrics
-            if (existingAuth.isPresent()) {
-                // Update existing record using putAuthentication
-                AuthenticationEntity auth = existingAuth.get();
-                AuthenticationEntity updatedAuth = new AuthenticationEntity();
-                updatedAuth.setUser(user);
-                updatedAuth.setUserBiometricId(1);
-                updatedAuth.setBiometricEnabled(true);
-                logger.info("Updating existing biometric record for user {}", userId);
-                return putAuthentication(auth.getUserBiometricId(), updatedAuth);
-            } else {
-                // Create new record
+            if (existingAuth == null) {
+                // Create new authentication entry
                 AuthenticationEntity newAuth = new AuthenticationEntity();
-                newAuth.setUserBiometricId(1);
-                newAuth.setBiometricEnabled(true);
                 newAuth.setUser(user);
-                logger.info("Creating new biometric record for user {}", userId);
                 return authenticationRepository.save(newAuth);
             }
+            return existingAuth; // Already enabled
         } else {
             // Disable biometrics
-            if (existingAuth.isPresent()) {
-                // Update the record using putAuthentication
-                AuthenticationEntity auth = existingAuth.get();
-                AuthenticationEntity updatedAuth = new AuthenticationEntity();
-                updatedAuth.setUser(user);
-                updatedAuth.setUserBiometricId(auth.getUserBiometricId()); // Keep the same ID
-                updatedAuth.setBiometricEnabled(false);
-                logger.info("Disabling biometrics for user {}", userId);
-                return putAuthentication(auth.getUserBiometricId(), updatedAuth);
+            if (existingAuth != null) {
+                authenticationRepository.delete(existingAuth);
+                return existingAuth;
             }
-            logger.info("No biometric record found for user {}, nothing to disable", userId);
+            // Already disabled
             return null;
         }
     }
-
-    public boolean hasBiometrics(Long userId) {
-        boolean hasBiometrics = authenticationRepository.findAll().stream()
-                .anyMatch(auth -> auth.getUser().getUserId() == userId.intValue() && 
-                        auth.getUserBiometricId() == 1 && 
-                        auth.isBiometricEnabled());
-        logger.info("Checking biometrics for user {}: {}", userId, hasBiometrics);
-        return hasBiometrics;
+    
+    /**
+     * Check if a user has biometrics enabled
+     * @param userId The user ID
+     * @return true if biometrics are enabled, false otherwise
+     * @throws Exception if the user doesn't exist
+     */
+    public boolean hasBiometrics(Long userId) throws Exception {
+        // Find the user
+        Optional<UserEntity> userOptional = userRepository.findById(userId.intValue());
+        if (!userOptional.isPresent()) {
+            throw new Exception("User not found with ID: " + userId);
+        }
+        
+        // Check if the user has biometrics
+        List<AuthenticationEntity> allAuths = authenticationRepository.findAll();
+        
+        for (AuthenticationEntity auth : allAuths) {
+            if (auth.getUser() != null && auth.getUser().getUserId() == userId.intValue()) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

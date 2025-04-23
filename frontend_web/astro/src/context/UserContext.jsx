@@ -105,8 +105,14 @@ export const UserProvider = ({ children }) => {
   };
 
   const logout = () => {
-    // We're keeping the favorites data in localStorage
-    // Only removing user authentication data
+    // Save current favorites to a special key that persists after logout
+    const savedFavorites = localStorage.getItem('firebaseFavorites');
+    if (savedFavorites) {
+      localStorage.setItem('persistentFavorites', savedFavorites);
+      console.log('Saved favorites to persistent storage before logout');
+    }
+
+    // Standard logout procedure
     setUser(null);
     setToken(null);
     setIsAuthenticated(false);
@@ -114,7 +120,7 @@ export const UserProvider = ({ children }) => {
     localStorage.removeItem("token");
     sessionStorage.removeItem("user");
     sessionStorage.removeItem("token");
-    // Note: We're not removing 'firebaseFavorites' from localStorage
+    // Note: We're not removing 'firebaseFavorites' or 'persistentFavorites' from localStorage
     // so they persist between sessions
   };
 
