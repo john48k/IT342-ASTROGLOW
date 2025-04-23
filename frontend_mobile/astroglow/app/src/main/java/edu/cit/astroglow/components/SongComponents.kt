@@ -33,6 +33,9 @@ import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+import androidx.compose.foundation.clickable
+import android.content.Intent
+import edu.cit.astroglow.PlayActivity
 
 data class Song(
     val id: Int,
@@ -202,10 +205,21 @@ fun SongItemPlaceholder(modifier: Modifier = Modifier) {
 
 @Composable
 fun SongItem(song: Song, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+
     Row(
         modifier = modifier
             .height(48.dp)
             .padding(end = 8.dp)
+            .clickable {
+                val intent = Intent(context, PlayActivity::class.java).apply {
+                    putExtra("SONG_ID", song.id)
+                    putExtra("SONG_TITLE", song.title)
+                    putExtra("SONG_ARTIST", song.artist)
+                    putExtra("SONG_IMAGE_URL", song.imageUrl)
+                }
+                context.startActivity(intent)
+            }
     ) {
         // Song thumbnail
         Box(
@@ -258,4 +272,4 @@ fun SongItem(song: Song, modifier: Modifier = Modifier) {
             }
         }
     }
-} 
+}
