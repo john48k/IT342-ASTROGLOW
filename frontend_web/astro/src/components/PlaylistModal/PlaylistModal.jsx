@@ -9,7 +9,8 @@ const PlaylistModal = () => {
     createPlaylist, 
     isPlaylistModalOpen, 
     closePlaylistModal, 
-    selectedMusicId 
+    selectedMusicId,
+    removeSongFromPlaylist
   } = usePlaylist();
   
   const [newPlaylistName, setNewPlaylistName] = useState('');
@@ -21,11 +22,17 @@ const PlaylistModal = () => {
   const handleCreatePlaylist = async (e) => {
     e.preventDefault();
     
+    if (!newPlaylistName.trim()) {
+      setError('Please enter a playlist name');
+      return;
+    }
+    
     setIsCreating(true);
     setError('');
+    setSuccessMessage('');
     
     try {
-      const newPlaylist = await createPlaylist();
+      const newPlaylist = await createPlaylist(newPlaylistName);
       
       if (newPlaylist) {
         setNewPlaylistName('');
@@ -33,11 +40,15 @@ const PlaylistModal = () => {
         
         // If a song is selected, add it to the new playlist
         if (selectedMusicId) {
-          const added = await addSongToPlaylist(newPlaylist.playlistId, selectedMusicId);
-          if (added) {
-            setSuccessMessage('Song added to the new playlist!');
-          } else {
-            setError('Failed to add song to playlist');
+          try {
+            const added = await addSongToPlaylist(newPlaylist.playlistId, selectedMusicId);
+            if (added) {
+              setSuccessMessage('Song added to the new playlist!');
+            } else {
+              setError('Failed to add song to playlist');
+            }
+          } catch (err) {
+            setError('Failed to add song to playlist: ' + err.message);
           }
         }
         
@@ -45,12 +56,10 @@ const PlaylistModal = () => {
         setTimeout(() => {
           setSuccessMessage('');
         }, 3000);
-      } else {
-        setError('Failed to create playlist');
       }
     } catch (err) {
-      setError('An error occurred while creating the playlist');
-      console.error(err);
+      setError(err.message || 'An error occurred while creating the playlist');
+      console.error('Error creating playlist:', err);
     } finally {
       setIsCreating(false);
     }
@@ -76,6 +85,23 @@ const PlaylistModal = () => {
       }
     } catch (err) {
       setError('An error occurred while adding the song to the playlist');
+      console.error(err);
+    }
+  };
+
+  const handleRemoveFromPlaylist = async (playlistId, musicId) => {
+    try {
+      const removed = await removeSongFromPlaylist(playlistId, musicId);
+      if (removed) {
+        setSuccessMessage('Song removed from playlist successfully!');
+        setTimeout(() => {
+          setSuccessMessage('');
+        }, 3000);
+      } else {
+        setError('Failed to remove song from playlist');
+      }
+    } catch (err) {
+      setError('An error occurred while removing the song from the playlist');
       console.error(err);
     }
   };
@@ -144,6 +170,13 @@ const PlaylistModal = () => {
                             <span className={styles.musicTitle}>{music.title}</span>
                             <span className={styles.musicArtist}>{music.artist}</span>
                           </div>
+                          <button
+                            className={styles.removeButton}
+                            onClick={() => handleRemoveFromPlaylist(playlist.playlistId, music.musicId)}
+                            title="Remove from playlist"
+                          >
+                            ×
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -157,10 +190,18 @@ const PlaylistModal = () => {
         <div className={styles.createPlaylistContainer}>
           <h3>Create New Playlist</h3>
           <form onSubmit={handleCreatePlaylist} className={styles.createPlaylistForm}>
+            <input
+              type="text"
+              value={newPlaylistName}
+              onChange={(e) => setNewPlaylistName(e.target.value)}
+              placeholder="Enter playlist name"
+              className={styles.playlistNameInput}
+              disabled={isCreating}
+            />
             <button 
               type="submit" 
               className={styles.createButton}
-              disabled={isCreating}
+              disabled={isCreating || !newPlaylistName.trim()}
             >
               {isCreating ? 'Creating...' : 'Create New Playlist'}
             </button>

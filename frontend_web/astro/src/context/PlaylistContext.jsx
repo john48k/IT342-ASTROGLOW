@@ -17,7 +17,7 @@ export const PlaylistProvider = ({ children }) => {
       if (user?.userId) {
         try {
           console.log(`Loading playlists for user ID: ${user.userId}`);
-          const response = await fetch(`${API_BASE_URL}/playlists/getAllPlaylist`, {
+          const response = await fetch(`${API_BASE_URL}/playlists/user/${user.userId}`, {
             headers: {
               'Accept': 'application/json',
               'Content-Type': 'application/json',
@@ -48,7 +48,7 @@ export const PlaylistProvider = ({ children }) => {
     if (user?.userId) {
       try {
         console.log(`Refreshing playlists for user ID: ${user.userId}`);
-        const response = await fetch(`${API_BASE_URL}/playlists/getAllPlaylist`, {
+        const response = await fetch(`${API_BASE_URL}/playlists/user/${user.userId}`, {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
@@ -71,35 +71,15 @@ export const PlaylistProvider = ({ children }) => {
     }
   }, [user?.userId]);
 
-  // Check if a song is in a playlist
-  const checkSongInPlaylist = useCallback(async (musicId) => {
-    if (!user?.userId) return false;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/playlists/user/${user.userId}/music/${musicId}/check`, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        return await response.json();
-      }
-      return false;
-    } catch (error) {
-      console.error('Error checking song in playlist:', error);
-      return false;
-    }
-  }, [user?.userId]);
-
   // Create a new playlist
   const createPlaylist = useCallback(async (playlistName) => {
-    if (!user?.userId) return null;
+    if (!user?.userId) {
+      console.error('User ID is required to create a playlist');
+      return null;
+    }
 
     try {
-      console.log(`Creating new playlist`);
+      console.log(`Creating new playlist: ${playlistName}`);
       const response = await fetch(`${API_BASE_URL}/playlists/postPlaylist`, {
         method: 'POST',
         headers: {
@@ -109,26 +89,25 @@ export const PlaylistProvider = ({ children }) => {
           'Pragma': 'no-cache'
         },
         body: JSON.stringify({
-          user: {
-            userId: parseInt(user.userId)
-          }
+          userId: parseInt(user.userId),
+          name: playlistName
         }),
         credentials: 'include'
       });
 
-      if (response.ok) {
-        const newPlaylist = await response.json();
-        console.log(`Successfully created playlist`);
-        await refreshPlaylists();
-        return newPlaylist;
-      } else {
+      if (!response.ok) {
         const errorData = await response.text();
         console.error(`Error creating playlist: ${response.status}`, errorData);
-        return null;
+        throw new Error(errorData || 'Failed to create playlist');
       }
+
+      const newPlaylist = await response.json();
+      console.log(`Successfully created playlist: ${newPlaylist.name}`);
+      await refreshPlaylists();
+      return newPlaylist;
     } catch (error) {
       console.error('Error creating playlist:', error);
-      return null;
+      throw error;
     }
   }, [user?.userId, refreshPlaylists]);
 
@@ -138,7 +117,7 @@ export const PlaylistProvider = ({ children }) => {
 
     try {
       console.log(`Adding song ${musicId} to playlist ${playlistId}`);
-      const response = await fetch(`${API_BASE_URL}/playlists/user/${user.userId}/music/${musicId}`, {
+      const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}/add/${musicId}`, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -150,7 +129,7 @@ export const PlaylistProvider = ({ children }) => {
       });
 
       if (response.ok) {
-        console.log(`Successfully added song ${musicId} to playlist`);
+        console.log(`Successfully added song ${musicId} to playlist ${playlistId}`);
         await refreshPlaylists();
         return true;
       } else {
@@ -165,11 +144,12 @@ export const PlaylistProvider = ({ children }) => {
   }, [user?.userId, refreshPlaylists]);
 
   // Remove a song from a playlist
-  const removeSongFromPlaylist = useCallback(async (musicId) => {
+  const removeSongFromPlaylist = useCallback(async (playlistId, musicId) => {
     if (!user?.userId) return false;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/playlists/deletePlaylist/user/${user.userId}/music/${musicId}`, {
+      console.log(`Removing song ${musicId} from playlist ${playlistId}`);
+      const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}/remove/${musicId}`, {
         method: 'DELETE',
         headers: {
           'Accept': 'application/json',
@@ -179,12 +159,46 @@ export const PlaylistProvider = ({ children }) => {
       });
 
       if (response.ok) {
+        console.log(`Successfully removed song ${musicId} from playlist ${playlistId}`);
         await refreshPlaylists();
         return true;
+      } else {
+        const errorData = await response.text();
+        console.error(`Error removing song from playlist: ${response.status}`, errorData);
+        return false;
       }
-      return false;
     } catch (error) {
       console.error('Error removing song from playlist:', error);
+      return false;
+    }
+  }, [user?.userId, refreshPlaylists]);
+
+  // Delete a playlist
+  const deletePlaylist = useCallback(async (playlistId) => {
+    if (!user?.userId) return false;
+
+    try {
+      console.log(`Deleting playlist ${playlistId}`);
+      const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        console.log(`Successfully deleted playlist ${playlistId}`);
+        await refreshPlaylists();
+        return true;
+      } else {
+        const errorData = await response.text();
+        console.error(`Error deleting playlist: ${response.status}`, errorData);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error deleting playlist:', error);
       return false;
     }
   }, [user?.userId, refreshPlaylists]);
@@ -207,7 +221,7 @@ export const PlaylistProvider = ({ children }) => {
       addSongToPlaylist, 
       createPlaylist,
       removeSongFromPlaylist,
-      checkSongInPlaylist,
+      deletePlaylist,
       isPlaylistModalOpen,
       openPlaylistModal,
       closePlaylistModal,

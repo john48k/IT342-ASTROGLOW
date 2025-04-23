@@ -205,29 +205,31 @@
 
 .createPlaylistForm {
   display: flex;
+  flex-direction: column;
   gap: 10px;
+  width: 100%;
 }
 
-.playlistInput {
-  flex: 1;
-  background-color: #2a2a2a;
-  border: 1px solid #333;
-  border-radius: 4px;
+.playlistNameInput {
   padding: 8px 12px;
-  color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
   font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.playlistInput:focus {
+.playlistNameInput:focus {
   outline: none;
-  border-color: #ff4081;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
 .createButton {
-  background-color: #ff4081;
+  padding: 8px 16px;
+  background-color: #007bff;
   color: white;
   border: none;
-  padding: 8px 20px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
@@ -235,10 +237,10 @@
 }
 
 .createButton:hover {
-  background-color: #f50057;
+  background-color: #0056b3;
 }
 
 .createButton:disabled {
-  background-color: #666;
+  background-color: #ccc;
   cursor: not-allowed;
 } 
