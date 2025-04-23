@@ -1,6 +1,7 @@
 package com.astroglow.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -50,6 +51,21 @@ public class PlaylistController {
         try {
             List<PlaylistEntity> playlists = playlistService.getPlaylistsByUserId(userId);
             return new ResponseEntity<>(playlists, HttpStatus.OK);
+        } catch (EntityNotFoundException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    // Get song IDs from user's playlist
+    @GetMapping("/user/{userId}/songs")
+    public ResponseEntity<List<Integer>> getSongIdsByUserId(@PathVariable("userId") int userId) {
+        try {
+            List<PlaylistEntity> playlists = playlistService.getPlaylistsByUserId(userId);
+            List<Integer> songIds = playlists.stream()
+                .map(playlist -> playlist.getMusic().getMusicId())
+                .distinct()
+                .collect(Collectors.toList());
+            return new ResponseEntity<>(songIds, HttpStatus.OK);
         } catch (EntityNotFoundException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

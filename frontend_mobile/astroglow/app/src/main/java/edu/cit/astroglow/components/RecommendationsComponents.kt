@@ -58,9 +58,10 @@ fun RecommendationsSection() {
     var songs by remember { mutableStateOf<List<RecommendationSong>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var refreshTrigger by remember { mutableStateOf(0) } // Add a trigger to refresh recommendations
     
     // Fetch random songs
-    LaunchedEffect(Unit) {
+    LaunchedEffect(refreshTrigger) { // Change dependency to refreshTrigger
         isLoading = true
         error = null
         CoroutineScope(Dispatchers.Main).launch {
@@ -127,7 +128,13 @@ fun RecommendationsSection() {
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { 
+                    // Increment refreshTrigger to trigger a new fetch
+                    refreshTrigger++
+                }
+            ) {
                 Text(
                     text = "Recommendations",
                     fontFamily = interFontFamily,
@@ -137,7 +144,7 @@ fun RecommendationsSection() {
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowForward,
-                    contentDescription = "See more",
+                    contentDescription = "Refresh recommendations",
                     tint = Color.White,
                     modifier = Modifier.padding(start = 8.dp).size(24.dp)
                 )

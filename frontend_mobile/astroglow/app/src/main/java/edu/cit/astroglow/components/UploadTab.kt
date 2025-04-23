@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberAsyncImagePainter
@@ -56,7 +57,15 @@ fun UploadTab() {
     var showAudioPreview by remember { mutableStateOf(false) }
     var showImagePreview by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    
+    // Predefined genre options
+    val genres = listOf(
+        "None", "Pop", "Rock", "OPM", "Hip Hop", "R&B", "Electronic", 
+        "Jazz", "Classical", "Country", "Folk", "Metal",
+        "Blues", "Reggae", "Latin", "World", "Other"
+    )
     
     // Create a MediaPlayer instance
     val mediaPlayer = remember { MediaPlayer() }
@@ -189,18 +198,69 @@ fun UploadTab() {
             )
         )
 
-        OutlinedTextField(
-            value = genre,
-            onValueChange = { genre = it },
-            label = { Text("Genre", color = Color.White) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.White,
-                unfocusedBorderColor = Color.White,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
+        // Genre Dropdown
+        Column(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = genre,
+                onValueChange = { },
+                label = { Text("Genre", color = Color.White) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.White,
+                    unfocusedBorderColor = Color.White,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                ),
+                readOnly = true,
+                trailingIcon = {
+                    IconButton(onClick = { expanded = !expanded }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Select Genre",
+                            tint = Color.White
+                        )
+                    }
+                }
             )
-        )
+            
+            if (expanded) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .background(Color(0xFF1E1E1E), RoundedCornerShape(4.dp))
+                        .border(1.dp, Color.White, RoundedCornerShape(4.dp))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        genres.forEach { genreOption ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        genre = genreOption
+                                        expanded = false
+                                    }
+                                    .background(
+                                        if (genreOption == genre) Color(0xFF0050D0).copy(alpha = 0.3f)
+                                        else Color.Transparent
+                                    )
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = genreOption,
+                                    color = Color.White,
+                                    fontFamily = interFontFamily
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         OutlinedTextField(
             value = time,
