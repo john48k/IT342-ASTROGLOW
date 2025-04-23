@@ -134,8 +134,10 @@ const SignUpPage = () => {
       const response = await fetch("http://localhost:8080/api/user/signup", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json;charset=UTF-8",
+          "Accept": "application/json"
         },
+        credentials: "include",
         body: JSON.stringify({
           userName: formData.userName,
           userEmail: formData.userEmail,
@@ -143,12 +145,12 @@ const SignUpPage = () => {
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || "Failed to sign up");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to sign up");
       }
 
+      const data = await response.json();
       console.log("Signup successful:", data);
 
       // Show success message

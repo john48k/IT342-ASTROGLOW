@@ -133,10 +133,30 @@ public class UserController {
         return userService.deleteUser(id);
     }
 
-    @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody UserEntity user) {
+    @PostMapping(value = "/signup", consumes = "application/json;charset=UTF-8", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> signup(@RequestBody Map<String, String> signupData) {
         try {
+            // Validate required fields
+            if (!signupData.containsKey("userName") || signupData.get("userName").trim().isEmpty()) {
+                throw new IllegalArgumentException("Username is required");
+            }
+            if (!signupData.containsKey("userEmail") || signupData.get("userEmail").trim().isEmpty()) {
+                throw new IllegalArgumentException("Email is required");
+            }
+            if (!signupData.containsKey("userPassword") || signupData.get("userPassword").trim().isEmpty()) {
+                throw new IllegalArgumentException("Password is required");
+            }
+
+            // Create new user entity
+            UserEntity user = new UserEntity();
+            user.setUserName(signupData.get("userName"));
+            user.setUserEmail(signupData.get("userEmail"));
+            user.setUserPassword(signupData.get("userPassword"));
+
+            // Validate user data
             validateSignupData(user);
+            
+            // Register user
             UserEntity newUser = userService.registerUser(user);
             return ResponseEntity.ok(newUser);
         } catch (IllegalArgumentException e) {
@@ -150,18 +170,18 @@ public class UserController {
         }
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody UserEntity user) {
+    @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> login(@RequestBody Map<String, String> loginData) {
         try {
             // Validate login data
-            if (user.getUserEmail() == null || user.getUserEmail().trim().isEmpty()) {
+            if (loginData == null || !loginData.containsKey("userEmail") || loginData.get("userEmail").trim().isEmpty()) {
                 throw new IllegalArgumentException("Email is required");
             }
-            if (user.getUserPassword() == null || user.getUserPassword().trim().isEmpty()) {
+            if (!loginData.containsKey("userPassword") || loginData.get("userPassword").trim().isEmpty()) {
                 throw new IllegalArgumentException("Password is required");
             }
 
-            UserEntity loggedInUser = userService.loginUser(user.getUserEmail(), user.getUserPassword());
+            UserEntity loggedInUser = userService.loginUser(loginData.get("userEmail"), loginData.get("userPassword"));
             if (loggedInUser != null) {
                 return ResponseEntity.ok(loggedInUser);
             }
