@@ -119,12 +119,38 @@ fun PlayScreen(
     var currentPositionMillis by remember { mutableStateOf(0L) }
     var shuffleEnabled by remember { mutableStateOf(false) }
     var repeatMode by remember { mutableStateOf(RepeatMode.Off) }
+    var isInQueue by remember { mutableStateOf(false) }
+    var isLoadingQueue by remember { mutableStateOf(true) }
 
-    // Update current position periodically while playing
-    LaunchedEffect(isPlaying, isPlayerReady) {
-        while (isPlaying && isPlayerReady) {
-            currentPositionMillis = exoPlayer.currentPosition
-            delay(1000) // Update every second
+    // Check if song is in queue
+    LaunchedEffect(key1 = songId, key2 = userId) {
+        if (userId != -1L && songId != -1) {
+            isLoadingQueue = true
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val checkUrl = "${Constants.BASE_URL}/api/playlists/user/$userId/music/$songId/check"
+                    val request = Request.Builder().url(checkUrl).get().build()
+                    val response = client.newCall(request).execute()
+                    Log.d("PlayScreen", "isInQueue check response code: ${response.code}")
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        val inQueue = responseBody?.toBooleanStrictOrNull() ?: false
+                        Log.d("PlayScreen", "isInQueue check result: $inQueue")
+                        withContext(Dispatchers.Main) { isInQueue = inQueue }
+                    } else {
+                        Log.w("PlayScreen", "Failed to check queue status (assuming false): ${response.code}")
+                        withContext(Dispatchers.Main) { isInQueue = false }
+                    }
+                } catch (e: Exception) {
+                    Log.e("PlayScreen", "Error checking queue status", e)
+                    withContext(Dispatchers.Main) { isInQueue = false }
+                } finally {
+                    withContext(Dispatchers.Main) { isLoadingQueue = false }
+                }
+            }
+        } else {
+            Log.w("PlayScreen", "Skipping queue check due to invalid IDs (User: $userId, Song: $songId)")
+            isLoadingQueue = false
         }
     }
 
@@ -168,6 +194,14 @@ fun PlayScreen(
             }
         } else {
              fetchError = "Invalid Song ID"
+        }
+    }
+
+    // Update current position periodically while playing
+    LaunchedEffect(isPlaying, isPlayerReady) {
+        while (isPlaying && isPlayerReady) {
+            currentPositionMillis = exoPlayer.currentPosition
+            delay(1000) // Update every second
         }
     }
 
@@ -292,18 +326,90 @@ fun PlayScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Top Bar (No changes)
+        // Top Bar with padding
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 32.dp, bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = onBack) {
                 Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
             }
-            Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = { /* TODO: Implement Share */ }) {
-                Icon(Icons.Default.Share, "Share", tint = Color.White)
+            
+            // Add to Queue Button
+            IconButton(
+                onClick = {
+                    if (!isInQueue) {
+                        // Add to queue
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val addUrl = "${Constants.BASE_URL}/api/playlists/postPlaylist/user/$userId/music/$songId"
+                                val request = Request.Builder()
+                                    .url(addUrl)
+                                    .post(okhttp3.RequestBody.create(null, ByteArray(0)))
+                                    .build()
+                                
+                                val response = client.newCall(request).execute()
+                                
+                                if (response.isSuccessful) {
+                                    withContext(Dispatchers.Main) {
+                                        isInQueue = true
+                                        Toast.makeText(context, "Added to queue", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    Log.e("PlayScreen", "Failed to add to queue: ${response.code}")
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Failed to add to queue", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.e("PlayScreen", "Error adding to queue", e)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Error adding to queue", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    } else {
+                        // Remove from queue
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val removeUrl = "${Constants.BASE_URL}/api/playlists/deletePlaylist/user/$userId/music/$songId"
+                                val request = Request.Builder()
+                                    .url(removeUrl)
+                                    .delete()
+                                    .build()
+                                
+                                val response = client.newCall(request).execute()
+                                
+                                if (response.isSuccessful) {
+                                    withContext(Dispatchers.Main) {
+                                        isInQueue = false
+                                        Toast.makeText(context, "Removed from queue", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    Log.e("PlayScreen", "Failed to remove from queue: ${response.code}")
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Failed to remove from queue", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.e("PlayScreen", "Error removing from queue", e)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Error removing from queue", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                },
+                enabled = !isLoadingQueue && songId != -1
+            ) {
+                Icon(
+                    imageVector = if (isInQueue) Icons.Default.QueueMusic else Icons.Default.QueueMusic,
+                    contentDescription = if (isInQueue) "Remove from Queue" else "Add to Queue",
+                    tint = if (isLoadingQueue) Color.Gray else if (isInQueue) Color(0xFFE91E63) else Color.White
+                )
             }
         }
 
@@ -485,11 +591,8 @@ fun PlayScreen(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceAround
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            IconButton(onClick = { /* TODO: Shuffle */ }) {
-                Icon(Icons.Default.Shuffle, "Shuffle", tint = if (shuffleEnabled) Color(0xFFE91E63) else Color.White)
-            }
             IconButton(onClick = { /* TODO: Previous */ }) {
                 Icon(Icons.Default.SkipPrevious, "Previous", tint = Color.White, modifier = Modifier.size(40.dp))
             }
@@ -524,23 +627,6 @@ fun PlayScreen(
             }
             IconButton(onClick = { /* TODO: Next */ }) {
                 Icon(Icons.Default.SkipNext, "Next", tint = Color.White, modifier = Modifier.size(40.dp))
-            }
-            IconButton(onClick = {
-                repeatMode = when (repeatMode) {
-                    RepeatMode.Off -> RepeatMode.All
-                    RepeatMode.All -> RepeatMode.One
-                    RepeatMode.One -> RepeatMode.Off
-                }
-            }) {
-                Icon(
-                    imageVector = when (repeatMode) {
-                        RepeatMode.Off -> Icons.Default.Repeat
-                        RepeatMode.All -> Icons.Default.Repeat
-                        RepeatMode.One -> Icons.Default.RepeatOne
-                    },
-                    contentDescription = "Repeat",
-                    tint = if (repeatMode != RepeatMode.Off) Color(0xFFE91E63) else Color.White // Pink accent when active
-                )
             }
         }
         Spacer(modifier = Modifier.height(24.dp))

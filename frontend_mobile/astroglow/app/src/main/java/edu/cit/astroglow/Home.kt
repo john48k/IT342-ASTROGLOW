@@ -12,6 +12,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Face
+import androidx.compose.material.icons.outlined.Info
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,12 +24,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Fingerprint
-import androidx.compose.material.icons.outlined.Face
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -46,7 +48,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.Alignment
-import edu.cit.astroglow.components.BottomNavBar
 import edu.cit.astroglow.interFontFamily
 import edu.cit.astroglow.interLightFontFamily
 import androidx.compose.foundation.verticalScroll
@@ -98,7 +99,98 @@ import edu.cit.astroglow.components.SongGrid
 import edu.cit.astroglow.components.RecommendationsSection
 import edu.cit.astroglow.components.FavoritesSection
 import edu.cit.astroglow.components.FavoritesTab
-import edu.cit.astroglow.components.PlaylistTab
+import edu.cit.astroglow.components.PlayerTab
+
+/**
+ * Shared bottom navigation bar used across the app
+ */
+@Composable
+fun BottomNavBar(selectedTab: Int, onTabSelected: (Int) -> Unit, showUploadTab: Boolean = false) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(60.dp),
+        color = Color.Black
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // First tab is Home
+            NavBarItem(
+                icon = Icons.Filled.Home,
+                label = "Home",
+                isSelected = selectedTab == 0,
+                onClick = { onTabSelected(0) }
+            )
+            
+            // Second tab is Favorites
+            NavBarItem(
+                icon = Icons.Outlined.Favorite,
+                label = "Favorites",
+                isSelected = selectedTab == 1,
+                onClick = { onTabSelected(1) }
+            )
+            
+            // Third tab is Player
+            NavBarItem(
+                icon = Icons.Outlined.List,
+                label = "Player",
+                isSelected = selectedTab == 2,
+                onClick = { onTabSelected(2) }
+            )
+            
+            // Fourth tab is Settings
+            NavBarItem(
+                icon = Icons.Outlined.Settings,
+                label = "Settings",
+                isSelected = selectedTab == 3,
+                onClick = { onTabSelected(3) }
+            )
+
+            // Fifth tab is Upload (only shown if showUploadTab is true)
+            if (showUploadTab) {
+                NavBarItem(
+                    icon = Icons.Filled.Upload,
+                    label = "Upload",
+                    isSelected = selectedTab == 4,
+                    onClick = { onTabSelected(4) }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Individual navigation item used in the bottom navigation bar
+ */
+@Composable
+fun NavBarItem(icon: ImageVector, label: String, isSelected: Boolean, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .padding(4.dp)
+            .fillMaxHeight()
+            .width(80.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = if (isSelected) Color(0xFF0050D0) else Color.White,
+            modifier = Modifier.size(24.dp)
+        )
+        Text(
+            text = label,
+            color = if (isSelected) Color(0xFF0050D0) else Color.White,
+            fontFamily = interLightFontFamily,
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
 
 class HomeActivity : FragmentActivity() {
     private val client = OkHttpClient.Builder()
@@ -919,21 +1011,23 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null, onProfileImag
     ) { paddingValues ->
         // The main content based on selected tab or special screens
         Box(
-            modifier = if (isDarkMode) {
-                Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(Color.Black)
-            } else {
-                Modifier
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(firstColor, secondColor)
-                    )
+                .padding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding()
                 )
-            }
+                .then(
+                    if (isDarkMode) {
+                        Modifier.background(Color.Black)
+                    } else {
+                        Modifier.background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(firstColor, secondColor)
+                            )
+                        )
+                    }
+                )
         ) {
             when {
                 showProfileTab -> ProfileTab(
@@ -950,7 +1044,7 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null, onProfileImag
                     when (selectedTab) {
                         0 -> HomeTabWithSearch(currentUserName)
                         1 -> FavoritesTab()
-                        2 -> PlaylistTab()
+                        2 -> PlayerTab()
                         3 -> SettingsTab(
                             isDarkMode = isDarkMode,
                             onDarkModeChange = { newDarkMode ->
@@ -1942,7 +2036,7 @@ fun FavoritesTab() {
 }
 
 @Composable
-fun PlaylistTab() {
+fun PlayerTab() {
     Column(
         modifier = Modifier
             .fillMaxSize()
