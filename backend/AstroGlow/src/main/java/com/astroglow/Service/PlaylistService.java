@@ -2,6 +2,7 @@ package com.astroglow.Service;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,129 +53,208 @@ public class PlaylistService {
 
     // Get playlists containing a specific music
     public List<PlaylistEntity> getPlaylistsByMusicId(int musicId) {
-        MusicEntity music = musicRepo.findById(musicId)
-                .orElseThrow(() -> new EntityNotFoundException("Music with ID " + musicId + " not found"));
-        return playlistRepo.findByMusic(music);
+        // Check if the music exists first
+        if (!musicRepo.existsById(musicId)) {
+            throw new EntityNotFoundException("Music with ID " + musicId + " not found");
+        }
+        return playlistRepo.findByMusicId(musicId);
     }
 
-    // Add a music to a user's playlist
+    // Create a new playlist
     @Transactional
-    public PlaylistEntity addToPlaylist(int userId, int musicId) {
+    public PlaylistEntity createPlaylist(int userId, String name) {
         // Check if the user exists
         UserEntity user = userRepo.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User with ID " + userId + " not found"));
 
-        // Check if the music exists
-        MusicEntity music = musicRepo.findById(musicId)
-                .orElseThrow(() -> new EntityNotFoundException("Music with ID " + musicId + " not found"));
-
-        // Check if the music is already in the user's playlist
-        if (playlistRepo.existsByUserAndMusic(user, music)) {
-            throw new IllegalStateException("This music is already in the user's playlist");
-        }
-
-        // Create a new playlist entry
+        // Create a new playlist
         PlaylistEntity playlist = new PlaylistEntity();
         playlist.setUser(user);
-        playlist.setMusic(music);
-
+        playlist.setName(name != null && !name.trim().isEmpty() ? name.trim() : "New Playlist");
+        playlist.setMusic(new ArrayList<>());
+        
         return playlistRepo.save(playlist);
     }
 
-    // Add a playlist entry (using entity)
+    // Add a playlist entry (legacy method kept for backward compatibility)
     @Transactional
     public PlaylistEntity addPlaylistEntry(PlaylistEntity playlist) {
         // Check if the user exists
         UserEntity user = userRepo.findById(playlist.getUser().getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("User with ID " + playlist.getUser().getUserId() + " not found"));
 
+        // Create a new playlist if one doesn't exist
+        PlaylistEntity newPlaylist;
+        if (playlist.getPlaylistId() > 0) {
+            // Use existing playlist
+            newPlaylist = playlistRepo.findById(playlist.getPlaylistId())
+                    .orElseThrow(() -> new EntityNotFoundException("Playlist with ID " + playlist.getPlaylistId() + " not found"));
+        } else {
+            // Create a new playlist
+            newPlaylist = new PlaylistEntity();
+            newPlaylist.setUser(user);
+            String name = playlist.getName() != null ? playlist.getName() : "New Playlist";
+            newPlaylist.setName(name);
+            newPlaylist = playlistRepo.save(newPlaylist);
+        }
+
+        return newPlaylist;
+    }
+
+    // Add a music to a playlist
+    @Transactional
+    public PlaylistEntity addToPlaylist(int playlistId, int musicId) {
+        // Check if the playlist exists
+        PlaylistEntity playlist = playlistRepo.findById(playlistId)
+                .orElseThrow(() -> new EntityNotFoundException("Playlist with ID " + playlistId + " not found"));
+
         // Check if the music exists
-        MusicEntity music = musicRepo.findById(playlist.getMusic().getMusicId())
-                .orElseThrow(() -> new EntityNotFoundException("Music with ID " + playlist.getMusic().getMusicId() + " not found"));
+        MusicEntity music = musicRepo.findById(musicId)
+                .orElseThrow(() -> new EntityNotFoundException("Music with ID " + musicId + " not found"));
 
-        // Check if the music is already in the user's playlist
-        if (playlistRepo.existsByUserAndMusic(user, music)) {
-            throw new IllegalStateException("This music is already in the user's playlist");
+        // Check if the music is already in the playlist
+        if (playlist.getMusic().stream().anyMatch(m -> m.getMusicId() == musicId)) {
+            throw new IllegalStateException("This music is already in the playlist");
         }
 
-        // Set the proper entities (to ensure we have the complete entity, not just ID)
-        playlist.setUser(user);
-        playlist.setMusic(music);
+        // Add the music to the playlist
+        playlist.addMusic(music);
+        return playlistRepo.save(playlist);
+    }
+
+    // Add a music to a user's playlist (convenience method)
+    @Transactional
+    public PlaylistEntity addToPlaylist(int userId, int musicId, int playlistId) {
+        // Check if the user exists
+        UserEntity user = userRepo.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User with ID " + userId + " not found"));
+
+        // Check if the playlist exists and belongs to the user
+        PlaylistEntity playlist = playlistRepo.findById(playlistId)
+                .orElseThrow(() -> new EntityNotFoundException("Playlist with ID " + playlistId + " not found"));
+
+        if (playlist.getUser().getUserId() != userId) {
+            throw new IllegalStateException("This playlist doesn't belong to the specified user");
+        }
+
+        // Check if the music exists
+        MusicEntity music = musicRepo.findById(musicId)
+                .orElseThrow(() -> new EntityNotFoundException("Music with ID " + musicId + " not found"));
+
+        // Check if the music is already in the playlist
+        if (playlist.getMusic().stream().anyMatch(m -> m.getMusicId() == musicId)) {
+            throw new IllegalStateException("This music is already in the playlist");
+        }
+
+        // Add the music to the playlist
+        playlist.addMusic(music);
+        return playlistRepo.save(playlist);
+    }
+
+    // Remove a music from a playlist
+    @Transactional
+    public PlaylistEntity removeFromPlaylist(int playlistId, int musicId) {
+        // Check if the playlist exists
+        PlaylistEntity playlist = playlistRepo.findById(playlistId)
+                .orElseThrow(() -> new EntityNotFoundException("Playlist with ID " + playlistId + " not found"));
+
+        // Check if the music exists
+        MusicEntity music = musicRepo.findById(musicId)
+                .orElseThrow(() -> new EntityNotFoundException("Music with ID " + musicId + " not found"));
+
+        // Check if the music is in the playlist
+        if (playlist.getMusic().stream().noneMatch(m -> m.getMusicId() == musicId)) {
+            throw new IllegalStateException("This music is not in the playlist");
+        }
+
+        // Remove the music from the playlist
+        playlist.removeMusic(music);
+        return playlistRepo.save(playlist);
+    }
+
+    // Update a playlist (name)
+    @Transactional
+    public PlaylistEntity updatePlaylist(int playlistId, String newName) {
+        PlaylistEntity playlist = playlistRepo.findById(playlistId)
+                .orElseThrow(() -> new EntityNotFoundException("Playlist with ID " + playlistId + " not found"));
+
+        // Update the name if provided
+        if (newName != null && !newName.trim().isEmpty()) {
+            playlist.setName(newName.trim());
+        }
 
         return playlistRepo.save(playlist);
     }
 
-    // Update a playlist entry
+    // Delete a playlist
     @Transactional
-    public PlaylistEntity updatePlaylistEntry(int playlistId, PlaylistEntity newPlaylistDetails) {
-        PlaylistEntity playlist;
-
-        try {
-            playlist = playlistRepo.findById(playlistId).get();
-
-            // Check if the user exists if provided
-            if (newPlaylistDetails.getUser() != null) {
-                UserEntity user = userRepo.findById(newPlaylistDetails.getUser().getUserId())
-                        .orElseThrow(() -> new EntityNotFoundException("User with ID " + newPlaylistDetails.getUser().getUserId() + " not found"));
-                playlist.setUser(user);
-            }
-
-            // Check if the music exists if provided
-            if (newPlaylistDetails.getMusic() != null) {
-                MusicEntity music = musicRepo.findById(newPlaylistDetails.getMusic().getMusicId())
-                        .orElseThrow(() -> new EntityNotFoundException("Music with ID " + newPlaylistDetails.getMusic().getMusicId() + " not found"));
-                playlist.setMusic(music);
-            }
-
-        } catch (NoSuchElementException nex) {
-            throw new EntityNotFoundException("Playlist entry with ID " + playlistId + " not found");
-        }
-
-        return playlistRepo.save(playlist);
-    }
-
-    // Delete a playlist entry
-    @Transactional
-    public String deletePlaylistEntry(int playlistId) {
+    public String deletePlaylist(int playlistId) {
         if (playlistRepo.existsById(playlistId)) {
             playlistRepo.deleteById(playlistId);
-            return "Playlist entry successfully removed";
+            return "Playlist successfully deleted";
         } else {
-            return "Playlist entry with ID " + playlistId + " not found";
+            return "Playlist with ID " + playlistId + " not found";
         }
     }
 
-    // Remove a music from a user's playlist
-    @Transactional
-    public String removeFromPlaylist(int userId, int musicId) {
-        // Check if the user exists
-        UserEntity user = userRepo.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User with ID " + userId + " not found"));
-
-        // Check if the music exists
-        MusicEntity music = musicRepo.findById(musicId)
-                .orElseThrow(() -> new EntityNotFoundException("Music with ID " + musicId + " not found"));
-
-        // Find the playlist entry
-        PlaylistEntity playlist = playlistRepo.findByUserAndMusic(user, music)
-                .orElseThrow(() -> new EntityNotFoundException("This music is not in the user's playlist"));
-
-        // Delete the playlist entry
-        playlistRepo.deleteById(playlist.getPlaylistId());
-
-        return "Music successfully removed from playlist";
+    // Check if a music is in a playlist
+    public boolean isInPlaylist(int playlistId, int musicId) {
+        try {
+            PlaylistEntity playlist = playlistRepo.findById(playlistId)
+                    .orElseThrow(() -> new EntityNotFoundException("Playlist with ID " + playlistId + " not found"));
+            
+            return playlist.getMusic().stream().anyMatch(m -> m.getMusicId() == musicId);
+        } catch (EntityNotFoundException e) {
+            return false;
+        }
     }
 
-    // Check if a music is in a user's playlist
-    public boolean isInPlaylist(int userId, int musicId) {
-        // Check if the user exists
-        UserEntity user = userRepo.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User with ID " + userId + " not found"));
+    // Find music by title/filename (used for Firebase music files)
+    public List<MusicEntity> findMusicByTitle(String title) {
+        return musicRepo.findByTitleContainingIgnoreCase(title);
+    }
+    
+    // Find music by audio URL (used for Firebase music files)
+    public List<MusicEntity> findMusicByAudioUrl(String url) {
+        // Ideally, this would query the database for music with the given URL
+        // Since there's no repository method for this yet, we'll query all music and filter
+        List<MusicEntity> allMusic = musicRepo.findAll();
+        return allMusic.stream()
+            .filter(music -> music.getAudioUrl() != null && 
+                   music.getAudioUrl().contains(url))
+            .collect(java.util.stream.Collectors.toList());
+    }
 
-        // Check if the music exists
+    public List<PlaylistEntity> getUserPlaylists(int userId) {
+        return playlistRepo.findByUserUserId(userId);
+    }
+
+    public void addSongToPlaylist(int playlistId, int musicId) {
+        PlaylistEntity playlist = playlistRepo.findById(playlistId)
+            .orElseThrow(() -> new RuntimeException("Playlist not found"));
+        
         MusicEntity music = musicRepo.findById(musicId)
-                .orElseThrow(() -> new EntityNotFoundException("Music with ID " + musicId + " not found"));
+            .orElseThrow(() -> new RuntimeException("Music not found"));
+        
+        playlist.getMusic().add(music);
+        playlistRepo.save(playlist);
+    }
 
-        return playlistRepo.existsByUserAndMusic(user, music);
+    public void removeSongFromPlaylist(int playlistId, int musicId) {
+        PlaylistEntity playlist = playlistRepo.findById(playlistId)
+            .orElseThrow(() -> new RuntimeException("Playlist not found"));
+        
+        MusicEntity music = musicRepo.findById(musicId)
+            .orElseThrow(() -> new RuntimeException("Music not found"));
+        
+        playlist.getMusic().remove(music);
+        playlistRepo.save(playlist);
+    }
+
+    public void deletePlaylistById(int playlistId) {
+        PlaylistEntity playlist = playlistRepo.findById(playlistId)
+            .orElseThrow(() -> new RuntimeException("Playlist not found"));
+        
+        playlistRepo.delete(playlist);
     }
 }
