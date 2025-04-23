@@ -1,6 +1,9 @@
 package edu.cit.astroglow
 
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -27,9 +30,25 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import edu.cit.astroglow.ui.theme.AstroglowTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 class PlayActivity : ComponentActivity() {
+
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -39,12 +58,26 @@ class PlayActivity : ComponentActivity() {
         val songArtist = intent.getStringExtra("SONG_ARTIST") ?: "Unknown Artist"
         val songImageUrl = intent.getStringExtra("SONG_IMAGE_URL")
         
+        // Get userId from SharedPreferences
+        val sharedPreferences = getSharedPreferences("auth", Context.MODE_PRIVATE)
+        val userId = sharedPreferences.getLong("user_id", -1)
+
+        if (songId == -1 || userId == -1L) {
+            // Handle error: Invalid song or user ID
+            Toast.makeText(this, "Error: Invalid song or user.", Toast.LENGTH_SHORT).show()
+            finish()
+            return
+        }
+        
         setContent {
             AstroglowTheme {
                 PlayScreen(
+                    userId = userId,
+                    songId = songId,
                     songTitle = songTitle,
                     songArtist = songArtist,
                     songImageUrl = songImageUrl,
+                    client = client, // Pass the OkHttpClient
                     onBack = { finish() } // Close activity on back press
                 )
             }
@@ -54,17 +87,65 @@ class PlayActivity : ComponentActivity() {
 
 @Composable
 fun PlayScreen(
+    userId: Long,
+    songId: Int,
     songTitle: String,
     songArtist: String,
     songImageUrl: String?,
+    client: OkHttpClient,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     var isPlaying by remember { mutableStateOf(false) }
     var isFavorite by remember { mutableStateOf(false) }
-    var currentPosition by remember { mutableStateOf(0f) } // 0.0f to 1.0f
-    var totalDuration by remember { mutableStateOf(224L) } // Example duration in seconds (3:44)
+    var isLoadingFavorite by remember { mutableStateOf(true) }
+    var currentPosition by remember { mutableStateOf(0f) }
+    var totalDuration by remember { mutableStateOf(224L) }
     var shuffleEnabled by remember { mutableStateOf(false) }
-    var repeatMode by remember { mutableStateOf(RepeatMode.Off) } // Off, One, All
+    var repeatMode by remember { mutableStateOf(RepeatMode.Off) }
+
+    LaunchedEffect(key1 = songId, key2 = userId) {
+        Log.d("PlayScreen", "LaunchedEffect: Checking favorite status for song $songId, user $userId")
+        if (userId != -1L && songId != -1) {
+            isLoadingFavorite = true
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val checkUrl = "${Constants.BASE_URL}/api/favorites/user/$userId/music/$songId/check"
+                    val request = Request.Builder().url(checkUrl).get().build()
+                    
+                    val response = client.newCall(request).execute()
+                    Log.d("PlayScreen", "isFavorite check response code: ${response.code}")
+                    
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+                        val isFav = responseBody?.toBooleanStrictOrNull() ?: false
+                        Log.d("PlayScreen", "isFavorite check result: $isFav")
+                        withContext(Dispatchers.Main) {
+                            isFavorite = isFav
+                        }
+                    } else {
+                         Log.w("PlayScreen", "Failed to check favorite status (assuming false): ${response.code}")
+                         withContext(Dispatchers.Main) {
+                            isFavorite = false
+                         }
+                    }
+                } catch (e: Exception) {
+                    Log.e("PlayScreen", "Error checking favorite status", e)
+                     withContext(Dispatchers.Main) {
+                         isFavorite = false
+                        Toast.makeText(context, "Error checking favorite status", Toast.LENGTH_SHORT).show()
+                    }
+                } finally {
+                    withContext(Dispatchers.Main) {
+                        isLoadingFavorite = false
+                    }
+                }
+            }
+        } else {
+             Log.w("PlayScreen", "Skipping favorite check due to invalid IDs (User: $userId, Song: $songId)")
+             isLoadingFavorite = false
+        }
+    }
 
     val formattedCurrentTime = formatTime( (currentPosition * totalDuration).toLong() )
     val formattedTotalTime = formatTime(totalDuration)
@@ -205,11 +286,74 @@ fun PlayScreen(
                     maxLines = 1
                 )
             }
-            IconButton(onClick = { isFavorite = !isFavorite }) {
+            IconButton(onClick = {
+                val targetFavoriteState = !isFavorite
+                isFavorite = targetFavoriteState // Optimistic UI update
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        if (targetFavoriteState) {
+                            // --- Add Favorite (POST) --- 
+                            Log.d("PlayScreen", "Attempting to ADD favorite: User $userId, Song $songId")
+                            val addUrl = "${Constants.BASE_URL}/api/favorites/postFavorites"
+                            val jsonBody = JSONObject().apply {
+                                put("user", JSONObject().put("userId", userId))
+                                put("music", JSONObject().put("musicId", songId))
+                            }.toString()
+                            val requestBody = jsonBody.toRequestBody("application/json".toMediaType())
+                            val request = Request.Builder().url(addUrl).post(requestBody).build()
+                            
+                            val response = client.newCall(request).execute()
+                            Log.d("PlayScreen", "Add favorite response code: ${response.code}")
+
+                            if (response.isSuccessful || response.code == 409) { // Success or Already Exists
+                                Log.i("PlayScreen", "Successfully added favorite (or it already existed)")
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Added to favorites", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Log.e("PlayScreen", "Failed to add favorite: ${response.code} - ${response.body?.string()}")
+                                withContext(Dispatchers.Main) {
+                                    isFavorite = false // Revert
+                                    Toast.makeText(context, "Failed to add favorite", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        } else {
+                             // --- Remove Favorite (DELETE) --- 
+                            Log.d("PlayScreen", "Attempting to REMOVE favorite: User $userId, Song $songId")
+                            // Correct DELETE endpoint from FavoritesController
+                            val deleteUrl = "${Constants.BASE_URL}/api/favorites/user/$userId/music/$songId" 
+                            
+                            val request = Request.Builder().url(deleteUrl).delete().build()
+                            val response = client.newCall(request).execute()
+                            Log.d("PlayScreen", "Remove favorite response code: ${response.code}")
+
+                            if (response.isSuccessful || response.code == 404) { // Success or Not Found
+                                Log.i("PlayScreen", "Successfully removed favorite (or it was already gone)")
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Removed from favorites", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                Log.e("PlayScreen", "Failed to remove favorite: ${response.code} - ${response.body?.string()}")
+                                withContext(Dispatchers.Main) {
+                                    isFavorite = true // Revert
+                                    Toast.makeText(context, "Failed to remove favorite", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                         Log.e("PlayScreen", "Error toggling favorite status", e)
+                        withContext(Dispatchers.Main) {
+                            isFavorite = !targetFavoriteState // Revert
+                            Toast.makeText(context, "Error updating favorite", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }, enabled = !isLoadingFavorite ) {
                 Icon(
                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = "Favorite",
-                    tint = if (isFavorite) Color(0xFFE91E63) else Color.White, // Pink when favorite
+                    tint = if (isLoadingFavorite) Color.Gray else if (isFavorite) Color(0xFFE91E63) else Color.White,
                     modifier = Modifier.size(32.dp)
                 )
             }
