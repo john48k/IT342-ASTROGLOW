@@ -82,8 +82,9 @@ body {
     padding: 2rem;
     border-radius: 10px;
     background-image: linear-gradient(160deg, #000000 0%, #653895 100%);
-    min-height: 100%;
-    margin-bottom: 60px; /* Space for now playing bar */
+    height: 100vh;
+    /* min-height: 100%; */
+    margin-bottom: 0px; /* Space for now playing bar */
     margin-left: 240px; /* Space for fixed sidebar */
     box-sizing: border-box;
   }
@@ -326,9 +327,9 @@ body {
       display: none;
     }
     
-    .mainContent {
+    /* .mainContent {
       padding: 1.5rem;
-    }
+    } */
   }
   
   @media (max-width: 480px) {
@@ -358,9 +359,9 @@ body {
       padding: 0.5rem;
     }
     
-    .mainContent {
-      padding: 1rem;
-    }
+    /* .mainContent {
+      padding: 100rem;
+    } */
     
     .musicGrid {
       grid-template-columns: repeat(2, 1fr);
