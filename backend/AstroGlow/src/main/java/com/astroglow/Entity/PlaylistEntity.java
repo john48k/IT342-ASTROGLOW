@@ -1,9 +1,6 @@
 package com.astroglow.Entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +8,6 @@ import java.util.List;
 @Entity
 @Table(name = "PLAYLIST")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "playlistId")
 public class PlaylistEntity {
 
     @Id
@@ -22,7 +18,7 @@ public class PlaylistEntity {
     @Column(name = "playlist_name", nullable = false)
     private String name;
 
-    @JsonBackReference(value = "user-playlist")
+    @JsonIgnoreProperties("playlists")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "userId", nullable = false)
     private UserEntity user;
@@ -33,7 +29,7 @@ public class PlaylistEntity {
         joinColumns = @JoinColumn(name = "playlist_id"),
         inverseJoinColumns = @JoinColumn(name = "music_id")
     )
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "playlists"})
     private List<MusicEntity> music = new ArrayList<>();
 
     public PlaylistEntity() {

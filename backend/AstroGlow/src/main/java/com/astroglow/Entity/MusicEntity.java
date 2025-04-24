@@ -1,8 +1,7 @@
 package com.astroglow.Entity;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -12,6 +11,7 @@ import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "MUSIC")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class MusicEntity {
 
     @Id
@@ -44,18 +44,18 @@ public class MusicEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "userId")
-    @JsonBackReference(value = "user-music")
+    @JsonIgnoreProperties("music")
     private UserEntity owner;
 
-    @JsonManagedReference(value = "music-playlist")
+    @JsonIgnoreProperties("music")
     @OneToMany(mappedBy = "music", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<PlaylistEntity> playlists;
 
-    @JsonManagedReference(value = "music-offline")
+    @JsonIgnoreProperties("music")
     @OneToMany(mappedBy = "music", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<OfflineLibraryEntity> offlineLibraries;
 
-    @JsonManagedReference(value = "music-favorites")
+    @JsonIgnoreProperties("music")
     @OneToMany(mappedBy = "music", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FavoritesEntity> favorites = new ArrayList<>();
 
@@ -205,11 +205,16 @@ public class MusicEntity {
      * @return true if removed, false if not found
      */
     public boolean removeFromFavorites(int userId) {
-        List<FavoritesEntity> userFavorites = favorites.stream()
+        List<FavoritesEntity> toRemove = favorites.stream()
             .filter(fav -> fav.getUser() != null && fav.getUser().getUserId() == userId)
             .collect(Collectors.toList());
-            
-        return favorites.removeAll(userFavorites);
+        
+        if (toRemove.isEmpty()) {
+            return false;
+        }
+        
+        favorites.removeAll(toRemove);
+        return true;
     }
 
     /**

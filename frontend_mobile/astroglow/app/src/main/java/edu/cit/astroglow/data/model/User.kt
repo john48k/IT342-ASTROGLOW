@@ -14,15 +14,15 @@ data class User(
     @SerializedName("profilePicture")
     val profilePicture: String? = null,
     @SerializedName("authentication")
-    val authentication: String? = null,
+    val authentication: AuthenticationEntity? = null,
     @SerializedName("music")
-    val music: List<Any> = emptyList(),
+    val music: List<Any>? = null,
     @SerializedName("playlists")
-    val playlists: List<Any> = emptyList(),
+    val playlists: List<Any>? = null,
     @SerializedName("offlineLibraries")
-    val offlineLibraries: List<Any> = emptyList(),
+    val offlineLibraries: List<Any>? = null,
     @SerializedName("favorites")
-    val favorites: List<Any> = emptyList()
+    val favorites: List<Any>? = null
 )
 
 data class LoginRequest(

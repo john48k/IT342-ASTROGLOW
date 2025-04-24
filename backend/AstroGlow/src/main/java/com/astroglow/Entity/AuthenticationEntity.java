@@ -1,10 +1,11 @@
 package com.astroglow.Entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "AUTHENTICATION")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class AuthenticationEntity {
 
     @Id
@@ -17,7 +18,7 @@ public class AuthenticationEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", referencedColumnName = "userId", nullable = false)
-    @JsonBackReference(value = "user-authentication")
+    @JsonIgnoreProperties("authentication")
     private UserEntity user;
 
     public AuthenticationEntity(int userBiometricId, UserEntity user) {

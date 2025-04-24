@@ -3,6 +3,7 @@ package edu.cit.astroglow
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,6 +39,7 @@ import edu.cit.astroglow.interFontFamily
 import edu.cit.astroglow.interLightFontFamily
 import edu.cit.astroglow.data.api.RetrofitClient
 import edu.cit.astroglow.data.model.User
+import edu.cit.astroglow.data.model.UserEntity
 import edu.cit.astroglow.data.repository.AstroGlowRepository
 import kotlinx.coroutines.launch
 import retrofit2.Response
@@ -320,12 +322,38 @@ fun SignUpScreen(
                                     userPassword = password
                                 )
                                 
+                                Log.d("SignUpActivity", "Attempting to register user: ${user.userName}, ${user.userEmail}")
                                 val response = repository.register(user)
+                                Log.d("SignUpActivity", "Registration response: ${response.code()}, ${response.message()}")
+                                
                                 if (response.isSuccessful) {
-                                    Toast.makeText(context, "Account created successfully", Toast.LENGTH_SHORT).show()
-                                    onNavigateToHome()
+                                    // Store user information in SharedPreferences
+                                    val userData = response.body()
+                                    Log.d("SignUpActivity", "Registration successful, user data: $userData")
+                                    
+                                    if (userData != null) {
+                                        context.getSharedPreferences("auth", android.content.Context.MODE_PRIVATE)
+                                            .edit()
+                                            .putLong("user_id", userData.id ?: -1)
+                                            .putString("user_email", userData.userEmail)
+                                            .putString("user_name", userData.userName)
+                                            .putString("user_password", password)
+                                            .putBoolean("is_logged_in", true)
+                                            .apply()
+                                        
+                                        Log.d("SignUpActivity", "Stored user data - ID: ${userData.id}, Email: ${userData.userEmail}, Name: ${userData.userName}")
+                                        
+                                        // Show success toast and navigate to home
+                                        Toast.makeText(context, "Account created successfully", Toast.LENGTH_SHORT).show()
+                                        onNavigateToHome()
+                                    } else {
+                                        Log.e("SignUpActivity", "Registration response body is null")
+                                        Toast.makeText(context, "Registration failed: No user data returned", Toast.LENGTH_LONG).show()
+                                    }
                                 } else {
                                     val errorBody = response.errorBody()?.string()
+                                    Log.e("SignUpActivity", "Registration failed: $errorBody")
+                                    
                                     val errorMessage = try {
                                         // Try to parse JSON error message
                                         val messageStart = errorBody?.indexOf("\"message\":\"")
@@ -341,6 +369,7 @@ fun SignUpScreen(
                                     Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                                 }
                             } catch (e: Exception) {
+                                Log.e("SignUpActivity", "Error during registration", e)
                                 Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                             } finally {
                                 isLoading = false

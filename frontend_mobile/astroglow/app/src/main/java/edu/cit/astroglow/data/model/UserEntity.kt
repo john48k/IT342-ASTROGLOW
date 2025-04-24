@@ -14,16 +14,18 @@ data class UserEntity(
     @SerializedName("authentication")
     val authentication: AuthenticationEntity? = null,
     @SerializedName("playlists")
-    val playlists: List<Any> = emptyList(),
+    val playlists: List<Any>? = null,
     @SerializedName("offlineLibraries")
-    val offlineLibraries: List<Any> = emptyList(),
+    val offlineLibraries: List<Any>? = null,
     @SerializedName("favorites")
-    val favorites: List<Any> = emptyList()
+    val favorites: List<Any>? = null
 )
 
 data class AuthenticationEntity(
     @SerializedName("id")
     var id: Int = 0,
     @SerializedName("type")
-    var type: String = ""
+    var type: String = "",
+    @SerializedName("biometricEnabled")
+    var biometricEnabled: Boolean = false
 ) 

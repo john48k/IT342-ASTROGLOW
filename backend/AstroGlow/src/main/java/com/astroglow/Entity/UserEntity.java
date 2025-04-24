@@ -1,6 +1,7 @@
 package com.astroglow.Entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import java.util.List;
 
@@ -9,6 +10,7 @@ import java.util.List;
         @UniqueConstraint(columnNames = "user_name", name = "uk_user_name"),
         @UniqueConstraint(columnNames = "user_email", name = "uk_user_email")
 })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class UserEntity {
 
     @Id
@@ -31,23 +33,23 @@ public class UserEntity {
     @Column(name = "profile_picture", columnDefinition = "LONGTEXT")
     private String profilePicture;
 
-    @JsonManagedReference(value = "user-authentication")
+    @JsonIgnoreProperties("user")
     @OneToOne(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private AuthenticationEntity authentication;
 
-    @JsonManagedReference(value = "user-music")
+    @JsonIgnoreProperties("owner")
     @OneToMany(mappedBy = "owner", cascade = CascadeType.PERSIST)
     private List<MusicEntity> music;
 
-    @JsonManagedReference(value = "user-playlist")
+    @JsonIgnoreProperties("user")
     @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<PlaylistEntity> playlists;
 
-    @JsonManagedReference(value = "user-offline")
+    @JsonIgnoreProperties("user")
     @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<OfflineLibraryEntity> offlineLibraries;
 
-    @JsonManagedReference(value = "user-favorites")
+    @JsonIgnoreProperties("user")
     @OneToMany(mappedBy = "user", cascade = CascadeType.PERSIST, orphanRemoval = true)
     private List<FavoritesEntity> favorites;
 
@@ -123,6 +125,9 @@ public class UserEntity {
 
     public void setAuthentication(AuthenticationEntity authentication) {
         this.authentication = authentication;
+        if (authentication != null) {
+            authentication.setUser(this);
+        }
     }
 
     public List<MusicEntity> getMusic() {
