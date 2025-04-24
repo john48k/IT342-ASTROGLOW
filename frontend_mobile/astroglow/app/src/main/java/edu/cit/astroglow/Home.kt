@@ -2178,12 +2178,47 @@ fun SettingsTab(
                     val response = client.newCall(request).execute()
                     if (response.isSuccessful) {
                         val responseBody = response.body?.string()
-                        val jsonObject = JSONObject(responseBody)
-                        withContext(Dispatchers.Main) {
-                            hasBiometrics = jsonObject.getBoolean("hasBiometrics")
-                            isLoading = false
+                        Log.d("SettingsTab", "Biometrics check response: $responseBody")
+                        
+                        try {
+                            val jsonObject = JSONObject(responseBody)
+                            val success = jsonObject.optBoolean("success", false)
+                            
+                            if (success) {
+                                withContext(Dispatchers.Main) {
+                                    hasBiometrics = jsonObject.optBoolean("hasBiometrics", false)
+                                    // Update SharedPreferences to match server state
+                                    sharedPreferences.edit()
+                                        .putBoolean("biometrics_enabled", hasBiometrics)
+                                        .apply()
+                                    isLoading = false
+                                    Log.d("SettingsTab", "Biometrics status updated: $hasBiometrics")
+                                }
+                            } else {
+                                val message = jsonObject.optString("message", "Unknown error")
+                                Log.e("SettingsTab", "Error checking biometrics: $message")
+                                withContext(Dispatchers.Main) {
+                                    isLoading = false
+                                    Toast.makeText(
+                                        context,
+                                        "Failed to check biometrics status: $message",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("SettingsTab", "Error parsing biometrics response", e)
+                            withContext(Dispatchers.Main) {
+                                isLoading = false
+                                Toast.makeText(
+                                    context,
+                                    "Error parsing biometrics response: ${e.message}",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                         }
                     } else {
+                        Log.e("SettingsTab", "Failed to check biometrics status: ${response.code}")
                         withContext(Dispatchers.Main) {
                             isLoading = false
                             Toast.makeText(
@@ -2444,6 +2479,33 @@ fun SettingsTab(
                                     .writeTimeout(30, TimeUnit.SECONDS)
                                     .build()
                                 
+                                if (hasBiometrics) {
+                                    // If disabling biometrics, first delete the authentication
+                                    Log.d("Biometrics", "Deleting authentication for user ID: $userId")
+                                    val deleteRequest = Request.Builder()
+                                        .url("${Constants.BASE_URL}/api/authentication/deleteAuthentication/$userId")
+                                        .delete()
+                                        .build()
+                                    
+                                    val deleteResponse = client.newCall(deleteRequest).execute()
+                                    val deleteResponseBody = deleteResponse.body?.string()
+                                    Log.d("Biometrics", "Delete response code: ${deleteResponse.code}, Body: $deleteResponseBody")
+                                    
+                                    if (!deleteResponse.isSuccessful) {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                context,
+                                                "Failed to disable biometrics: ${deleteResponse.message}",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            isTogglingBiometrics = false
+                                            showBiometricDialog = false
+                                        }
+                                        return@launch
+                                    }
+                                }
+                                
+                                // Then toggle the biometrics status
                                 val requestBody = JSONObject().apply {
                                     put("enable", !hasBiometrics)
                                 }.toString()
@@ -2457,16 +2519,21 @@ fun SettingsTab(
                                 
                                 val response = client.newCall(request).execute()
                                 val responseBody = response.body?.string()
-                                Log.d("Biometrics", "Response code: ${response.code}, Body: $responseBody")
+                                Log.d("Biometrics", "Toggle response code: ${response.code}, Body: $responseBody")
                                 
                                 withContext(Dispatchers.Main) {
                                     if (response.isSuccessful) {
                                         try {
-                                            val jsonResponse = JSONObject(responseBody ?: "{}")
+                                            val jsonResponse = JSONObject(responseBody)
                                             val success = jsonResponse.optBoolean("success", true)
                                             
                                             if (success) {
+                                                // Update both the UI state and SharedPreferences
                                                 hasBiometrics = !hasBiometrics
+                                                sharedPreferences.edit()
+                                                    .putBoolean("biometrics_enabled", hasBiometrics)
+                                                    .apply()
+                                                
                                                 Toast.makeText(
                                                     context,
                                                     if (hasBiometrics) "Biometrics enabled successfully" else "Biometrics disabled successfully",
@@ -2540,7 +2607,12 @@ fun SettingsTab(
                                             }
                                         } catch (e: Exception) {
                                             Log.e("Biometrics", "Error parsing response", e)
+                                            // Even if parsing fails, if the response was successful, we assume the toggle worked
                                             hasBiometrics = !hasBiometrics
+                                            sharedPreferences.edit()
+                                                .putBoolean("biometrics_enabled", hasBiometrics)
+                                                .apply()
+                                            
                                             Toast.makeText(
                                                 context,
                                                 if (hasBiometrics) "Biometrics enabled successfully" else "Biometrics disabled successfully",

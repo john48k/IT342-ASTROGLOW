@@ -89,12 +89,21 @@ public class AuthenticationService {
                 // Create new authentication entry
                 AuthenticationEntity newAuth = new AuthenticationEntity();
                 newAuth.setUser(user);
+                newAuth.setBiometricEnabled(true);
                 return authenticationRepository.save(newAuth);
+            } else {
+                // Update existing authentication
+                existingAuth.setBiometricEnabled(true);
+                return authenticationRepository.save(existingAuth);
             }
-            return existingAuth; // Already enabled
         } else {
             // Disable biometrics
             if (existingAuth != null) {
+                // First set biometricEnabled to false
+                existingAuth.setBiometricEnabled(false);
+                // Save the changes
+                authenticationRepository.save(existingAuth);
+                // Then delete the authentication
                 authenticationRepository.delete(existingAuth);
                 return existingAuth;
             }
@@ -121,7 +130,8 @@ public class AuthenticationService {
         
         for (AuthenticationEntity auth : allAuths) {
             if (auth.getUser() != null && auth.getUser().getUserId() == userId.intValue()) {
-                return true;
+                // Check both existence and biometricEnabled status
+                return auth.isBiometricEnabled();
             }
         }
         
