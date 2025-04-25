@@ -278,6 +278,27 @@ public class MusicController {
         return new ResponseEntity<>(musicList, HttpStatus.OK);
     }
 
+    // Search by exact title match
+    @GetMapping("/search/exact/title")
+    public ResponseEntity<List<MusicEntity>> searchByExactTitle(@RequestParam String title) {
+        List<MusicEntity> musicList = musicService.findByExactTitle(title);
+        return new ResponseEntity<>(musicList, HttpStatus.OK);
+    }
+
+    // Search by exact artist match
+    @GetMapping("/search/exact/artist")
+    public ResponseEntity<List<MusicEntity>> searchByExactArtist(@RequestParam String artist) {
+        List<MusicEntity> musicList = musicService.findByExactArtist(artist);
+        return new ResponseEntity<>(musicList, HttpStatus.OK);
+    }
+
+    // Search by exact genre match
+    @GetMapping("/search/exact/genre")
+    public ResponseEntity<List<MusicEntity>> searchByExactGenre(@RequestParam String genre) {
+        List<MusicEntity> musicList = musicService.findByExactGenre(genre);
+        return new ResponseEntity<>(musicList, HttpStatus.OK);
+    }
+
     // Search by duration less than or equal to
     @GetMapping("/search/duration/max")
     public ResponseEntity<List<MusicEntity>> searchByMaxDuration(@RequestParam Integer maxTime) {

@@ -79,6 +79,21 @@ public class MusicService {
         return mrepo.findByGenreContainingIgnoreCase(genre);
     }
 
+    // Find music by exact title match
+    public List<MusicEntity> findByExactTitle(String title) {
+        return mrepo.findByTitle(title);
+    }
+
+    // Find music by exact artist match
+    public List<MusicEntity> findByExactArtist(String artist) {
+        return mrepo.findByArtist(artist);
+    }
+
+    // Find music by exact genre match
+    public List<MusicEntity> findByExactGenre(String genre) {
+        return mrepo.findByGenre(genre);
+    }
+
     // Get a single music by ID
     public MusicEntity getMusicById(int id) {
         return mrepo.findById(id)

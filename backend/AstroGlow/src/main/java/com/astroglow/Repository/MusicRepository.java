@@ -34,4 +34,13 @@ public interface MusicRepository extends JpaRepository<MusicEntity, Integer> {
     
     // Find by owner ID (user ID who uploaded the music)
     List<MusicEntity> findByOwnerUserId(Integer userId);
+
+    // Find by exact title match
+    List<MusicEntity> findByTitle(String title);
+
+    // Find by exact artist match
+    List<MusicEntity> findByArtist(String artist);
+
+    // Find by exact genre match
+    List<MusicEntity> findByGenre(String genre);
 }

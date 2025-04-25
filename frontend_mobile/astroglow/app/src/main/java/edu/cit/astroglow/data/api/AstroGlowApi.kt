@@ -44,6 +44,9 @@ interface AstroGlowApi {
     @GET("/api/user/getUserByEmail/{email}")
     suspend fun getUserByEmail(@Path("email") email: String): Response<UserEntity>
 
+    @GET("api/music/search/exact/title")
+    suspend fun searchByExactTitle(@Query("title") title: String): Response<List<Music>>
+
     @POST("api/music/postMusic")
     suspend fun uploadMusic(@Body music: MusicUploadRequest): Response<Music>
 }

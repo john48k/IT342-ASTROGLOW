@@ -50,7 +50,6 @@ fun UploadTab() {
     var title by remember { mutableStateOf("") }
     var artist by remember { mutableStateOf("") }
     var genre by remember { mutableStateOf("") }
-    var time by remember { mutableStateOf("") }
     var isPlaying by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -278,20 +277,6 @@ fun UploadTab() {
             }
         }
 
-        OutlinedTextField(
-            value = time,
-            onValueChange = { time = it },
-            label = { Text("Duration (seconds)", color = Color.White) },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.White,
-                unfocusedBorderColor = Color.White,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
-            )
-        )
-
         // Audio File Upload Button
         Button(
             onClick = { audioPickerLauncher.launch("audio/*") },
@@ -424,11 +409,41 @@ fun UploadTab() {
             onClick = {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        // Check for exact title match only
+                        val exactTitleMatch = RetrofitClient.api.searchByExactTitle(title)
+                        Log.d("UploadTab", "Checking for existing title: $title")
+                        Log.d("UploadTab", "Response code: ${exactTitleMatch.code()}")
+                        Log.d("UploadTab", "Response body: ${exactTitleMatch.body()}")
+                        
+                        var titleExists = false
+                        withContext(Dispatchers.Main) {
+                            if (exactTitleMatch.isSuccessful) {
+                                val existingSongs = exactTitleMatch.body()
+                                if (existingSongs != null && existingSongs.isNotEmpty()) {
+                                    Log.d("UploadTab", "Found ${existingSongs.size} songs with title: $title")
+                                    Toast.makeText(context, "A song with this title already exists", Toast.LENGTH_LONG).show()
+                                    titleExists = true
+                                } else {
+                                    Log.d("UploadTab", "No existing songs found with title: $title")
+                                }
+                            } else {
+                                Log.e("UploadTab", "Failed to check title existence: ${exactTitleMatch.code()}")
+                                Log.e("UploadTab", "Error body: ${exactTitleMatch.errorBody()?.string()}")
+                                Toast.makeText(context, "Error checking title existence", Toast.LENGTH_SHORT).show()
+                                titleExists = true
+                            }
+                        }
+
+                        if (titleExists) {
+                            return@launch
+                        }
+
+                        // Only proceed with upload if no matching title was found
                         val musicRequest = MusicUploadRequest(
                             title = title,
                             artist = artist,
                             genre = genre,
-                            time = time.toIntOrNull() ?: 0,
+                            time = 0, // Default duration
                             audioUrl = uploadState.audioUrl.takeIf { it.isNotBlank() },
                             imageUrl = uploadState.imageUrl.takeIf { it.isNotBlank() },
                             playlists = emptyList(),
@@ -444,7 +459,6 @@ fun UploadTab() {
                                 title = ""
                                 artist = ""
                                 genre = ""
-                                time = ""
                                 viewModel.onEvent(UploadEvent.ResetUpload)
                                 if (mediaPlayer.isPlaying) {
                                     mediaPlayer.stop()
@@ -464,7 +478,7 @@ fun UploadTab() {
                 .fillMaxWidth()
                 .height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0050D0)),
-            enabled = !uploadState.isUploading && title.isNotBlank() && artist.isNotBlank() && genre.isNotBlank() && time.isNotBlank() && uploadState.audioUrl.isNotBlank() && uploadState.imageUrl.isNotBlank()
+            enabled = !uploadState.isUploading && title.isNotBlank() && artist.isNotBlank() && genre.isNotBlank() && uploadState.audioUrl.isNotBlank() && uploadState.imageUrl.isNotBlank()
         ) {
             if (uploadState.isUploading) {
                 CircularProgressIndicator(color = Color.White)
