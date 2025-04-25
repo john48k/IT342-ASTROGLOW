@@ -28,11 +28,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.rememberAsyncImagePainter
@@ -44,6 +40,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun UploadTab() {
@@ -51,14 +51,17 @@ fun UploadTab() {
     var artist by remember { mutableStateOf("") }
     var genre by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
-    var audioUrl by remember { mutableStateOf("") }
-    var imageUrl by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var showAudioPreview by remember { mutableStateOf(false) }
-    var showImagePreview by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    
+    val viewModel: UploadViewModel = viewModel()
+    val uploadState by viewModel.uploadState.collectAsState()
+    
+    // Set context in ViewModel
+    LaunchedEffect(Unit) {
+        viewModel.setContext(context)
+    }
     
     // Predefined genre options
     val genres = listOf(
@@ -93,9 +96,26 @@ fun UploadTab() {
         }
     }
     
+    // File picker launchers
+    val audioPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.onEvent(UploadEvent.AudioFileSelected(it))
+        }
+    }
+    
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            viewModel.onEvent(UploadEvent.ImageFileSelected(it))
+        }
+    }
+    
     // Function to play or pause audio
     fun togglePlayback() {
-        if (audioUrl.isBlank()) return
+        if (uploadState.audioUrl.isBlank()) return
         
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -111,9 +131,8 @@ fun UploadTab() {
                         }
                         
                         mediaPlayer.reset()
-                        mediaPlayer.setDataSource(audioUrl)
+                        mediaPlayer.setDataSource(uploadState.audioUrl)
                         
-                        // Set up listeners before preparing
                         mediaPlayer.setOnPreparedListener {
                             mediaPlayer.start()
                             isPlaying = true
@@ -123,7 +142,6 @@ fun UploadTab() {
                             isPlaying = false
                         }
                         
-                        // Use a variable to store error message
                         var errorMessage: String? = null
                         
                         mediaPlayer.setOnErrorListener { _, what, extra ->
@@ -133,10 +151,8 @@ fun UploadTab() {
                             true
                         }
                         
-                        // Prepare and start playback
                         mediaPlayer.prepareAsync()
                         
-                        // Check for errors after a short delay
                         kotlinx.coroutines.delay(1000)
                         if (errorMessage != null) {
                             withContext(Dispatchers.Main) {
@@ -276,36 +292,39 @@ fun UploadTab() {
             )
         )
 
-        OutlinedTextField(
-            value = audioUrl,
-            onValueChange = { 
-                audioUrl = it
-                showAudioPreview = it.isNotBlank()
-            },
-            label = { Text("Audio URL", color = Color.White) },
+        // Audio File Upload Button
+        Button(
+            onClick = { audioPickerLauncher.launch("audio/*") },
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.White,
-                unfocusedBorderColor = Color.White,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
-            ),
-            trailingIcon = {
-                if (audioUrl.isNotBlank()) {
-                    IconButton(onClick = { showAudioPreview = !showAudioPreview }) {
-                        Icon(
-                            imageVector = Icons.Default.AudioFile,
-                            contentDescription = "Preview Audio",
-                            tint = Color.White
-                        )
-                    }
-                }
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0050D0))
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.AudioFile, contentDescription = "Select Audio")
+                Text("Select Audio File")
             }
-        )
+        }
+
+        // Audio Upload Progress
+        if (uploadState.isUploading && uploadState.uploadProgress > 0f) {
+            LinearProgressIndicator(
+                progress = uploadState.uploadProgress / 100f,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp),
+                color = Color(0xFF0050D0)
+            )
+            Text(
+                text = "Uploading audio: ${uploadState.uploadProgress.toInt()}%",
+                color = Color.White,
+                fontSize = 14.sp
+            )
+        }
 
         // Audio Preview
-        if (showAudioPreview && audioUrl.isNotBlank()) {
+        if (uploadState.showAudioPreview && uploadState.audioUrl.isNotBlank()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -337,36 +356,39 @@ fun UploadTab() {
             }
         }
 
-        OutlinedTextField(
-            value = imageUrl,
-            onValueChange = { 
-                imageUrl = it
-                showImagePreview = it.isNotBlank()
-            },
-            label = { Text("Image URL", color = Color.White) },
+        // Image File Upload Button
+        Button(
+            onClick = { imagePickerLauncher.launch("image/*") },
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.White,
-                unfocusedBorderColor = Color.White,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
-            ),
-            trailingIcon = {
-                if (imageUrl.isNotBlank()) {
-                    IconButton(onClick = { showImagePreview = !showImagePreview }) {
-                        Icon(
-                            imageVector = Icons.Default.Image,
-                            contentDescription = "Preview Image",
-                            tint = Color.White
-                        )
-                    }
-                }
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0050D0))
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Image, contentDescription = "Select Image")
+                Text("Select Cover Image")
             }
-        )
+        }
+
+        // Image Upload Progress
+        if (uploadState.isUploading && uploadState.uploadProgress > 0f) {
+            LinearProgressIndicator(
+                progress = uploadState.uploadProgress / 100f,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp),
+                color = Color(0xFF0050D0)
+            )
+            Text(
+                text = "Uploading image: ${uploadState.uploadProgress.toInt()}%",
+                color = Color.White,
+                fontSize = 14.sp
+            )
+        }
 
         // Image Preview
-        if (showImagePreview && imageUrl.isNotBlank()) {
+        if (uploadState.showImagePreview && uploadState.imageUrl.isNotBlank()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -377,7 +399,7 @@ fun UploadTab() {
                 Image(
                     painter = rememberAsyncImagePainter(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(imageUrl)
+                            .data(uploadState.imageUrl)
                             .crossfade(true)
                             .build()
                     ),
@@ -388,9 +410,18 @@ fun UploadTab() {
             }
         }
 
+        // Error message
+        uploadState.error?.let { error ->
+            Text(
+                text = error,
+                color = Color.Red,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
         Button(
             onClick = {
-                isLoading = true
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         val musicRequest = MusicUploadRequest(
@@ -398,8 +429,8 @@ fun UploadTab() {
                             artist = artist,
                             genre = genre,
                             time = time.toIntOrNull() ?: 0,
-                            audioUrl = audioUrl.takeIf { it.isNotBlank() },
-                            imageUrl = imageUrl.takeIf { it.isNotBlank() },
+                            audioUrl = uploadState.audioUrl.takeIf { it.isNotBlank() },
+                            imageUrl = uploadState.imageUrl.takeIf { it.isNotBlank() },
                             playlists = emptyList(),
                             offlineLibraries = emptyList(),
                             favorites = emptyList()
@@ -414,23 +445,17 @@ fun UploadTab() {
                                 artist = ""
                                 genre = ""
                                 time = ""
-                                audioUrl = ""
-                                imageUrl = ""
-                                showAudioPreview = false
-                                showImagePreview = false
-                                isPlaying = false
+                                viewModel.onEvent(UploadEvent.ResetUpload)
                                 if (mediaPlayer.isPlaying) {
                                     mediaPlayer.stop()
                                 }
                             } else {
                                 Toast.makeText(context, "Failed to upload music: ${response.message()}", Toast.LENGTH_SHORT).show()
                             }
-                            isLoading = false
                         }
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                            isLoading = false
                         }
                     }
                 }
@@ -439,9 +464,9 @@ fun UploadTab() {
                 .fillMaxWidth()
                 .height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0050D0)),
-            enabled = !isLoading && title.isNotBlank() && artist.isNotBlank() && genre.isNotBlank() && time.isNotBlank() && audioUrl.isNotBlank() && imageUrl.isNotBlank()
+            enabled = !uploadState.isUploading && title.isNotBlank() && artist.isNotBlank() && genre.isNotBlank() && time.isNotBlank() && uploadState.audioUrl.isNotBlank() && uploadState.imageUrl.isNotBlank()
         ) {
-            if (isLoading) {
+            if (uploadState.isUploading) {
                 CircularProgressIndicator(color = Color.White)
             } else {
                 Text(

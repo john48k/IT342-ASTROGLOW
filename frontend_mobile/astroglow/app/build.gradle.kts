@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -90,6 +91,11 @@ dependencies {
     // Biometric authentication
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
 
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-analytics-ktx")
+
     // ExoPlayer for music playback
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1") // Optional for UI components
@@ -108,4 +114,10 @@ dependencies {
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.32.0")
     implementation("com.google.accompanist:accompanist-navigation-animation:0.32.0")
+
+    implementation("com.uploadcare.android.library:uploadcare-android:4.3.1")
+
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }
+
