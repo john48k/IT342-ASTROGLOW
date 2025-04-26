@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 // import './Navbar.css';
 import logo from "../../assets/images/AstroGlow-logo.png";
@@ -10,6 +10,7 @@ import { FaSearch } from 'react-icons/fa';
 const Navbar = () => {
   const { isAuthenticated, logout } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   // Explicitly initialize modal to closed
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,7 +60,7 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {isAuthenticated && (
+        {isAuthenticated && (location.pathname === "/home" || location.pathname === "/favorites") && (
           <div className="navbar-search">
             <form onSubmit={handleSearchSubmit} className="search-form">
               <input
