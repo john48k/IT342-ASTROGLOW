@@ -5,11 +5,13 @@ import Sidebar from "../../components/Sidebar/Sidebar";
 import { useUser } from "../../context/UserContext";
 import { useFavorites } from "../../context/FavoritesContext";
 import { useAudioPlayer } from "../../context/AudioPlayerContext";
+import { usePlaylist } from "../../context/PlaylistContext";
 import styles from "./HomePage.module.css";
 import Modal from '../../components/Modal/Modal';
 import AudioUploader from "../../components/AudioUploader";
 import UploadModal from '../../components/UploadModal';
 import { registerHomePageNavHandlers, unregisterHomePageNavHandlers } from "../../components/NowPlayingBar/NowPlayingBar";
+import PlaylistModal from "../../components/PlaylistModal/PlaylistModal";
 
 // Helper function to check if a string is a data URI
 const isDataUri = (str) => {
@@ -104,6 +106,7 @@ export const HomePage = () => {
     musicCategory,
     setMusicCategory
   } = useAudioPlayer();
+  const { openPlaylistModal, playlists } = usePlaylist();
 
   const userName = user?.userName || "Guest";
   const [musicList, setMusicList] = useState([]);
@@ -132,6 +135,8 @@ export const HomePage = () => {
   const [availableMusicList, setAvailableMusicList] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [musicToDelete, setMusicToDelete] = useState(null);
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null);
+  const [showPlaylistDetailsModal, setShowPlaylistDetailsModal] = useState(false);
 
   // Add refs for tracking double clicks and click prevention
   const lastClickTimeRef = useRef({});
@@ -1193,6 +1198,70 @@ export const HomePage = () => {
     });
   };
 
+  // Handle adding music to playlist
+  const handleAddToPlaylistClick = (e, musicId) => {
+    e.stopPropagation();
+    openPlaylistModal(musicId);
+  };
+
+  // Function to handle playlist card click
+  const handlePlaylistClick = (playlist) => {
+    setSelectedPlaylist(playlist);
+    setShowPlaylistDetailsModal(true);
+  };
+
+  // Function to play song from playlist
+  const playPlaylistSong = (song) => {
+    if (!song || !song.musicId) return;
+    
+    console.log(`Playing song from playlist: ${song.title}`);
+    
+    // Set category to ensure proper navigation in the player
+    setMusicCategory('playlist');
+    
+    // Stop current playback first
+    if (currentlyPlaying) {
+      stopPlayback();
+    }
+    
+    // Short delay to ensure playback is stopped properly
+    setTimeout(() => {
+      try {
+        playMusic(String(song.musicId), song.audioUrl, 'playlist');
+      } catch (err) {
+        console.error('Error playing song from playlist:', err);
+      }
+    }, 100);
+  };
+
+  // Function to play all songs in a playlist
+  const playAllSongs = (playlist) => {
+    if (!playlist || !playlist.music || playlist.music.length === 0) return;
+    
+    // Play the first song
+    playPlaylistSong(playlist.music[0]);
+    
+    // Save the playlist for navigation
+    if (playlist.music.length > 1) {
+      // Save the ordered playlist to localStorage for next/previous navigation
+      const orderedPlaylist = playlist.music.map((item, index) => ({
+        ...item,
+        displayIndex: index,
+        originalIndex: index,
+        category: 'playlist'
+      }));
+      
+      localStorage.setItem('playlist-music-list', JSON.stringify(orderedPlaylist));
+      console.log(`Stored ${orderedPlaylist.length} songs from playlist for playback navigation`);
+    }
+  };
+
+  // Function to close playlist details modal
+  const closePlaylistDetailsModal = () => {
+    setShowPlaylistDetailsModal(false);
+    setSelectedPlaylist(null);
+  };
+
   return (
     <div className={styles.homePage}>
       <NavBar />
@@ -1206,17 +1275,62 @@ export const HomePage = () => {
             </button>
           </div>
 
+          {/* Playlists Section */}
+          <section className={styles.playlistsSection}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Your Playlists</h2>
+              <button 
+                className={styles.createPlaylistButton}
+                onClick={() => openPlaylistModal(null)}
+                title="Create New Playlist"
+              >
+                +
+              </button>
+            </div>
+            
+            {playlists.length > 0 ? (
+              <div className={styles.playlistsGrid}>
+                {playlists.map((playlist, index) => (
+                  <div 
+                    key={`playlist-${playlist.playlistId}-${index}`} 
+                    className={styles.playlistCard}
+                    onClick={() => handlePlaylistClick(playlist)}
+                  >
+                    <div className={styles.playlistImageContainer}>
+                      <div className={styles.musicPlaceholder}>
+                        <span>{playlist.name ? playlist.name.charAt(0).toUpperCase() : 'P'}</span>
+                      </div>
+                      <div className={styles.playlistOverlay}></div>
+                    </div>
+                    <div className={styles.playlistInfo}>
+                      <h3 className={styles.playlistTitle}>{playlist.name}</h3>
+                      <p className={styles.playlistTracks}>
+                        {playlist.music?.length || 0} songs
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.emptyPlaylistsMessage}>
+                <p>You don't have any playlists yet. Create one by clicking the + button.</p>
+              </div>
+            )}
+          </section>
+
           {/* Uploaded Music Section */}
           {musicList.length > 0 && (
             <section className={styles.uploadedMusicSection}>
               <h2 className={styles.sectionTitle}>Your Uploaded Music</h2>
               <div className={styles.musicGrid}>
-                {musicList.map((music) => {
+                {musicList.map((music, index) => {
                   const isCurrentlyPlaying = currentlyPlaying === music.musicId;
                   const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
+                  const isFavorited = isFavorite(music.musicId);
+                  const canEdit = true; // Assuming canEdit is always true for uploaded music
 
                   return (
-                    <div key={music.musicId}
+                    <div key={`uploaded-${music.musicId}-${index}`}
                       className={`${styles.musicCard} ${isCurrentlyPlaying ?
                         (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
                       onClick={(e) => handleMusicCardClick(e, music.musicId)}
@@ -1251,19 +1365,40 @@ export const HomePage = () => {
                           {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
                         </button>
                         <div className={styles.musicCardControls}>
-                          <button
-                            className={styles.musicCardControlButton}
-                            onClick={(e) => handleEditClick(music, e)}
-                            title="Edit song"
+                          {canEdit && (
+                            <>
+                              <button
+                                className={styles.musicCardControlButton}
+                                onClick={(e) => handleEditClick(music, e)}
+                                title="Edit"
+                              >
+                                ✎
+                              </button>
+                              <button
+                                className={styles.musicCardControlButton}
+                                onClick={(e) => handleDeleteClick(music.musicId, e)}
+                                title="Delete"
+                              >
+                                🗑
+                              </button>
+                            </>
+                          )}
+                          <button 
+                            className={`${styles.favoriteButton} ${isFavorited ? styles.favorited : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(music.musicId);
+                            }}
+                            title={isFavorited ? "Remove from favorites" : "Add to favorites"}
                           >
-                            ✎
+                            {isFavorited ? '★' : '☆'}
                           </button>
-                          <button
-                            className={styles.musicCardControlButton}
-                            onClick={(e) => handleDeleteClick(music.musicId, e)}
-                            title="Delete song"
+                          <button 
+                            className={styles.addToPlaylistButton}
+                            onClick={(e) => handleAddToPlaylistClick(e, music.musicId)}
+                            title="Add to playlist"
                           >
-                            🗑
+                            +
                           </button>
                         </div>
                       </div>
@@ -1283,13 +1418,13 @@ export const HomePage = () => {
           <section className={styles.availableMusicSection}>
             <h2 className={styles.sectionTitle}>Available Music</h2>
             <div className={styles.musicGrid}>
-              {availableMusicList.map((music) => {
+              {availableMusicList.map((music, index) => {
                 const isCurrentlyPlaying = currentlyPlaying === music.id;
                 const isFavorited = isFavorite(music.id);
                 const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
 
                 return (
-                  <div key={music.id}
+                  <div key={`available-${music.id}-${index}`}
                     className={`${styles.musicCard} ${isCurrentlyPlaying ?
                       (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
                     onClick={(e) => handleMusicCardClick(e, music.id)}
@@ -1333,6 +1468,13 @@ export const HomePage = () => {
                       >
                         {isFavorited ? '★' : '☆'}
                       </button>
+                      <button 
+                        className={styles.addToPlaylistButton}
+                        onClick={(e) => handleAddToPlaylistClick(e, music.id)}
+                        title="Add to playlist"
+                      >
+                        +
+                      </button>
                     </div>
                     <div className={styles.musicInfo}>
                       <h3 className={styles.musicTitle}>{music.title}</h3>
@@ -1367,17 +1509,27 @@ export const HomePage = () => {
 
           {/* Featured Music Section */}
           <section className={styles.featuredSection}>
-            <h2 className={styles.sectionTitle}>Featured Songs</h2>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Featured Songs</h2>
+              <button 
+                className={styles.createPlaylistButton}
+                onClick={() => openPlaylistModal(null)}
+                title="Create New Playlist"
+              >
+                +
+              </button>
+            </div>
 
             {/* Featured songs from uploaded music */}
             <div className={styles.featuredGrid}>
-              {getFeaturedMusic().map((music) => {
+              {getFeaturedMusic().map((music, index) => {
                 const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
                 const isCurrentlyPlaying = currentlyPlaying === music.musicId;
+                const isFavorited = isFavorite(music.musicId);
 
                 return (
                   <div
-                    key={music.musicId}
+                    key={`featured-${music.musicId}-${index}`}
                     className={styles.playlistCard}
                     onClick={() => handleFeaturedPlayClick(null, music.musicId)}
                   >
@@ -1399,6 +1551,23 @@ export const HomePage = () => {
                         onClick={(e) => handleFeaturedPlayClick(e, music.musicId)}
                       >
                         {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
+                      </button>
+                      <button
+                        className={`${styles.favoriteButton} ${isFavorited ? styles.favorited : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(music.musicId);
+                        }}
+                        title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                      >
+                        {isFavorited ? '★' : '☆'}
+                      </button>
+                      <button 
+                        className={styles.addToPlaylistButton}
+                        onClick={(e) => handleAddToPlaylistClick(e, music.musicId)}
+                        title="Add to playlist"
+                      >
+                        +
                       </button>
                     </div>
                     <div className={styles.playlistInfo}>
@@ -1629,6 +1798,81 @@ export const HomePage = () => {
         confirmText="Delete"
         onConfirm={confirmDelete}
       />
+
+      {/* Playlist Details Modal */}
+      {selectedPlaylist && (
+        <Modal
+          isOpen={showPlaylistDetailsModal}
+          onClose={closePlaylistDetailsModal}
+          title={`${selectedPlaylist.name} (${selectedPlaylist.music?.length || 0} songs)`}
+          message={
+            <div className={styles.playlistDetailsContent}>
+              {selectedPlaylist.music && selectedPlaylist.music.length > 0 ? (
+                <>
+                  <div className={styles.playlistControls}>
+                    <button 
+                      className={styles.playAllButton}
+                      onClick={() => playAllSongs(selectedPlaylist)}
+                    >
+                      <span className={styles.playAllIcon}>▶</span>
+                      Play All
+                    </button>
+                    
+                    <div className={styles.playlistStats}>
+                      <span>{selectedPlaylist.music.length} songs</span>
+                      {/* Add more stats here if needed */}
+                    </div>
+                  </div>
+                  
+                  <div className={styles.playlistSongsList}>
+                    {selectedPlaylist.music.map((song, index) => (
+                      <div 
+                        key={`playlist-song-${song.musicId}-${index}`} 
+                        className={`${styles.playlistSongItem} ${currentlyPlaying === song.musicId ? styles.currentlyPlayingSong : ''}`}
+                        onClick={() => playPlaylistSong(song)}
+                      >
+                        <div className={styles.playlistSongImage}>
+                          {song.imageUrl ? (
+                            <img 
+                              src={getSafeImageUrl(song.imageUrl, getImageUrl)} 
+                              alt={song.title} 
+                              className={styles.songThumbnail}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.style.display = 'none';
+                                const placeholderElement = e.target.parentNode.querySelector(`.${styles.songPlaceholder}`);
+                                if (placeholderElement) {
+                                  placeholderElement.style.display = 'flex';
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div className={styles.songPlaceholder}>
+                              <span>{song.title ? song.title.charAt(0).toUpperCase() : '♪'}</span>
+                            </div>
+                          )}
+                          <div className={styles.playOverlay}>
+                            <span className={styles.playIcon}>{currentlyPlaying === song.musicId && isPlaying ? '❚❚' : '▶'}</span>
+                          </div>
+                        </div>
+                        <div className={styles.playlistSongInfo}>
+                          <h4 className={styles.playlistSongTitle}>{song.title}</h4>
+                          <p className={styles.playlistSongArtist}>{song.artist}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className={styles.emptyPlaylistMessage}>This playlist is empty. Add songs by clicking the + button on any song.</p>
+              )}
+            </div>
+          }
+        />
+      )}
+
+      {/* Add PlaylistModal */}
+      <PlaylistModal />
     </div>
   );
 };
