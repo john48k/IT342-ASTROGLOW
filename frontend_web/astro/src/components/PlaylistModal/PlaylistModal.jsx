@@ -78,17 +78,47 @@ const PlaylistModal = () => {
     setError('');
     
     try {
-      const added = await addSongToPlaylist(playlistId, selectedMusicId);
+      // Check if the song is already in the selected playlist
+      const selectedPlaylist = playlists.find(p => p.playlistId === playlistId);
       
-      if (added) {
-        setSuccessMessage('Song added to playlist successfully!');
+      if (selectedPlaylist) {
+        // For Firebase files, the ID might be string-based 
+        const isMusicInPlaylist = selectedPlaylist.music && selectedPlaylist.music.some(song => {
+          // Check if either the musicId matches or for Firebase items, the audioUrl matches
+          return String(song.musicId) === String(selectedMusicId) || 
+                 (song.audioUrl && selectedMusicId.startsWith('firebase-') && 
+                  song.audioUrl === selectedMusicId);
+        });
+        
+        if (isMusicInPlaylist) {
+          // Song already exists in playlist, show a message
+          setSuccessMessage('This song is already in the playlist!');
+          
+          // Clear success message after 3 seconds
+          setTimeout(() => {
+            setSuccessMessage('');
+          }, 3000);
+          
+          return;
+        }
+      }
+      
+      // If we get here, the song is not in the playlist, proceed with adding it
+      const result = await addSongToPlaylist(playlistId, selectedMusicId);
+      
+      if (result.success) {
+        if (result.alreadyExists) {
+          setSuccessMessage('This song is already in the playlist!');
+        } else {
+          setSuccessMessage('Song added to playlist successfully!');
+        }
         
         // Clear success message after 3 seconds
         setTimeout(() => {
           setSuccessMessage('');
         }, 3000);
       } else {
-        setError('Failed to add song to playlist');
+        setError(result.error || 'Failed to add song to playlist');
       }
     } catch (err) {
       setError('An error occurred while adding the song to the playlist');
@@ -317,8 +347,8 @@ const PlaylistModal = () => {
                   {expandedPlaylist === playlist.playlistId && playlist.music && (
                     <ul className={styles.musicList}>
                       {playlist.music.length > 0 ? (
-                        playlist.music.map(music => (
-                          <li key={music.musicId} className={styles.musicItem}>
+                        playlist.music.map((music, index) => (
+                          <li key={`playlist-music-${playlist.playlistId}-${music.musicId}-${index}`} className={styles.musicItem}>
                             <img 
                               src={music.imageUrl} 
                               alt={music.title} 

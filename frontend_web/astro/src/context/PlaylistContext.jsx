@@ -128,18 +128,27 @@ export const PlaylistProvider = ({ children }) => {
         credentials: 'include'
       });
 
+      // Read response content
+      const responseText = await response.text();
+      
+      // Handle 200 responses
       if (response.ok) {
+        // Check if response indicates song already exists (success but already exists)
+        if (responseText.includes("already exists")) {
+          console.log(`Song ${musicId} already exists in playlist ${playlistId}`);
+          return { success: true, alreadyExists: true };
+        }
+        
         console.log(`Successfully added song ${musicId} to playlist ${playlistId}`);
         await refreshPlaylists();
-        return true;
+        return { success: true, alreadyExists: false };
       } else {
-        const errorData = await response.text();
-        console.error(`Error adding song to playlist: ${response.status}`, errorData);
-        return false;
+        console.error(`Error adding song to playlist: ${response.status}`, responseText);
+        return { success: false, error: responseText };
       }
     } catch (error) {
       console.error('Error adding song to playlist:', error);
-      return false;
+      return { success: false, error: error.message };
     }
   }, [user?.userId, refreshPlaylists]);
 
