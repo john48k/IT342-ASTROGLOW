@@ -8,7 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitClient {
     // For physical device, use your computer's IP address
 //     const val BASE_URL = "http://10.0.2.2:8080/"
-    private const val BASE_URL = "http://192.168.254.105:8080/"
+    private const val BASE_URL = "https://astroglowfirebase-d2411.uc.r.appspot.com/"
 //    private const val BASE_URL = "http://192.168.60.69:8080/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {

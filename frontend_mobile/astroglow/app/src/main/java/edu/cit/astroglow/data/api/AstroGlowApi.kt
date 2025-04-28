@@ -38,10 +38,10 @@ interface AstroGlowApi {
     @POST("api/user/postUser")
     suspend fun postUser(@Body user: UserEntity): Response<UserEntity>
 
-    @GET("/api/user/getAllUser")
+    @GET("api/user/getAllUser")
     suspend fun getAllUsers(): Response<List<UserEntity>>
 
-    @GET("/api/user/getUserByEmail/{email}")
+    @GET("api/user/getUserByEmail/{email}")
     suspend fun getUserByEmail(@Path("email") email: String): Response<UserEntity>
 
     @GET("api/music/search/exact/title")
