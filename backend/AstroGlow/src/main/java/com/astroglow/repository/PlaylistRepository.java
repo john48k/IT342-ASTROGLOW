@@ -1,4 +1,4 @@
-package com.astroglow.Repository;
+package com.astroglow.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -8,9 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.astroglow.Entity.PlaylistEntity;
-import com.astroglow.Entity.MusicEntity;
-import com.astroglow.Entity.UserEntity;
+import com.astroglow.entity.PlaylistEntity;
+import com.astroglow.entity.UserEntity;
 
 @Repository
 public interface PlaylistRepository extends JpaRepository<PlaylistEntity, Integer> {

@@ -1,18 +1,14 @@
-package com.astroglow.Service;
+package com.astroglow.service;
 
-import com.astroglow.Entity.UserEntity;
-import com.astroglow.Repository.UserRepository;
+import com.astroglow.entity.UserEntity;
+import com.astroglow.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.naming.NameNotFoundException;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.regex.Pattern;
 
 @Service

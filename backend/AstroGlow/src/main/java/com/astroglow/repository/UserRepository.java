@@ -1,7 +1,7 @@
-package com.astroglow.Repository;
+package com.astroglow.repository;
 
 
-import com.astroglow.Entity.UserEntity;
+import com.astroglow.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

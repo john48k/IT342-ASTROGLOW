@@ -1,7 +1,7 @@
 package com.astroglow.controller;
 
-import com.astroglow.Entity.AuthenticationEntity;
-import com.astroglow.Service.AuthenticationService;
+import com.astroglow.entity.AuthenticationEntity;
+import com.astroglow.service.AuthenticationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

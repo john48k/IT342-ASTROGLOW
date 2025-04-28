@@ -1,18 +1,17 @@
-package com.astroglow.Service;
+package com.astroglow.service;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.astroglow.Entity.PlaylistEntity;
-import com.astroglow.Entity.MusicEntity;
-import com.astroglow.Entity.UserEntity;
-import com.astroglow.Repository.PlaylistRepository;
-import com.astroglow.Repository.MusicRepository;
-import com.astroglow.Repository.UserRepository;
+import com.astroglow.entity.PlaylistEntity;
+import com.astroglow.entity.MusicEntity;
+import com.astroglow.entity.UserEntity;
+import com.astroglow.repository.PlaylistRepository;
+import com.astroglow.repository.MusicRepository;
+import com.astroglow.repository.UserRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;

@@ -3,10 +3,7 @@ package com.astroglow.controller;
 import java.util.List;
 import java.util.Base64;
 import java.io.IOException;
-import java.util.stream.Collectors;
 import java.net.URL;
-import java.net.MalformedURLException;
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Map;
 
@@ -25,11 +22,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.astroglow.Entity.MusicEntity;
-import com.astroglow.Entity.UserEntity;
-import com.astroglow.Repository.UserRepository;
-import com.astroglow.Service.MusicService;
-import com.astroglow.Service.FavoritesService;
+import com.astroglow.entity.MusicEntity;
+import com.astroglow.entity.UserEntity;
+import com.astroglow.repository.UserRepository;
+import com.astroglow.service.MusicService;
+import com.astroglow.service.FavoritesService;
 
 import jakarta.persistence.EntityNotFoundException;
 

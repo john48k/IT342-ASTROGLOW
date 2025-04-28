@@ -1,9 +1,9 @@
-package com.astroglow.Service;
+package com.astroglow.service;
 
-import com.astroglow.Entity.AuthenticationEntity;
-import com.astroglow.Entity.UserEntity;
-import com.astroglow.Repository.AuthenticationRepository;
-import com.astroglow.Repository.UserRepository;
+import com.astroglow.entity.AuthenticationEntity;
+import com.astroglow.entity.UserEntity;
+import com.astroglow.repository.AuthenticationRepository;
+import com.astroglow.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

@@ -1,12 +1,12 @@
-package com.astroglow.Repository;
+package com.astroglow.repository;
 
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.astroglow.Entity.MusicEntity;
-import com.astroglow.Entity.UserEntity;
+import com.astroglow.entity.MusicEntity;
+import com.astroglow.entity.UserEntity;
 
 @Repository
 public interface MusicRepository extends JpaRepository<MusicEntity, Integer> {

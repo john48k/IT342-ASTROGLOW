@@ -1,9 +1,8 @@
-package com.astroglow.Controller;
+package com.astroglow.controller;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.logging.Logger;
 import java.util.ArrayList;
 
@@ -22,11 +21,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.astroglow.Entity.PlaylistEntity;
-import com.astroglow.Entity.UserEntity;
-import com.astroglow.Entity.MusicEntity;
-import com.astroglow.Service.PlaylistService;
-import com.astroglow.Service.MusicService;
+import com.astroglow.entity.PlaylistEntity;
+import com.astroglow.entity.MusicEntity;
+import com.astroglow.service.PlaylistService;
+import com.astroglow.service.MusicService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -49,6 +47,11 @@ public class PlaylistController {
         List<PlaylistEntity> playlists = playlistService.getAllPlaylists();
         logger.info("Found " + playlists.size() + " playlists");
         return new ResponseEntity<>(playlists, HttpStatus.OK);
+    }
+
+    @GetMapping("hello")
+    public String hello(){
+        return "Hello World";
     }
 
     // Get playlist by ID

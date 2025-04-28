@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.astroglow.Entity.OfflineLibraryEntity;
-import com.astroglow.Service.OfflineLibraryService;
+import com.astroglow.entity.OfflineLibraryEntity;
+import com.astroglow.service.OfflineLibraryService;
 
 import jakarta.persistence.EntityNotFoundException;
 

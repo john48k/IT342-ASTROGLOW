@@ -1,7 +1,7 @@
 package com.astroglow.config;
 
-import com.astroglow.Entity.UserEntity;
-import com.astroglow.Repository.UserRepository;
+import com.astroglow.entity.UserEntity;
+import com.astroglow.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;

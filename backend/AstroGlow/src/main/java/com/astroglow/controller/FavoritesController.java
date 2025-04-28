@@ -2,15 +2,12 @@ package com.astroglow.controller;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,14 +19,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
-import com.astroglow.Entity.FavoritesEntity;
-import com.astroglow.Entity.MusicEntity;
-import com.astroglow.Service.FavoritesService;
-import com.astroglow.Entity.UserEntity;
-import com.astroglow.Service.UserService;
+import com.astroglow.entity.FavoritesEntity;
+import com.astroglow.entity.MusicEntity;
+import com.astroglow.service.FavoritesService;
+import com.astroglow.entity.UserEntity;
+import com.astroglow.service.UserService;
 
 import jakarta.persistence.EntityNotFoundException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("/api/favorites")

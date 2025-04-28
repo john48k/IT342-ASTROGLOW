@@ -1,7 +1,7 @@
 package com.astroglow.controller;
 
-import com.astroglow.Entity.UserEntity;
-import com.astroglow.Service.UserService;
+import com.astroglow.entity.UserEntity;
+import com.astroglow.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
