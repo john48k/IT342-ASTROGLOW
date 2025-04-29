@@ -212,7 +212,7 @@ export const HomePage = () => {
     }
   };
 
-  // Function to fetch available music from MySQL and Firebase
+  // Function to fetch available music from MySQL
   const fetchAvailableMusic = async () => {
     try {
       console.log('Fetching music from MySQL database...');
@@ -236,99 +236,24 @@ export const HomePage = () => {
         userName: music.owner?.userName || 'Unknown User'
       }));
 
-      console.log('Attempting to fetch Firebase music files...');
-
-      // Use the imported Firebase storage directly
-      const { storage } = await import('../../firebase');
-      const { ref, listAll, getDownloadURL } = await import('firebase/storage');
-
-      // Create reference to 'audios' folder in Firebase Storage
-      const listRef = ref(storage, 'audios');
-
-      console.log('Listing files in Firebase storage...');
-      const listResult = await listAll(listRef);
-      console.log(`Found ${listResult.items.length} files in Firebase storage`);
-
-      let firebaseMusic = [];
-      if (listResult.items.length > 0) {
-        const musicFiles = await Promise.all(
-          listResult.items.map(async (itemRef) => {
-            try {
-              // Get the download URL for each file
-              console.log(`Getting download URL for ${itemRef.name}...`);
-              const url = await getDownloadURL(itemRef);
-
-              // Get file name
-              const name = itemRef.name;
-              console.log(`Processing file: ${name}`);
-
-              // Parse metadata from filename
-              let artist = "Unknown Artist";
-              let title = name.replace(".mp3", "");
-              let genre = "Music";
-              let userName = "Unknown User";
-
-              // Parse artist and title from the filename
-              const parts = name.split(' - ');
-              if (parts.length >= 2) {
-                artist = parts[0];
-                title = parts[1].replace('.mp3', '');
-
-                // Extract genre if present in brackets
-                const genreMatch = title.match(/\[(.*?)\]/);
-                if (genreMatch && genreMatch[1]) {
-                  genre = genreMatch[1];
-                  title = title.replace(/\[.*?\]/, '').trim();
-                }
-
-                // Extract username if present in parentheses
-                const userMatch = title.match(/\((.*?)\)/);
-                if (userMatch && userMatch[1]) {
-                  userName = userMatch[1];
-                  title = title.replace(/\(.*?\)/, '').trim();
-                }
-              }
-
-              return {
-                id: `firebase-${name}`,
-                title: title,
-                artist: artist,
-                genre: genre,
-                audioUrl: url,
-                userName: userName
-              };
-            } catch (itemError) {
-              console.error(`Error processing file ${itemRef.name}:`, itemError);
-              return null;
-            }
-          })
-        );
-
-        // Filter out any null entries (from errors)
-        firebaseMusic = musicFiles.filter(item => item !== null);
-        console.log(`Successfully processed ${firebaseMusic.length} Firebase music files`);
-      }
-
-      // Filter out the user's own music from Firebase
-      const otherUsersFirebaseMusic = firebaseMusic.filter(music =>
+      // Filter out the user's own music
+      const otherUsersMusic = transformedDbMusic.filter(music =>
         !music.userName.toLowerCase().includes(user?.userName?.toLowerCase() || '')
       );
 
-      // Combine both sources of music
-      const allMusic = [...transformedDbMusic, ...otherUsersFirebaseMusic];
-      console.log(`Total available music: ${allMusic.length} (${transformedDbMusic.length} from DB, ${otherUsersFirebaseMusic.length} from Firebase)`);
+      console.log(`Total available music: ${otherUsersMusic.length} from database`);
 
       // Set the available music list in state
-      setAvailableMusicList(allMusic);
+      setAvailableMusicList(otherUsersMusic);
 
       // Save to localStorage with display index to preserve UI order
-      const musicFilesWithIndex = allMusic.map((item, index) => ({
+      const musicFilesWithIndex = otherUsersMusic.map((item, index) => ({
         ...item,
         displayIndex: index,
         category: 'available'
       }));
 
-      console.log('Saving combined music list to localStorage with display indices',
+      console.log('Saving music list to localStorage with display indices',
         `(${musicFilesWithIndex.length} items)`);
 
       // Log the first few items to verify correct order
@@ -342,7 +267,7 @@ export const HomePage = () => {
       // Save to localStorage for the NowPlayingBar to use
       localStorage.setItem('firebase-music-list', JSON.stringify(musicFilesWithIndex));
 
-      return allMusic;
+      return otherUsersMusic;
     } catch (error) {
       console.error('Error fetching music:', error);
       return [];
@@ -1361,7 +1286,7 @@ export const HomePage = () => {
                       <h3 className={styles.musicTitle}>{music.title}</h3>
                       <p className={styles.musicArtist}>{music.artist}</p>
                       {music.genre && <p className={styles.musicGenre}>{music.genre}</p>}
-                      <p className={styles.uploadedBy}>Uploaded by: {music.userName || 'Unknown User'}</p>
+                      {/* <p className={styles.uploadedBy}>Uploaded by: {music.userName || 'Unknown User'}</p> */}
                     </div>
                   </div>
                 );
