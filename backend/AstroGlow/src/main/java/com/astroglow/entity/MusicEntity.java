@@ -1,6 +1,5 @@
 package com.astroglow.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -156,7 +155,6 @@ public class MusicEntity {
         this.offlineLibraries = offlineLibraries;
     }
 
-    @JsonBackReference(value = "music-favorites")
     public List<FavoritesEntity> getFavorites() {
         return favorites;
     }

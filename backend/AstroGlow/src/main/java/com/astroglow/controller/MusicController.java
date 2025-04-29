@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Optional;
 import java.util.Map;
+import java.util.Date;
+import java.util.HashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -145,9 +147,24 @@ public class MusicController {
 
     // Get all music
     @GetMapping("/getAllMusic")
-    public ResponseEntity<List<MusicEntity>> getAllMusic() {
-        List<MusicEntity> musicList = musicService.getAllMusic();
-        return new ResponseEntity<>(musicList, HttpStatus.OK);
+    public ResponseEntity<?> getAllMusic() {
+        try {
+            System.out.println("Fetching all music...");
+            List<MusicEntity> musicList = musicService.getAllMusic();
+            System.out.println("Successfully fetched " + musicList.size() + " music entries");
+            return new ResponseEntity<>(musicList, HttpStatus.OK);
+        } catch (Exception e) {
+            System.out.println("Error fetching all music: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Create a detailed error response
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to fetch music list");
+            errorResponse.put("message", e.getMessage());
+            errorResponse.put("timestamp", new Date().toString());
+            
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     // Get music by user ID (owner)

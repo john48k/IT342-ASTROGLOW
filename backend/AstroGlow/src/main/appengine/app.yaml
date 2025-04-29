@@ -3,12 +3,19 @@ instance_class: F1
 
 env_variables:
   SPRING_PROFILES_ACTIVE: "prod"
+  SPRING_CLOUD_GCP_SQL_ENABLED: "true"
   SPRING_CLOUD_GCP_SQL_DATABASE_NAME: "dbastroglow"
   SPRING_CLOUD_GCP_SQL_INSTANCE_CONNECTION_NAME: "astroglowfirebase-d2411:asia-southeast1:dbastroglow"
   SPRING_DATASOURCE_URL: "jdbc:mysql:///dbastroglow?cloudSqlInstance=astroglowfirebase-d2411:asia-southeast1:dbastroglow&socketFactory=com.google.cloud.sql.mysql.SocketFactory&user=root&password=password"
   SPRING_DATASOURCE_USERNAME: "root"
   SPRING_DATASOURCE_PASSWORD: "password"
   SPRING_DATASOURCE_DRIVER_CLASS_NAME: "com.mysql.cj.jdbc.Driver"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+  SPRING_JPA_SHOW_SQL: "false"
+  SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.MySQL8Dialect"
+  SPRING_JPA_PROPERTIES_HIBERNATE_ENABLE_LAZY_LOAD_NO_TRANS: "true"
+  SPRING_JPA_OPEN_IN_VIEW: "true"
+  SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
 
 automatic_scaling:
   target_cpu_utilization: 0.65
