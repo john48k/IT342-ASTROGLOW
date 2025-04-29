@@ -23,23 +23,23 @@ const SearchPage = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const query = searchParams.get('q') || '';
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [databaseResults, setDatabaseResults] = useState([]);
   const [firebaseResults, setFirebaseResults] = useState([]);
   const [error, setError] = useState(null);
   const [isImageLoading, setIsImageLoading] = useState(true);
-  
-  const { 
-    currentlyPlaying, 
-    isPlaying, 
-    playMusic, 
+
+  const {
+    currentlyPlaying,
+    isPlaying,
+    playMusic,
     togglePlayPause,
     getImageUrl,
     setMusicCategory,
-    stopPlayback 
+    stopPlayback
   } = useAudioPlayer();
-  
+
   const { isFavorite, toggleFavorite } = useFavorites();
 
   // Add refs for tracking double clicks and click prevention similar to HomePage
@@ -57,51 +57,51 @@ const SearchPage = () => {
     const fetchSearchResults = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         // Instead of using a general search endpoint, we'll search by title, artist, and genre separately
         // and combine the results
         const results = new Set(); // Use a Set to avoid duplicates
-        
+
         // Search by title
-        const titleResponse = await fetch(`http://localhost:8080/api/music/search/title?title=${encodeURIComponent(query)}`, {
+        const titleResponse = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/music/search/title?title=${encodeURIComponent(query)}`, {
           credentials: 'include'
         });
-        
+
         if (titleResponse.ok) {
           const titleData = await titleResponse.json();
           titleData.forEach(item => results.add(JSON.stringify(item)));
         }
-        
+
         // Search by artist
-        const artistResponse = await fetch(`http://localhost:8080/api/music/search/artist?artist=${encodeURIComponent(query)}`, {
+        const artistResponse = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/music/search/artist?artist=${encodeURIComponent(query)}`, {
           credentials: 'include'
         });
-        
+
         if (artistResponse.ok) {
           const artistData = await artistResponse.json();
           artistData.forEach(item => results.add(JSON.stringify(item)));
         }
-        
+
         // Search by genre
-        const genreResponse = await fetch(`http://localhost:8080/api/music/search/genre?genre=${encodeURIComponent(query)}`, {
+        const genreResponse = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/music/search/genre?genre=${encodeURIComponent(query)}`, {
           credentials: 'include'
         });
-        
+
         if (genreResponse.ok) {
           const genreData = await genreResponse.json();
           genreData.forEach(item => results.add(JSON.stringify(item)));
         }
-        
+
         // Convert back from Set of strings to array of objects
         const combinedResults = Array.from(results).map(item => JSON.parse(item));
         setDatabaseResults(combinedResults);
-        
+
         // Fetch Firebase results from localStorage
         const firebaseMusicList = localStorage.getItem('firebase-music-list');
         if (firebaseMusicList) {
           const parsedFirebaseMusic = JSON.parse(firebaseMusicList);
-          
+
           // Filter Firebase music based on search query
           const lowercaseQuery = query.toLowerCase();
           const matchingFirebaseMusic = parsedFirebaseMusic.filter(music => {
@@ -111,10 +111,10 @@ const SearchPage = () => {
               (music.genre && music.genre.toLowerCase().includes(lowercaseQuery))
             );
           });
-          
+
           setFirebaseResults(matchingFirebaseMusic);
         }
-        
+
         setIsLoading(false);
       } catch (error) {
         console.error('Error searching music:', error);
@@ -122,7 +122,7 @@ const SearchPage = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchSearchResults();
   }, [query]);
 
@@ -130,12 +130,12 @@ const SearchPage = () => {
   const lockPlayback = (duration = 500) => {
     // Set processing flag to prevent any clicks
     isProcessingClickRef.current = true;
-    
+
     // Clear any existing timer
     if (lockoutTimerRef.current) {
       clearTimeout(lockoutTimerRef.current);
     }
-    
+
     // Set a new timer
     lockoutTimerRef.current = setTimeout(() => {
       isProcessingClickRef.current = false;
@@ -147,21 +147,21 @@ const SearchPage = () => {
   const handleMusicCardClick = (e, musicId, audioUrl, category) => {
     // If event exists, stop propagation
     if (e) e.stopPropagation();
-    
+
     // Hard lockout - prevent any clicks during processing
     if (isProcessingClickRef.current) {
       console.log('Ignoring click during lockout period');
       return;
     }
-    
+
     // Immediately lock to prevent multiple rapid clicks
     lockPlayback(500);
-    
+
     // Check for double-clicks
     const now = Date.now();
     const lastClickTime = lastClickTimeRef.current[musicId] || 0;
     lastClickTimeRef.current[musicId] = now;
-    
+
     // If this is a double-click, ignore the second click
     if (now - lastClickTime < doubleClickThreshold) {
       console.log('Double-click detected, ignoring second click');
@@ -173,14 +173,14 @@ const SearchPage = () => {
       togglePlayPause(musicId);
       return;
     }
-    
+
     try {
       // If any other song is playing, completely stop it first
       if (currentlyPlaying) {
         console.log('Stopping current playback before playing new song');
         stopPlayback();
       }
-      
+
       // Ensure we've completely stopped before playing new song
       setTimeout(() => {
         try {
@@ -216,7 +216,7 @@ const SearchPage = () => {
         <Sidebar />
         <main className={styles.mainContent}>
           <h1 className={styles.pageTitle}>Search Results for "{query}"</h1>
-          
+
           {isLoading ? (
             <div className={styles.loading}>Searching...</div>
           ) : error ? (
@@ -231,7 +231,7 @@ const SearchPage = () => {
               <div className={styles.resultsSummary}>
                 Found {totalResults} results
               </div>
-              
+
               {/* Database Results */}
               {databaseResults.length > 0 && (
                 <section className={styles.resultsSection}>
@@ -241,11 +241,11 @@ const SearchPage = () => {
                       const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
                       const isCurrentlyPlaying = currentlyPlaying === music.musicId;
                       const isFavorited = isFavorite(music.musicId);
-                      
+
                       return (
                         <div
                           key={music.musicId}
-                          className={`${styles.musicCard} ${isCurrentlyPlaying ? 
+                          className={`${styles.musicCard} ${isCurrentlyPlaying ?
                             (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
                           onClick={(e) => handleMusicCardClick(e, music.musicId, music.audioUrl, 'uploaded')}
                         >
@@ -300,7 +300,7 @@ const SearchPage = () => {
                   </div>
                 </section>
               )}
-              
+
               {/* Firebase Results */}
               {firebaseResults.length > 0 && (
                 <section className={styles.resultsSection}>
@@ -310,11 +310,11 @@ const SearchPage = () => {
                       const imageUrl = getSafeImageUrl(music.imageUrl, getImageUrl);
                       const isCurrentlyPlaying = currentlyPlaying === music.id;
                       const isFavorited = isFavorite(music.id);
-                      
+
                       return (
                         <div
                           key={music.id}
-                          className={`${styles.musicCard} ${isCurrentlyPlaying ? 
+                          className={`${styles.musicCard} ${isCurrentlyPlaying ?
                             (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
                           onClick={(e) => handleMusicCardClick(e, music.id, music.audioUrl, 'available')}
                         >

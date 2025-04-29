@@ -3,7 +3,7 @@ import { useUser } from './UserContext';
 
 const PlaylistContext = createContext();
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://astroglowfirebase-d2411.uc.r.appspot.com/api';
 
 export const PlaylistProvider = ({ children }) => {
   const [playlists, setPlaylists] = useState([]);
@@ -26,7 +26,7 @@ export const PlaylistProvider = ({ children }) => {
             },
             credentials: 'include'
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             console.log(`Loaded ${data.length} playlists for user ID: ${user.userId}`);
@@ -39,7 +39,7 @@ export const PlaylistProvider = ({ children }) => {
         }
       }
     };
-    
+
     loadPlaylists();
   }, [user?.userId]);
 
@@ -57,7 +57,7 @@ export const PlaylistProvider = ({ children }) => {
           },
           credentials: 'include'
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           console.log(`Refreshed ${data.length} playlists for user ID: ${user.userId}`);
@@ -216,9 +216,9 @@ export const PlaylistProvider = ({ children }) => {
   }, []);
 
   return (
-    <PlaylistContext.Provider value={{ 
-      playlists, 
-      addSongToPlaylist, 
+    <PlaylistContext.Provider value={{
+      playlists,
+      addSongToPlaylist,
       createPlaylist,
       removeSongFromPlaylist,
       deletePlaylist,

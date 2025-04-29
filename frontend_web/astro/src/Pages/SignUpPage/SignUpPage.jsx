@@ -131,7 +131,7 @@ const SignUpPage = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:8080/api/user/signup", {
+      const response = await fetch("https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json;charset=UTF-8",
@@ -359,7 +359,7 @@ const SignUpPage = () => {
             </button>
 
             <div className="signup-google-login">
-              <a href="http://localhost:8080/oauth2/authorization/google">
+              <a href="https://astroglowfirebase-d2411.uc.r.appspot.com/oauth2/authorization/google">
                 Login with Google
               </a>
             </div>

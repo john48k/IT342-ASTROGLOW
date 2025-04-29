@@ -39,9 +39,9 @@ const LoginPage = () => {
         rememberMe: true // Added to request persistent cookie
       };
 
-      console.log("Attempting to connect to backend at http://localhost:8080/api/user/login");
+      console.log("Attempting to connect to backend at https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/login");
 
-      const response = await fetch("http://localhost:8080/api/user/login", {
+      const response = await fetch("https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -86,7 +86,7 @@ const LoginPage = () => {
       if (error.name === 'AbortError') {
         setError("Request timed out. Please check if the server is running.");
       } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        setError("Cannot connect to the server. Please ensure the backend is running at http://localhost:8080");
+        setError("Cannot connect to the server. Please ensure the backend is running at https://astroglowfirebase-d2411.uc.r.appspot.com");
       } else {
         setError(error.message || "An error occurred during login");
       }
@@ -96,18 +96,18 @@ const LoginPage = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:8080/oauth2/authorization/google";
+    window.location.href = "https://astroglowfirebase-d2411.uc.r.appspot.com/oauth2/authorization/google";
   };
 
   const handleGithubLogin = () => {
-    window.location.href = "http://localhost:8080/oauth2/authorization/github";
+    window.location.href = "https://astroglowfirebase-d2411.uc.r.appspot.com/oauth2/authorization/github";
   };
 
   // Function to check backend health
   const checkBackendStatus = async () => {
     try {
       setError("Checking server status...");
-      const response = await fetch("http://localhost:8080/api/user/api-test", {
+      const response = await fetch("https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/api-test", {
         method: "GET",
         signal: AbortSignal.timeout(5000) // 5 second timeout
       });

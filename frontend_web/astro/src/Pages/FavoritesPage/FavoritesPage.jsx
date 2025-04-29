@@ -25,10 +25,10 @@ const getSafeImageUrl = (imageUrl, getImageUrl) => {
 
 export const FavoritesPage = () => {
   const { user } = useUser();
-  const { 
-    currentlyPlaying, 
-    isPlaying, 
-    playMusic, 
+  const {
+    currentlyPlaying,
+    isPlaying,
+    playMusic,
     togglePlayPause,
     getImageUrl,
     setMusicCategory,
@@ -36,10 +36,10 @@ export const FavoritesPage = () => {
     playPreviousSong,
     stopPlayback
   } = useAudioPlayer();
-  
+
   const { isFavorite, toggleFavorite, favorites } = useFavorites();
   const { openPlaylistModal } = usePlaylist();
-  
+
   const [favoriteMusic, setFavoriteMusic] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -53,7 +53,7 @@ export const FavoritesPage = () => {
   useEffect(() => {
     // Register our handlers with the NowPlayingBar
     registerHomePageNavHandlers(handleNextSong, handlePreviousSong);
-    
+
     // Clean up on unmount
     return () => {
       unregisterHomePageNavHandlers();
@@ -67,7 +67,7 @@ export const FavoritesPage = () => {
       if (savedFirebaseMusic) {
         const parsedItems = JSON.parse(savedFirebaseMusic);
         console.log(`[FavoritesPage] Loaded ${parsedItems.length} Firebase items from cache`);
-        
+
         // Create a map for faster lookups
         const cacheMap = {};
         parsedItems.forEach(item => {
@@ -75,7 +75,7 @@ export const FavoritesPage = () => {
             cacheMap[item.id] = item;
           }
         });
-        
+
         setFirebaseMusicCache(cacheMap);
       }
     } catch (error) {
@@ -86,11 +86,11 @@ export const FavoritesPage = () => {
   // Handler for next song button - navigates only within favorites
   const handleNextSong = () => {
     console.log("Next song requested in FavoritesPage");
-    
+
     if (favoriteMusic && favoriteMusic.length > 0) {
       // Make sure we're in favorites mode
       setMusicCategory('favorites');
-      
+
       // Add displayIndex to ensure proper order based on visual presentation
       const favoritesWithIndex = favoriteMusic.map((item, index) => ({
         ...item,
@@ -98,26 +98,26 @@ export const FavoritesPage = () => {
         originalIndex: index, // Add this for consistent sorting
         category: 'favorites'
       }));
-      
+
       console.log(`Playing next song from favorites list with ${favoritesWithIndex.length} items`);
-      
+
       // Find current playing index
       const currentIndex = favoritesWithIndex.findIndex(item => {
         const itemId = String(item.musicId || '');
         return itemId === String(currentlyPlaying);
       });
-      
+
       console.log(`Current playing index: ${currentIndex}`);
-      
+
       // Manual calculation of next track index
       if (currentIndex !== -1 && currentIndex < favoritesWithIndex.length - 1) {
         // There is a next track
         const nextTrack = favoritesWithIndex[currentIndex + 1];
         console.log(`Will play next track: ${nextTrack.title || 'Unknown'}`);
-        
+
         // Store the ordered favorites for next/previous navigation
         localStorage.setItem('favorites-music-list', JSON.stringify(favoritesWithIndex));
-        
+
         // Stop current playback first to avoid overlapping audio
         stopPlayback().then(() => {
           // Play the next track directly
@@ -131,10 +131,10 @@ export const FavoritesPage = () => {
         // Loop back to the first track
         const firstTrack = favoritesWithIndex[0];
         console.log(`Will loop back to first track: ${firstTrack.title || 'Unknown'}`);
-        
+
         // Store the ordered favorites
         localStorage.setItem('favorites-music-list', JSON.stringify(favoritesWithIndex));
-        
+
         // Stop current playback first
         stopPlayback().then(() => {
           // Play the first track
@@ -153,15 +153,15 @@ export const FavoritesPage = () => {
       console.log("No favorites available for next song");
     }
   };
-  
+
   // Handler for previous song button - navigates only within favorites
   const handlePreviousSong = () => {
     console.log("Previous song requested in FavoritesPage");
-    
+
     if (favoriteMusic && favoriteMusic.length > 0) {
       // Make sure we're in favorites mode
       setMusicCategory('favorites');
-      
+
       // Add displayIndex to ensure proper order based on visual presentation
       const favoritesWithIndex = favoriteMusic.map((item, index) => ({
         ...item,
@@ -169,26 +169,26 @@ export const FavoritesPage = () => {
         originalIndex: index, // Add this for consistent sorting
         category: 'favorites'
       }));
-      
+
       console.log(`Playing previous song from favorites list with ${favoritesWithIndex.length} items`);
-      
+
       // Find current playing index
       const currentIndex = favoritesWithIndex.findIndex(item => {
         const itemId = String(item.musicId || '');
         return itemId === String(currentlyPlaying);
       });
-      
+
       console.log(`Current playing index: ${currentIndex}`);
-      
+
       // Manual calculation of previous track index
       if (currentIndex > 0) {
         // There is a previous track
         const prevTrack = favoritesWithIndex[currentIndex - 1];
         console.log(`Will play previous track: ${prevTrack.title || 'Unknown'}`);
-        
+
         // Store the ordered favorites for next/previous navigation
         localStorage.setItem('favorites-music-list', JSON.stringify(favoritesWithIndex));
-        
+
         // Stop current playback first to avoid overlapping audio
         stopPlayback().then(() => {
           // Play the previous track directly
@@ -202,10 +202,10 @@ export const FavoritesPage = () => {
         // Loop back to the last track
         const lastTrack = favoritesWithIndex[favoritesWithIndex.length - 1];
         console.log(`Will loop back to last track: ${lastTrack.title || 'Unknown'}`);
-        
+
         // Store the ordered favorites
         localStorage.setItem('favorites-music-list', JSON.stringify(favoritesWithIndex));
-        
+
         // Stop current playback first
         stopPlayback().then(() => {
           // Play the last track
@@ -234,7 +234,7 @@ export const FavoritesPage = () => {
       }
 
       const response = await fetch(
-        `http://localhost:8080/api/music/getMusic/${musicId}?includeAudioData=false`,
+        `https://astroglowfirebase-d2411.uc.r.appspot.com/api/music/getMusic/${musicId}?includeAudioData=false`,
         {
           method: 'GET',
           headers: {
@@ -263,7 +263,7 @@ export const FavoritesPage = () => {
   // Function to fetch all image URLs for the favorite music
   const fetchAllImageUrls = async (musicList) => {
     const newImageUrls = { ...imageUrls };
-    
+
     for (const music of musicList) {
       if (!newImageUrls[music.musicId]) {
         const imageUrl = await fetchImageUrl(music.musicId);
@@ -272,7 +272,7 @@ export const FavoritesPage = () => {
         }
       }
     }
-    
+
     setImageUrls(newImageUrls);
   };
 
@@ -293,7 +293,7 @@ export const FavoritesPage = () => {
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       const response = await fetch(
-        `http://localhost:8080/api/favorites/user/${user.userId}/music-details`,
+        `https://astroglowfirebase-d2411.uc.r.appspot.com/api/favorites/user/${user.userId}/music-details`,
         {
           method: 'GET',
           headers: {
@@ -318,7 +318,7 @@ export const FavoritesPage = () => {
       // Get the response as text first to debug any JSON parsing issues
       const responseText = await response.text();
       console.log('Response text:', responseText.substring(0, 100) + '...'); // Log first 100 chars for debugging
-      
+
       // Try to parse the JSON
       let musicData;
       try {
@@ -328,20 +328,20 @@ export const FavoritesPage = () => {
         console.error('Response text that failed to parse:', responseText);
         throw new Error(`Failed to parse JSON: ${parseError.message}`);
       }
-      
+
       // Combine database favorites with Firebase favorites
       const databaseFavorites = Array.isArray(musicData) ? musicData : [];
-      
+
       // Only get Firebase favorites for the current user
-      const firebaseFavorites = favorites.filter(fav => 
-        typeof fav.music?.filename === 'string' && 
+      const firebaseFavorites = favorites.filter(fav =>
+        typeof fav.music?.filename === 'string' &&
         fav.music.filename.startsWith('firebase-') &&
         fav.userId === user.userId // Only include favorites for this user
       ).map(fav => {
         // Use cached Firebase music if available
         const musicId = fav.music.filename;
         const cachedItem = firebaseMusicCache[musicId];
-        
+
         if (cachedItem && cachedItem.audioUrl) {
           console.log(`[FavoritesPage] Using cached Firebase URL for ${musicId}`);
           return {
@@ -353,7 +353,7 @@ export const FavoritesPage = () => {
             userId: user.userId // Tag with user ID to ensure it's user-specific
           };
         }
-        
+
         // Fallback to constructed URL if not in cache
         return {
           musicId: musicId,
@@ -373,7 +373,7 @@ export const FavoritesPage = () => {
 
       const allFavorites = [...taggedDatabaseFavorites, ...firebaseFavorites];
       console.log(`Fetched ${allFavorites.length} favorite music items (${databaseFavorites.length} database, ${firebaseFavorites.length} Firebase) for user ${user.userId}`);
-      
+
       // Save to localStorage with proper display indices and user ID
       localStorage.setItem('favorites-music-list', JSON.stringify(
         allFavorites.map((item, index) => ({
@@ -384,26 +384,26 @@ export const FavoritesPage = () => {
           userId: user.userId // Ensure user ID is included
         }))
       ));
-      
+
       setFavoriteMusic(allFavorites);
-      
+
       // Fetch image URLs separately for database music only
       if (databaseFavorites.length > 0) {
         fetchAllImageUrls(databaseFavorites);
       }
-      
+
       setIsLoading(false);
     } catch (error) {
       console.error('Error fetching favorite music:', error);
-      
+
       if (error.name === 'AbortError') {
         setError('Request timed out. Please try again.');
       } else {
         setError(`Failed to load favorites: ${error.message}`);
       }
-      
+
       setIsLoading(false);
-      
+
       // Retry logic
       if (retryCount < 3) {
         console.log(`Retrying fetch (attempt ${retryCount + 1} of 3)...`);
@@ -416,7 +416,7 @@ export const FavoritesPage = () => {
 
   useEffect(() => {
     fetchFavoriteMusic();
-    
+
     // Get albums from localStorage
     try {
       const savedAlbums = localStorage.getItem('albums');
@@ -435,13 +435,13 @@ export const FavoritesPage = () => {
   // Handle play button click
   const handlePlayClick = (e, musicId) => {
     e.stopPropagation();
-    
+
     // Find the music item to get its URL if it's Firebase music
     const musicItem = favoriteMusic.find(item => item.musicId === musicId);
-    
+
     // Set category to favorites for proper navigation
     setMusicCategory('favorites');
-    
+
     // Save the ordered favorites list to localStorage with proper indices
     const orderedFavorites = favoriteMusic.map((item, index) => ({
       ...item,
@@ -451,7 +451,7 @@ export const FavoritesPage = () => {
     }));
     localStorage.setItem('favorites-music-list', JSON.stringify(orderedFavorites));
     console.log(`Stored ${orderedFavorites.length} favorites in order before playing`);
-    
+
     if (currentlyPlaying === musicId) {
       // If already playing this track, toggle play/pause
       togglePlayPause(musicId);
@@ -472,13 +472,13 @@ export const FavoritesPage = () => {
   // Handle click on music card
   const handleMusicCardClick = (e, musicId) => {
     e.stopPropagation();
-    
+
     // Find the music item to get its URL if it's Firebase music
     const musicItem = favoriteMusic.find(item => item.musicId === musicId);
-    
+
     // Set category to favorites for proper navigation
     setMusicCategory('favorites');
-    
+
     // Save the ordered favorites list to localStorage with proper indices
     const orderedFavorites = favoriteMusic.map((item, index) => ({
       ...item,
@@ -488,7 +488,7 @@ export const FavoritesPage = () => {
     }));
     localStorage.setItem('favorites-music-list', JSON.stringify(orderedFavorites));
     console.log(`Stored ${orderedFavorites.length} favorites in order before playing`);
-    
+
     if (currentlyPlaying === musicId) {
       // If this is the current track, toggle play/pause
       togglePlayPause(musicId);
@@ -511,10 +511,10 @@ export const FavoritesPage = () => {
     e.stopPropagation();
     console.log(`Toggling favorite for music ID: ${musicId} and user ID: ${user?.userId}`);
     toggleFavorite(musicId);
-    
+
     // Immediately update the favoriteMusic state
     // Only remove this specific music for the current user
-    setFavoriteMusic(prevList => 
+    setFavoriteMusic(prevList =>
       prevList.filter(music => !(music.musicId === musicId && music.userId === user?.userId))
     );
   };
@@ -538,7 +538,7 @@ export const FavoritesPage = () => {
           ) : error ? (
             <div className={styles.error}>
               {error}
-              <button 
+              <button
                 onClick={handleRetry}
                 className={styles.retryButton}
               >
@@ -559,22 +559,22 @@ export const FavoritesPage = () => {
                 const imageUrl = getSafeImageUrl(imageUrls[music.musicId], getImageUrl);
                 const isCurrentlyPlaying = currentlyPlaying === music.musicId;
                 const isFavorited = isFavorite(music.musicId);
-                
+
                 // Generate a unique key by combining the music ID and index
                 const uniqueKey = `favorite-${music.musicId}-${index}`;
-                
+
                 return (
-                  <div 
+                  <div
                     key={uniqueKey}
-                    className={`${styles.musicCard} ${isCurrentlyPlaying ? 
+                    className={`${styles.musicCard} ${isCurrentlyPlaying ?
                       (!isPlaying ? styles.pausedCard : styles.currentlyPlayingCard) : ''}`}
                     onClick={(e) => handleMusicCardClick(e, music.musicId)}
                   >
                     <div className={styles.musicImageContainer}>
                       {imageUrl ? (
-                        <img 
-                          src={imageUrl} 
-                          alt={music.title} 
+                        <img
+                          src={imageUrl}
+                          alt={music.title}
                           className={styles.musicImage}
                         />
                       ) : (
@@ -583,20 +583,20 @@ export const FavoritesPage = () => {
                         </div>
                       )}
                       <div className={styles.musicOverlay}></div>
-                      <button 
+                      <button
                         className={styles.musicPlayButton}
                         onClick={(e) => handlePlayClick(e, music.musicId)}
                       >
                         {isCurrentlyPlaying && isPlaying ? '❚❚' : '▶'}
                       </button>
-                      <button 
+                      <button
                         className={`${styles.favoriteButton} ${isFavorited ? styles.favorited : ''}`}
                         onClick={(e) => handleFavoriteClick(e, music.musicId)}
                         title={isFavorited ? "Remove from favorites" : "Add to favorites"}
                       >
                         {isFavorited ? '★' : '☆'}
                       </button>
-                      <button 
+                      <button
                         className={styles.addToPlaylistButton}
                         onClick={(e) => handleAddToPlaylistClick(e, music.musicId)}
                         title="Add to playlist"

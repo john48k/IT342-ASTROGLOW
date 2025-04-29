@@ -55,7 +55,7 @@ export const UserProfile = () => {
         if (!user || !user.userId) return;
 
         try {
-            const response = await fetch(`http://localhost:8080/api/user/profile-picture/${user.userId}`, {
+            const response = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/profile-picture/${user.userId}`, {
                 method: 'GET',
             });
 
@@ -136,7 +136,7 @@ export const UserProfile = () => {
                     const base64Image = event.target.result;
 
                     // Upload the image to the server
-                    const response = await fetch(`http://localhost:8080/api/user/update-profile-picture/${user.userId}`, {
+                    const response = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/update-profile-picture/${user.userId}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
@@ -174,7 +174,7 @@ export const UserProfile = () => {
             setIsUploadingImage(true);
 
             // Send request to clear the profile picture
-            const response = await fetch(`http://localhost:8080/api/user/update-profile-picture/${user.userId}`, {
+            const response = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/update-profile-picture/${user.userId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -214,7 +214,7 @@ export const UserProfile = () => {
         }
 
         try {
-            const response = await fetch(`http://localhost:8080/api/user/putUser/${user.userId}`, {
+            const response = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/putUser/${user.userId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -275,7 +275,7 @@ export const UserProfile = () => {
         }
 
         try {
-            const response = await fetch(`http://localhost:8080/api/user/putUser/${user.userId}`, {
+            const response = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/putUser/${user.userId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -315,7 +315,7 @@ export const UserProfile = () => {
 
         try {
             // First verify the password is correct
-            const verifyResponse = await fetch(`http://localhost:8080/api/user/login`, {
+            const verifyResponse = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -332,7 +332,7 @@ export const UserProfile = () => {
             }
 
             // If password is correct, proceed with deletion
-            const deleteResponse = await fetch(`http://localhost:8080/api/user/deleteUser/${user.userId}`, {
+            const deleteResponse = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/deleteUser/${user.userId}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',

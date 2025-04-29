@@ -29,59 +29,59 @@ const resizeImage = (file, maxWidth = 800, maxHeight = 600, quality = 0.7) => {
   return new Promise((resolve, reject) => {
     // Create a FileReader to read the file
     const reader = new FileReader();
-    
+
     // Set up the FileReader onload event
     reader.onload = (readerEvent) => {
       // Create an image object
       const img = new Image();
-      
+
       // Set up the image onload event
       img.onload = () => {
         // Check if resizing is needed
         let width = img.width;
         let height = img.height;
-        
+
         // Calculate new dimensions while maintaining aspect ratio
         if (width > maxWidth) {
           height = (height * maxWidth) / width;
           width = maxWidth;
         }
-        
+
         if (height > maxHeight) {
           width = (width * maxHeight) / height;
           height = maxHeight;
         }
-        
+
         // Create a canvas element
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
-        
+
         // Draw the image on the canvas
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        
+
         // Get the resized image as a data URL
         const dataUrl = canvas.toDataURL(file.type, quality);
-        
+
         // Resolve the promise with the resized image data URL
         resolve(dataUrl);
       };
-      
+
       // Handle image load error
       img.onerror = (error) => {
         reject(new Error('Error loading image.'));
       };
-      
+
       // Set the image source to the file data
       img.src = readerEvent.target.result;
     };
-    
+
     // Handle FileReader error
     reader.onerror = (error) => {
       reject(new Error('Error reading file.'));
     };
-    
+
     // Read the file as a data URL
     reader.readAsDataURL(file);
   });
@@ -146,7 +146,7 @@ export const HomePage = () => {
   useEffect(() => {
     // Register our handlers with the NowPlayingBar
     registerHomePageNavHandlers(handleNextSong, handlePreviousSong);
-    
+
     // Add keyboard navigation
     const handleKeyDown = (e) => {
       // Handle media key or keyboard shortcuts for next/previous
@@ -156,9 +156,9 @@ export const HomePage = () => {
         handlePreviousSong();
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
-    
+
     // Clean up on unmount
     return () => {
       unregisterHomePageNavHandlers();
@@ -196,7 +196,7 @@ export const HomePage = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:8080/api/music/user/${user.userId}`, {
+      const response = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/music/user/${user.userId}`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -212,9 +212,30 @@ export const HomePage = () => {
     }
   };
 
-  // Function to fetch available music from Firebase storage
+  // Function to fetch available music from MySQL and Firebase
   const fetchAvailableMusic = async () => {
     try {
+      console.log('Fetching music from MySQL database...');
+
+      // Fetch music from MySQL database
+      const dbResponse = await fetch('https://astroglowfirebase-d2411.uc.r.appspot.com/api/music/getAllMusic');
+      if (!dbResponse.ok) {
+        throw new Error('Failed to fetch music from database');
+      }
+      const dbMusic = await dbResponse.json();
+      console.log(`Found ${dbMusic.length} music entries in database`);
+
+      // Transform database music to match our format
+      const transformedDbMusic = dbMusic.map(music => ({
+        id: music.musicId,
+        title: music.title,
+        artist: music.artist,
+        genre: music.genre,
+        audioUrl: music.audioUrl,
+        imageUrl: music.imageUrl,
+        userName: music.owner?.userName || 'Unknown User'
+      }));
+
       console.log('Attempting to fetch Firebase music files...');
 
       // Use the imported Firebase storage directly
@@ -228,86 +249,88 @@ export const HomePage = () => {
       const listResult = await listAll(listRef);
       console.log(`Found ${listResult.items.length} files in Firebase storage`);
 
-      if (listResult.items.length === 0) {
-        console.log('No files found in Firebase storage');
-        return [];
+      let firebaseMusic = [];
+      if (listResult.items.length > 0) {
+        const musicFiles = await Promise.all(
+          listResult.items.map(async (itemRef) => {
+            try {
+              // Get the download URL for each file
+              console.log(`Getting download URL for ${itemRef.name}...`);
+              const url = await getDownloadURL(itemRef);
+
+              // Get file name
+              const name = itemRef.name;
+              console.log(`Processing file: ${name}`);
+
+              // Parse metadata from filename
+              let artist = "Unknown Artist";
+              let title = name.replace(".mp3", "");
+              let genre = "Music";
+              let userName = "Unknown User";
+
+              // Parse artist and title from the filename
+              const parts = name.split(' - ');
+              if (parts.length >= 2) {
+                artist = parts[0];
+                title = parts[1].replace('.mp3', '');
+
+                // Extract genre if present in brackets
+                const genreMatch = title.match(/\[(.*?)\]/);
+                if (genreMatch && genreMatch[1]) {
+                  genre = genreMatch[1];
+                  title = title.replace(/\[.*?\]/, '').trim();
+                }
+
+                // Extract username if present in parentheses
+                const userMatch = title.match(/\((.*?)\)/);
+                if (userMatch && userMatch[1]) {
+                  userName = userMatch[1];
+                  title = title.replace(/\(.*?\)/, '').trim();
+                }
+              }
+
+              return {
+                id: `firebase-${name}`,
+                title: title,
+                artist: artist,
+                genre: genre,
+                audioUrl: url,
+                userName: userName
+              };
+            } catch (itemError) {
+              console.error(`Error processing file ${itemRef.name}:`, itemError);
+              return null;
+            }
+          })
+        );
+
+        // Filter out any null entries (from errors)
+        firebaseMusic = musicFiles.filter(item => item !== null);
+        console.log(`Successfully processed ${firebaseMusic.length} Firebase music files`);
       }
 
-      const musicFiles = await Promise.all(
-        listResult.items.map(async (itemRef) => {
-          try {
-            // Get the download URL for each file
-            console.log(`Getting download URL for ${itemRef.name}...`);
-            const url = await getDownloadURL(itemRef);
-
-            // Get file name
-            const name = itemRef.name;
-            console.log(`Processing file: ${name}`);
-
-            // Parse metadata from filename
-            let artist = "Unknown Artist";
-            let title = name.replace(".mp3", "");
-            let genre = "Music";
-            let userName = "Unknown User";
-
-            // Parse artist and title from the filename
-            const parts = name.split(' - ');
-            if (parts.length >= 2) {
-              artist = parts[0];
-              title = parts[1].replace('.mp3', '');
-
-              // Extract genre if present in brackets
-              const genreMatch = title.match(/\[(.*?)\]/);
-              if (genreMatch && genreMatch[1]) {
-                genre = genreMatch[1];
-                title = title.replace(/\[.*?\]/, '').trim();
-              }
-
-              // Extract username if present in parentheses
-              const userMatch = title.match(/\((.*?)\)/);
-              if (userMatch && userMatch[1]) {
-                userName = userMatch[1];
-                title = title.replace(/\(.*?\)/, '').trim();
-              }
-            }
-
-            return {
-              id: `firebase-${name}`,
-              title: title,
-              artist: artist,
-              genre: genre,
-              audioUrl: url,
-              userName: userName
-            };
-          } catch (itemError) {
-            console.error(`Error processing file ${itemRef.name}:`, itemError);
-            return null;
-          }
-        })
-      );
-
-      // Filter out any null entries (from errors)
-      const validMusicFiles = musicFiles.filter(item => item !== null);
-      console.log(`Successfully processed ${validMusicFiles.length} music files`);
-
-      // Filter out the user's own music
-      const otherUsersMusic = validMusicFiles.filter(music => 
+      // Filter out the user's own music from Firebase
+      const otherUsersFirebaseMusic = firebaseMusic.filter(music =>
         !music.userName.toLowerCase().includes(user?.userName?.toLowerCase() || '')
       );
 
+      // Combine both sources of music
+      const allMusic = [...transformedDbMusic, ...otherUsersFirebaseMusic];
+      console.log(`Total available music: ${allMusic.length} (${transformedDbMusic.length} from DB, ${otherUsersFirebaseMusic.length} from Firebase)`);
+
       // Set the available music list in state
-      setAvailableMusicList(otherUsersMusic);
-      
+      setAvailableMusicList(allMusic);
+
       // Save to localStorage with display index to preserve UI order
-      const musicFilesWithIndex = otherUsersMusic.map((item, index) => ({
+      const musicFilesWithIndex = allMusic.map((item, index) => ({
         ...item,
         displayIndex: index,
         category: 'available'
       }));
-      
-      console.log('Saving Firebase music list to localStorage with display indices', 
+
+      console.log('Saving combined music list to localStorage with display indices',
         `(${musicFilesWithIndex.length} items)`);
-      
+
       // Log the first few items to verify correct order
       if (musicFilesWithIndex.length > 0) {
         console.log('First few items in order:');
@@ -315,13 +338,13 @@ export const HomePage = () => {
           console.log(`${idx}: ${item.title} by ${item.artist} (ID: ${item.id})`);
         });
       }
-      
+
       // Save to localStorage for the NowPlayingBar to use
       localStorage.setItem('firebase-music-list', JSON.stringify(musicFilesWithIndex));
-      
-      return otherUsersMusic;
+
+      return allMusic;
     } catch (error) {
-      console.error('Error fetching Firebase music:', error);
+      console.error('Error fetching music:', error);
       return [];
     }
   };
@@ -461,7 +484,7 @@ export const HomePage = () => {
       formData.append('userId', user.userId); // Add user ID to the upload
 
       // Upload to database
-      const response = await fetch('http://localhost:8080/api/music/upload', {
+      const response = await fetch('https://astroglowfirebase-d2411.uc.r.appspot.com/api/music/upload', {
         method: 'POST',
         body: formData,
         credentials: 'include'
@@ -552,21 +575,21 @@ export const HomePage = () => {
   const handleMusicCardClick = (e, musicId) => {
     // If event exists, stop propagation
     if (e) e.stopPropagation();
-    
+
     // Hard lockout - prevent any clicks during processing
     if (isProcessingClickRef.current) {
       console.log('Ignoring click during lockout period');
       return;
     }
-    
+
     // Immediately lock to prevent multiple rapid clicks
     lockPlayback(500);
-    
+
     // Check for double-clicks
     const now = Date.now();
     const lastClickTime = lastClickTimeRef.current[musicId] || 0;
     lastClickTimeRef.current[musicId] = now;
-    
+
     // If this is a double-click, ignore the second click
     if (now - lastClickTime < doubleClickThreshold) {
       console.log('Double-click detected, ignoring second click');
@@ -578,14 +601,14 @@ export const HomePage = () => {
       togglePlayPause(musicId);
       return;
     }
-    
+
     try {
       // If any other song is playing, completely stop it first
       if (currentlyPlaying) {
         console.log('Stopping current playback before playing new song');
         stopPlayback();
       }
-      
+
       // Ensure we've completely stopped before playing new song
       setTimeout(() => {
         try {
@@ -595,13 +618,13 @@ export const HomePage = () => {
             const searchId = String(musicId);
             return itemId === searchId;
           });
-          
+
           const availableItem = availableMusicList.find(item => {
             const itemId = String(item.musicId || item.id);
             const searchId = String(musicId);
             return itemId === searchId;
           });
-          
+
           // Set the music category based on which list contains the item
           if (uploadedItem) {
             console.log('Playing from uploaded music:', uploadedItem.title);
@@ -630,7 +653,7 @@ export const HomePage = () => {
   // Handle delete music click
   const handleDeleteClick = (musicId, event) => {
     event.stopPropagation(); // Prevent triggering card click
-    
+
     // Find the music item to display in the confirmation modal
     const musicItem = musicList.find(music => music.musicId === musicId);
     if (musicItem) {
@@ -646,35 +669,35 @@ export const HomePage = () => {
   // Handle confirming deletion in the modal
   const confirmDelete = async () => {
     if (!musicToDelete) return;
-    
+
     const musicId = musicToDelete.id;
-    
+
     try {
       // First, get the music details to check if it's stored in Firebase
       const musicItem = musicList.find(music => music.musicId === musicId);
-      
+
       if (musicItem && musicItem.audioUrl && musicItem.audioUrl.includes('firebasestorage.googleapis.com')) {
         // Extract the filename from the Firebase URL
         const urlParts = musicItem.audioUrl.split('/');
         const fileName = decodeURIComponent(urlParts[urlParts.length - 1].split('?')[0]);
-        
+
         // Delete from Firebase storage
         const { storage } = await import('../../firebase');
         const { ref, deleteObject } = await import('firebase/storage');
-        
+
         // Create a reference to the file in Firebase storage
         const storageRef = ref(storage, fileName);
-        
+
         try {
           await deleteObject(storageRef);
           console.log('File deleted from Firebase storage');
-          
+
           // Immediately update the available music list
           setAvailableMusicList(prevList => {
             const newList = prevList.filter(music => {
               // Check both the ID and the audio URL to ensure we remove the correct item
-              return music.id !== musicId && 
-                    (!music.audioUrl || !music.audioUrl.includes(fileName));
+              return music.id !== musicId &&
+                (!music.audioUrl || !music.audioUrl.includes(fileName));
             });
             console.log('Updated available music list:', newList);
             return newList;
@@ -686,7 +709,7 @@ export const HomePage = () => {
       }
 
       // Delete from database
-      const response = await fetch(`http://localhost:8080/api/music/deleteMusic/${musicId}`, {
+      const response = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/music/deleteMusic/${musicId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -735,7 +758,7 @@ export const HomePage = () => {
 
     // Store the ID type to distinguish between Firebase and database items
     const isFirebaseItem = music.musicId && !music.musicId;
-    
+
     setEditingMusic({
       ...music,
       // Store both ID types for proper handling
@@ -743,7 +766,7 @@ export const HomePage = () => {
       id: music.musicId || null,
       isFirebaseItem: isFirebaseItem
     });
-    
+
     setUseImageUrl(true);
     setShowEditModal(true);
   };
@@ -786,7 +809,7 @@ export const HomePage = () => {
         musicUpdate.imageUrl = editingMusic.imageUrl;
       }
 
-      const response = await fetch(`http://localhost:8080/api/music/putMusic/${editingMusic.musicId}`, {
+      const response = await fetch(`https://astroglowfirebase-d2411.uc.r.appspot.com/api/music/putMusic/${editingMusic.musicId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -867,7 +890,7 @@ export const HomePage = () => {
       formData.append('firebaseFileName', uploadData.audioFileName); // Add Firebase filename
 
       // Upload to database
-      const response = await fetch('http://localhost:8080/api/music/upload', {
+      const response = await fetch('https://astroglowfirebase-d2411.uc.r.appspot.com/api/music/upload', {
         method: 'POST',
         body: formData,
         credentials: 'include'
@@ -900,7 +923,7 @@ export const HomePage = () => {
 
       // Refresh the user's music list
       fetchUserMusic();
-      
+
     } catch (error) {
       console.error('Failed to upload music:', error);
     }
@@ -922,12 +945,12 @@ export const HomePage = () => {
   const lockPlayback = (duration = 500) => {
     // Set processing flag to prevent any clicks
     isProcessingClickRef.current = true;
-    
+
     // Clear any existing timer
     if (lockoutTimerRef.current) {
       clearTimeout(lockoutTimerRef.current);
     }
-    
+
     // Set a new timer
     lockoutTimerRef.current = setTimeout(() => {
       isProcessingClickRef.current = false;
@@ -939,52 +962,52 @@ export const HomePage = () => {
   const handleNextSong = () => {
     console.log("Next song requested in HomePage");
     console.log("Current music category:", musicCategory);
-    
+
     // Set processing flag to prevent rapid clicks
     if (isProcessingClickRef.current) {
       console.log("Still processing previous action, ignoring request");
       return;
     }
-    
+
     // Lock playback to prevent multiple simultaneous actions
     lockPlayback(1000);
-    
+
     // First stop the current playback to prevent multiple tracks playing
     stopPlayback().then(() => {
       // Determine which list to use based on the current category
       if (musicCategory === 'uploaded') {
         // Use uploaded music list for navigation
         console.log("Using uploaded music list for next song");
-        
+
         if (musicList.length > 0) {
           // Find current track index
           const currentIndex = musicList.findIndex(item => {
             const itemId = String(item.musicId || item.id || '');
             return itemId === String(currentlyPlaying);
           });
-          
+
           console.log(`Current index in uploaded list: ${currentIndex} of ${musicList.length}`);
-          
+
           // If found in list and not the last track
           if (currentIndex !== -1 && currentIndex < musicList.length - 1) {
             const nextTrack = musicList[currentIndex + 1];
             console.log(`Playing next track: ${nextTrack.title || 'Unknown'}`);
-            
+
             // Play the track directly to avoid playNextSong complexity
             playMusic(String(nextTrack.musicId), nextTrack.audioUrl, 'uploaded');
-          } 
+          }
           // If last track, loop to first
           else if (currentIndex === musicList.length - 1) {
             const firstTrack = musicList[0];
             console.log(`Looping to first track: ${firstTrack.title || 'Unknown'}`);
-            
+
             playMusic(String(firstTrack.musicId), firstTrack.audioUrl, 'uploaded');
           }
           // If not found, start with the first track
           else {
             const firstTrack = musicList[0];
             console.log(`Track not found in list, playing first: ${firstTrack.title || 'Unknown'}`);
-            
+
             playMusic(String(firstTrack.musicId), firstTrack.audioUrl, 'uploaded');
           }
         } else {
@@ -994,36 +1017,36 @@ export const HomePage = () => {
       } else if (musicCategory === 'available') {
         // Use available music list for navigation
         console.log("Using available music list for next song");
-        
+
         if (availableMusicList.length > 0) {
           // Find current track index
           const currentIndex = availableMusicList.findIndex(item => {
             const itemId = String(item.musicId || item.id || '');
             return itemId === String(currentlyPlaying);
           });
-          
+
           console.log(`Current index in available list: ${currentIndex} of ${availableMusicList.length}`);
-          
+
           // If found in list and not the last track
           if (currentIndex !== -1 && currentIndex < availableMusicList.length - 1) {
             const nextTrack = availableMusicList[currentIndex + 1];
             console.log(`Playing next track: ${nextTrack.title || 'Unknown'}`);
-            
+
             // Play the track directly to avoid playNextSong complexity
             playMusic(String(nextTrack.id), nextTrack.audioUrl, 'available');
-          } 
+          }
           // If last track, loop to first
           else if (currentIndex === availableMusicList.length - 1) {
             const firstTrack = availableMusicList[0];
             console.log(`Looping to first track: ${firstTrack.title || 'Unknown'}`);
-            
+
             playMusic(String(firstTrack.id), firstTrack.audioUrl, 'available');
           }
           // If not found, start with the first track
           else {
             const firstTrack = availableMusicList[0];
             console.log(`Track not found in list, playing first: ${firstTrack.title || 'Unknown'}`);
-            
+
             playMusic(String(firstTrack.id), firstTrack.audioUrl, 'available');
           }
         } else {
@@ -1036,12 +1059,12 @@ export const HomePage = () => {
           const itemId = String(item.musicId || item.id || '');
           return itemId === String(currentlyPlaying);
         });
-        
+
         const isInAvailableList = availableMusicList.some(item => {
           const itemId = String(item.musicId || item.id || '');
           return itemId === String(currentlyPlaying);
         });
-        
+
         if (isInUploadedList) {
           console.log("Current track found in uploaded list, using uploaded for next");
           setMusicCategory('uploaded');
@@ -1063,57 +1086,57 @@ export const HomePage = () => {
       isProcessingClickRef.current = false;
     });
   };
-  
+
   // Handler for previous song button - ensures it stays within the current section
   const handlePreviousSong = () => {
     console.log("Previous song requested in HomePage");
     console.log("Current music category:", musicCategory);
-    
+
     // Set processing flag to prevent rapid clicks
     if (isProcessingClickRef.current) {
       console.log("Still processing previous action, ignoring request");
       return;
     }
-    
+
     // Lock playback to prevent multiple simultaneous actions
     lockPlayback(1000);
-    
+
     // First stop the current playback to prevent multiple tracks playing
     stopPlayback().then(() => {
       // Determine which list to use based on the current category
       if (musicCategory === 'uploaded') {
         // Use uploaded music list for navigation
         console.log("Using uploaded music list for previous song");
-        
+
         if (musicList.length > 0) {
           // Find current track index
           const currentIndex = musicList.findIndex(item => {
             const itemId = String(item.musicId || item.id || '');
             return itemId === String(currentlyPlaying);
           });
-          
+
           console.log(`Current index in uploaded list: ${currentIndex} of ${musicList.length}`);
-          
+
           // If found in list and not the first track
           if (currentIndex > 0) {
             const prevTrack = musicList[currentIndex - 1];
             console.log(`Playing previous track: ${prevTrack.title || 'Unknown'}`);
-            
+
             // Play the track directly to avoid playPreviousSong complexity
             playMusic(String(prevTrack.musicId), prevTrack.audioUrl, 'uploaded');
-          } 
+          }
           // If first track, loop to last
           else if (currentIndex === 0) {
             const lastTrack = musicList[musicList.length - 1];
             console.log(`Looping to last track: ${lastTrack.title || 'Unknown'}`);
-            
+
             playMusic(String(lastTrack.musicId), lastTrack.audioUrl, 'uploaded');
           }
           // If not found, start with the last track
           else {
             const lastTrack = musicList[musicList.length - 1];
             console.log(`Track not found in list, playing last: ${lastTrack.title || 'Unknown'}`);
-            
+
             playMusic(String(lastTrack.musicId), lastTrack.audioUrl, 'uploaded');
           }
         } else {
@@ -1123,36 +1146,36 @@ export const HomePage = () => {
       } else if (musicCategory === 'available') {
         // Use available music list for navigation
         console.log("Using available music list for previous song");
-        
+
         if (availableMusicList.length > 0) {
           // Find current track index
           const currentIndex = availableMusicList.findIndex(item => {
             const itemId = String(item.musicId || item.id || '');
             return itemId === String(currentlyPlaying);
           });
-          
+
           console.log(`Current index in available list: ${currentIndex} of ${availableMusicList.length}`);
-          
+
           // If found in list and not the first track
           if (currentIndex > 0) {
             const prevTrack = availableMusicList[currentIndex - 1];
             console.log(`Playing previous track: ${prevTrack.title || 'Unknown'}`);
-            
+
             // Play the track directly to avoid playPreviousSong complexity
             playMusic(String(prevTrack.id), prevTrack.audioUrl, 'available');
-          } 
+          }
           // If first track, loop to last
           else if (currentIndex === 0) {
             const lastTrack = availableMusicList[availableMusicList.length - 1];
             console.log(`Looping to last track: ${lastTrack.title || 'Unknown'}`);
-            
+
             playMusic(String(lastTrack.id), lastTrack.audioUrl, 'available');
           }
           // If not found, start with the last track
           else {
             const lastTrack = availableMusicList[availableMusicList.length - 1];
             console.log(`Track not found in list, playing last: ${lastTrack.title || 'Unknown'}`);
-            
+
             playMusic(String(lastTrack.id), lastTrack.audioUrl, 'available');
           }
         } else {
@@ -1165,12 +1188,12 @@ export const HomePage = () => {
           const itemId = String(item.musicId || item.id || '');
           return itemId === String(currentlyPlaying);
         });
-        
+
         const isInAvailableList = availableMusicList.some(item => {
           const itemId = String(item.musicId || item.id || '');
           return itemId === String(currentlyPlaying);
         });
-        
+
         if (isInUploadedList) {
           console.log("Current track found in uploaded list, using uploaded for previous");
           setMusicCategory('uploaded');
@@ -1616,15 +1639,15 @@ export const HomePage = () => {
         onClose={cancelDelete}
         title="Confirm Delete"
         message={
-          musicToDelete ? 
-          <div>
+          musicToDelete ?
+            <div>
+              <p>Are you sure you want to delete this song?</p>
+              <p className={styles.songDeleteInfo}>
+                <strong>{musicToDelete.title}</strong> by {musicToDelete.artist}
+              </p>
+              <p>This action cannot be undone.</p>
+            </div> :
             <p>Are you sure you want to delete this song?</p>
-            <p className={styles.songDeleteInfo}>
-              <strong>{musicToDelete.title}</strong> by {musicToDelete.artist}
-            </p>
-            <p>This action cannot be undone.</p>
-          </div> : 
-          <p>Are you sure you want to delete this song?</p>
         }
         confirmText="Delete"
         onConfirm={confirmDelete}

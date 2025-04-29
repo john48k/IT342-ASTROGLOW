@@ -12,7 +12,7 @@ const OAuth2Redirect = () => {
     const fetchUserInfo = async () => {
       try {
         // Fetch user info from the backend OAuth endpoint
-        const response = await fetch('http://localhost:8080/api/user/user-info', {
+        const response = await fetch('https://astroglowfirebase-d2411.uc.r.appspot.com/api/user/user-info', {
           credentials: 'include' // Important to include cookies for OAuth session
         });
 
