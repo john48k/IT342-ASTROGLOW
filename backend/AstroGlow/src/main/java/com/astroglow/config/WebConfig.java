@@ -19,6 +19,7 @@ public class WebConfig {
                             "http://localhost:5174", 
                             "http://localhost:8080", 
                             "http://localhost:3000",
+                            "https://it-342-astroglow.vercel.app",
                             "https://astroglowfirebase-d2411.firebaseapp.com",
                             "https://astroglowfirebase-d2411.uc.r.appspot.com"
                         )
