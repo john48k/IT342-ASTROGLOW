@@ -1,47 +1,569 @@
-@font-face {
-    font-family: landing-page-font;
-    src: url(../../assets/fonts/13_Misa.TTF);
-}
-
-.landing-page {
-    position: relative;
-    background-image: url('../../assets/images/Landing-Page-Bg.png');
+/* Container */
+.LandingPageContainer {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #ffffff;
+    background: linear-gradient(160deg, #000000 0%, #653895 100%);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  /* Header Section */
+  .LandingPageHeader {
+    background-image: url("../../assets/images/Landing-Page-Bg.png");
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-}
-
-.landing-page::before {
-    content: '';
+    position: relative;
+  }
+  
+  .LandingPageHeader::before {
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.651); /* Adjust the opacity as needed */
+    background: rgba(0, 0, 0, 0.5);
     z-index: 1;
-}
-
-.landing-page > * {
+  }
+  
+  .LandingPageNav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 5%;
     position: relative;
     z-index: 2;
-}
-
-/* .astro-title-text{
-    font-size: 50px;
+  }
+  
+  .LandingPageLogo {
+    display: flex;
+    align-items: center;
+  }
+  
+  .LandingPageLogoText {
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #ffffff, #d6a8ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px;
+  }
+  
+  .LandingPageNavLinks {
+    display: flex;
+    gap: 2rem;
+  }
+  
+  .LandingPageNavLinks a {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  
+  .LandingPageNavLinks a::after {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #9b59b6;
+    transition: all 0.3s ease;
+  }
+  
+  .LandingPageNavLinks a:hover::after {
+    width: 100%;
+  }
+  
+  .LandingPageButton {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.6rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .LandingPageButton:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+  
+  .LandingPageHero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 5%;
+    flex: 1;
+    position: relative;
+    z-index: 2;
+  }
+  
+  .LandingPageTitle {
+    font-size: 5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    background: linear-gradient(90deg, #ffffff, #d6a8ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 2px;
+  }
+  
+  .LandingPageSlogan {
+    font-size: 1.5rem;
+    font-weight: 400;
+    margin-bottom: 2.5rem;
+    max-width: 700px;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .LandingPageCTA {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .LandingPagePrimaryButton {
+    background: #8e44ad;
     color: white;
-    margin-top: -160px;
-  font-family: inherit;
-  font-weight: 500;
-} */
-
-
-
-.astro-title-text{
-    margin-top: -160px;
-  font-family: inherit;
-  font-weight: 500;
-}
+    border: none;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .LandingPagePrimaryButton:hover {
+    background: #9b59b6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .LandingPageSecondaryButton {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .LandingPageSecondaryButton:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+  }
+  
+  .LandingPageIcon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  /* Section Styles */
+  .LandingPageSection {
+    padding: 6rem 5%;
+  }
+  
+  .LandingPageSectionContent {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .LandingPageSectionTitle {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  
+  .LandingPageSectionDescription {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto 3rem;
+    line-height: 1.6;
+  }
+  
+  /* Features Section */
+  .LandingPageFeatures {
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  .LandingPageFeatureGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+  }
+  
+  .LandingPageFeatureCard {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .LandingPageFeatureCard:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-5px);
+  }
+  
+  .LandingPageFeatureIconWrapper {
+    width: 60px;
+    height: 60px;
+    background: rgba(155, 89, 182, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .LandingPageFeatureIcon {
+    width: 30px;
+    height: 30px;
+    color: #9b59b6;
+  }
+  
+  .LandingPageFeatureCard h3 {
+    font-size: 1.3rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .LandingPageFeatureCard p {
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.6;
+  }
+  
+  /* About Section */
+  .LandingPageAbout {
+    background: linear-gradient(160deg, #000000 0%, #3a1f55 100%);
+  }
+  
+  .LandingPageAboutGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+  
+  .LandingPageAboutInfo {
+    text-align: left;
+  }
+  
+  .LandingPageAboutInfo .LandingPageSectionTitle {
+    text-align: left;
+  }
+  
+  .LandingPageAboutDescription {
+    text-align: left;
+    margin: 0 0 1.5rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.7;
+  }
+  
+  .LandingPageStats {
+    display: flex;
+    gap: 2rem;
+    margin-top: 2.5rem;
+  }
+  
+  .LandingPageStat {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .LandingPageStatNumber {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #9b59b6;
+  }
+  
+  .LandingPageStatLabel {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .LandingPageAboutImage {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .LandingPageImagePlaceholder {
+    width: 100%;
+    aspect-ratio: 1;
+    background: radial-gradient(circle, rgba(155, 89, 182, 0.3) 0%, rgba(0, 0, 0, 0) 70%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse 4s infinite ease-in-out;
+  }
+  
+  .LandingPageStarIcon {
+    width: 80px;
+    height: 80px;
+    color: #9b59b6;
+    animation: rotate 20s linear infinite;
+  }
+  
+  @keyframes pulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+  }
+  
+  @keyframes rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  /* Services Section */
+  .LandingPageServices {
+    background: rgba(0, 0, 0, 0.5);
+  }
+  
+  .LandingPageServicesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+  }
+  
+  .LandingPageServiceCard {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3rem 2rem;
+    border-radius: 8px;
+    text-align: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .LandingPageServiceCard:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-5px);
+  }
+  
+  .LandingPageServiceIcon {
+    width: 50px;
+    height: 50px;
+    color: #9b59b6;
+    margin-bottom: 1.5rem;
+  }
+  
+  .LandingPageServiceCard h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .LandingPageServiceCard p {
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.6;
+  }
+  
+  /* Contact Section */
+  .LandingPageContact {
+    background: linear-gradient(160deg, #3a1f55 0%, #000000 100%);
+  }
+  
+  .LandingPageContactForm {
+    max-width: 500px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3rem;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .LandingPageFormGroup {
+    margin-bottom: 1.5rem;
+  }
+  
+  .LandingPageInput {
+    width: 100%;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+  }
+  
+  .LandingPageInput:focus {
+    outline: none;
+    border-color: #9b59b6;
+  }
+  
+  .LandingPageInput::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .LandingPageFullWidth {
+    width: 100%;
+    margin-top: 1rem;
+  }
+  
+  /* Footer */
+  .LandingPageFooter {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 5rem 5% 2rem;
+  }
+  
+  .LandingPageFooterContent {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 4rem;
+  }
+  
+  .LandingPageFooterLogo {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .LandingPageFooterTagline {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+  }
+  
+  .LandingPageFooterLinks {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+  
+  .LandingPageFooterLinkGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .LandingPageFooterLinkGroup h4 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .LandingPageFooterLinkGroup a {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+  }
+  
+  .LandingPageFooterLinkGroup a:hover {
+    color: #9b59b6;
+  }
+  
+  .LandingPageFooterBottom {
+    max-width: 1200px;
+    margin: 4rem auto 0;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  
+  /* Responsive Styles */
+  @media (max-width: 992px) {
+    .LandingPageTitle {
+      font-size: 4rem;
+    }
+  
+    .LandingPageAboutGrid {
+      grid-template-columns: 1fr;
+      gap: 3rem;
+    }
+  
+    .LandingPageFooterContent {
+      grid-template-columns: 1fr;
+      gap: 3rem;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .LandingPageNav {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  
+    .LandingPageNavLinks {
+      margin: 1rem 0;
+    }
+  
+    .LandingPageTitle {
+      font-size: 3rem;
+    }
+  
+    .LandingPageSlogan {
+      font-size: 1.2rem;
+    }
+  
+    .LandingPageCTA {
+      flex-direction: column;
+      width: 100%;
+      max-width: 300px;
+    }
+  
+    .LandingPageStats {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+  
+    .LandingPageFooterLinks {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .LandingPageNavLinks {
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  
+    .LandingPageSection {
+      padding: 4rem 5%;
+    }
+  
+    .LandingPageSectionTitle {
+      font-size: 2rem;
+    }
+  
+    .LandingPageContactForm {
+      padding: 2rem;
+    }
+  }
+  
