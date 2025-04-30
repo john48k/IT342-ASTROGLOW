@@ -1,6 +1,5 @@
 import "./LandingPage.css"
 import { Music, Headphones, Radio, PlayCircle, Star, Users, Library, Zap } from "lucide-react"
-
 import '../../components/NavBarStyle/NavBar.css';
 import NavBar from '../../components/./NavBar/NavBar';
 import { useNavigate } from "react-router-dom"
