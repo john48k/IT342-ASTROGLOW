@@ -124,7 +124,6 @@ class LoginActivity : ComponentActivity() {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
             .requestProfile()
-            .requestId()
             .build()
         
         googleSignInClient = GoogleSignIn.getClient(this, gso)
