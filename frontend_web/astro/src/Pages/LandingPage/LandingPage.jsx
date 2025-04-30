@@ -1,8 +1,11 @@
 import "./LandingPage.css"
 import { Music, Headphones, Radio, PlayCircle, Star, Users, Library, Zap } from "lucide-react"
 import NavBar from "../../Components/NavBar/NavBar"
+import { useNavigate } from "react-router-dom"
 
 export default function LandingPage() {
+    const navigate = useNavigate();
+
     return (
         <div className="LandingPageContainer">
             {/* Header Section */}
@@ -24,11 +27,11 @@ export default function LandingPage() {
                     <h1 className="LandingPageTitle">AstroGlow</h1>
                     <p className="LandingPageSlogan">Music That Lights Up Your Universe.</p>
                     <div className="LandingPageCTA">
-                        <button className="LandingPagePrimaryButton">
+                        <button className="LandingPagePrimaryButton" onClick={() => navigate('/signup')}>
                             <PlayCircle className="LandingPageIcon" />
-                            Start Listening
+                            Sign Up Now
                         </button>
-                        <button className="LandingPageSecondaryButton">Learn More</button>
+                        {/* <button className="LandingPageSecondaryButton">Learn More</button> */}
                     </div>
                 </div>
             </header>
@@ -149,7 +152,7 @@ export default function LandingPage() {
             </section>
 
             {/* Contact Section */}
-            <section id="contact" className="LandingPageSection LandingPageContact">
+            {/* <section id="contact" className="LandingPageSection LandingPageContact">
                 <div className="LandingPageSectionContent">
                     <h2 className="LandingPageSectionTitle">Ready to Experience AstroGlow?</h2>
                     <p className="LandingPageSectionDescription">
@@ -166,7 +169,7 @@ export default function LandingPage() {
                         <button className="LandingPagePrimaryButton LandingPageFullWidth">Get Early Access</button>
                     </div>
                 </div>
-            </section>
+            </section> */}
 
             {/* Footer */}
             <footer className="LandingPageFooter">
