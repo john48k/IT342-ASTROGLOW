@@ -1009,7 +1009,7 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null, onProfileImag
                         selectedTab = it
                         showHomeTab = true
                     },
-                    showUploadTab = userId == 1L
+                    showUploadTab = true
                 )
             }
         }
@@ -1058,7 +1058,7 @@ fun HomeScreen(userName: String, initialProfileImage: Uri? = null, onProfileImag
                                 sharedPreferences.edit().putBoolean("dark_mode", newDarkMode).apply()
                             }
                         )
-                        4 -> if (userId == 1L) UploadTab()
+                        4 -> UploadTab()
                     }
                 }
             }
